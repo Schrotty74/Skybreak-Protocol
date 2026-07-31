@@ -58,6 +58,14 @@ The selected level is stored locally on the device.
 | High | powerful devices | up to 60 FPS, high resolution, and extended effects |
 | Ultra | current desktop GPUs and 4K | WebGPU effects, full render resolution, maximum particles, lighting, and parallax; WebGL2 fallback |
 
+### What Ultra changes
+
+Ultra adds a separate WebGPU effects layer that requests the browser's **high-performance GPU**. On macOS the browser maps WebGPU to Metal; on current NVIDIA and AMD systems it uses the browser's native GPU backend. Compared with High, Ultra renders denser multilayer fog and rain, energy grids, animated light beams, stronger atmospheric bloom, maximum Canvas particles, and higher resolution up to 4K.
+
+The effects resolution automatically adjusts between 65% and 100% according to measured frame timing. Unsupported or software-only WebGPU adapters automatically use the existing WebGL2 renderer instead.
+
+**Current limit:** the main game scene, platforms, enemies, debris, and gameplay particles still use Canvas 2D. GPU instancing, Web Workers, reflections, full-scene post-processing, and an adaptive 120 FPS Ultra+ mode are not yet implemented.
+
 ## Visual effects
 
 - WebGPU Ultra shader for multilayer neon fog, denser rain, energy grids, light beams, and atmospheric bloom
