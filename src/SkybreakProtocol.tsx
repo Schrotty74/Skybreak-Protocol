@@ -186,6 +186,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [highScore, setHighScore] = useState(0);
   const [renderer, setRenderer] = useState("CANVAS 2D");
   const [quality, setQuality] = useState<Quality>("medium");
+  const [nativeFullscreen, setNativeFullscreen] = useState(false);
+  const [immersiveMode, setImmersiveMode] = useState(false);
 
   const syncHud = useCallback((world: World) => {
     setScore(world.score);
@@ -220,6 +222,17 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     setQuality(initialQuality);
     window.dispatchEvent(new Event("skybreak-quality"));
   }, []);
+
+  useEffect(() => {
+    const syncFullscreen = () => setNativeFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("immersive-active", immersiveMode);
+    return () => document.documentElement.classList.remove("immersive-active");
+  }, [immersiveMode]);
 
   const chooseQuality = (next: Quality) => {
     qualityRef.current = next;
@@ -1040,15 +1053,32 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   };
 
   const toggleFullscreen = async () => {
-    const frame = canvasRef.current?.closest(".game-frame") as HTMLElement | null;
-    if (!frame) return;
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else if (frame.requestFullscreen) await frame.requestFullscreen();
-    } catch {
-      // iPhone Safari may decline element fullscreen; the game remains fully playable inline.
+    const shell = canvasRef.current?.closest(".game-shell") as HTMLElement | null;
+    if (!shell) return;
+
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
     }
+
+    if (immersiveMode) {
+      setImmersiveMode(false);
+      return;
+    }
+
+    if (document.fullscreenEnabled && shell.requestFullscreen) {
+      try {
+        await shell.requestFullscreen();
+        return;
+      } catch {
+        // Safari on iPhone can expose the API but still reject non-video elements.
+      }
+    }
+
+    setImmersiveMode(true);
   };
+
+  const fullscreenActive = nativeFullscreen || immersiveMode;
 
   const controlProps = (key: InputKey) => ({
     onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -1073,7 +1103,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           : (isDe ? `Dein Lauf endet bei ${score.toLocaleString("de-AT")} Punkten.` : `Your run ends at ${score.toLocaleString("en-US")} points.`);
 
   return (
-    <main className="game-shell">
+    <main className={`game-shell${immersiveMode ? " immersive-mode" : ""}`}>
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true">SP</span>
@@ -1091,7 +1121,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <button className="icon-button" onClick={toggleMute} aria-label={muted ? (isDe ? "Ton einschalten" : "Enable sound") : (isDe ? "Ton ausschalten" : "Mute sound")}>
             {muted ? "SOUND OFF" : "SOUND ON"}
           </button>
-          <button className="icon-button" onClick={toggleFullscreen} aria-label={isDe ? "Vollbildmodus umschalten" : "Toggle fullscreen"}>FULLSCREEN</button>
+          <button className="icon-button" onClick={toggleFullscreen} aria-label={fullscreenActive ? (isDe ? "Vollbild beenden" : "Exit fullscreen") : (isDe ? "Vollbildmodus starten" : "Enter fullscreen")}>{fullscreenActive ? "EXIT" : "FULLSCREEN"}</button>
           <button className="icon-button" onClick={togglePause} aria-label={isDe ? "Spiel pausieren" : "Pause game"}>PAUSE</button>
         </div>
       </header>
@@ -1144,7 +1174,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         </div>
         <div className="mobile-actions">
           <button onClick={toggleMute}>{muted ? (isDe ? "TON AN" : "SOUND ON") : (isDe ? "TON AUS" : "SOUND OFF")}</button>
-          <button onClick={toggleFullscreen}>{isDe ? "VOLLBILD" : "FULLSCREEN"}</button>
+          <button onClick={toggleFullscreen}>{fullscreenActive ? (isDe ? "BEENDEN" : "EXIT") : (isDe ? "VOLLBILD" : "FULLSCREEN")}</button>
           <button onClick={togglePause}>PAUSE</button>
         </div>
         <label className="quality-picker">

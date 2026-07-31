@@ -1,90 +1,94 @@
 <p align="center">
-  <img src="public/icon-512.png" alt="Skybreak Protocol Symbol" width="180" height="180">
+  <img src="public/icon-512.png" alt="Skybreak Protocol emblem" width="180" height="180">
 </p>
+
+<p align="center"><a href="README.de.md">Deutsch</a> · <strong>English</strong></p>
 
 # Skybreak Protocol
 
-Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus und erreiche den Sendeturm über der Megacity.
+An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Break through platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity.
 
-> Skybreak Protocol verwendet keine Grafiken, Musik, Figuren oder Quelltexte von Nintendo oder Ice Climber. Es handelt sich um eine eigenständige Neuinterpretation des klassischen vertikalen Arcade-Spielprinzips.
+> Skybreak Protocol uses no graphics, music, characters, or source code from Nintendo or Ice Climber. It is an independent reinterpretation of the classic vertical arcade concept.
 
-Der geprüfte Umgang mit Daten ist im [Datenschutzbericht](DATENSCHUTZ.md) und im [English Privacy Report](PRIVACY.md) dokumentiert.
+Data handling is documented in the [English Privacy Report](PRIVACY.md) and the [German privacy report](DATENSCHUTZ.md).
 
-## Spielen
+## Play
 
-- **GitHub Pages:** <https://schrotty74.github.io/Skybreak-Protocol/>
-- **Deutsch:** <https://schrotty74.github.io/Skybreak-Protocol/de/>
-- **Alternative OpenAI-Sites-Version:** <https://neon-ascent.bk-bezahlen.chatgpt.site>
+- **GitHub Pages — English:** <https://schrotty74.github.io/Skybreak-Protocol/>
+- **GitHub Pages — German:** <https://schrotty74.github.io/Skybreak-Protocol/de/>
+- **Alternative OpenAI Sites version:** <https://neon-ascent.bk-bezahlen.chatgpt.site>
 
-Die Web-App funktioniert ohne Installation. Auf iPhone oder iPad kann sie in Safari über **Teilen → Zum Home-Bildschirm** als App-Symbol abgelegt werden. Unter Android steht die entsprechende Funktion im Browsermenü zur Verfügung.
+The web app runs without installation. On iPhone or iPad, use **Share → Add to Home Screen** in Safari to install the app icon. Android browsers offer the equivalent option in their menu.
 
-## Spielprinzip
+## Gameplay
 
-- Vertikal durch neun Sektoren der Megacity aufsteigen
-- Plattformmodule von unten durchbrechen
-- Gegner mit dem Impulshammer oder durch Sprünge ausschalten
-- Lücken, fallenden Energiesplittern und Patrouillendrohnen ausweichen
-- Punkte sammeln, Leben erhalten und den lokalen Highscore verbessern
+- Ascend vertically through nine megacity sectors
+- Break platform modules from below
+- Disable enemies with the pulse hammer or by jumping on them
+- Avoid gaps, falling energy fragments, and patrol drones
+- Collect points, preserve lives, and improve the local high score
 
-## Steuerung
+## Controls
 
-| Aktion | Tastatur | Mobilgerät |
+| Action | Keyboard | Mobile device |
 |---|---|---|
-| Bewegen | `A` / `D` oder `←` / `→` | Linke und rechte Bildschirmtaste |
-| Springen | `W`, `↑` oder `Leertaste` | `JUMP` |
-| Impulshammer | `X` oder `K` | `PULSE` |
-| Pause | `P` oder `Esc` | `PAUSE` |
+| Move | `A` / `D` or `←` / `→` | Left and right touch buttons |
+| Jump | `W`, `↑`, or `Space` | `JUMP` |
+| Pulse hammer | `X` or `K` | `PULSE` |
+| Pause | `P` or `Esc` | `PAUSE` |
+| Fullscreen | `FULLSCREEN` button | Native fullscreen or immersive Safari fallback |
 
-## Grafikqualität
+## Graphics quality
 
-Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
+The selected level is stored locally on the device.
 
-| Stufe | Ziel | Effekte |
+| Level | Target | Effects |
 |---|---|---|
-| Niedrig | ältere oder warme Mobilgeräte | 30 FPS, reduzierte Auflösung, WebGL-Effekte aus, wenig Regen und Nebel |
-| Mittel | empfohlene Smartphone-Einstellung | 40 FPS, WebGL-Nebel, reduzierte Partikel und Parallaxe |
-| Hoch | leistungsfähige Geräte | bis 60 FPS, hohe Auflösung und erweiterte Effekte |
-| Ultra | aktuelle Desktop-GPUs und 4K | volle Renderauflösung, maximale Partikel, WebGL2, Beleuchtung und Parallaxe |
+| Low | older or warm mobile devices | 30 FPS, reduced resolution, WebGL effects disabled, little rain and fog |
+| Medium | recommended smartphone setting | 40 FPS, WebGL fog, reduced particles and parallax |
+| High | powerful devices | up to 60 FPS, high resolution, and extended effects |
+| Ultra | current desktop GPUs and 4K | full render resolution, maximum particles, WebGL2, lighting, and parallax |
 
-## Grafische Effekte
+## Visual effects
 
-- optionaler WebGL2-Shader für animierten Neon-Nebel, Regen und atmosphärisches Leuchten
-- mehrstufige Parallax-Megacity mit beleuchteten Fenstern
-- volumetrische Suchscheinwerfer und dynamische Lichtkegel
-- holografische Werbeflächen und fliegender Stadtverkehr
-- animierter Neonregen, Scanlines und subtile chromatische Effekte
-- dreidimensional wirkende Plattformmodule mit Metall-, Glas- und Energietexturen
-- dynamische Schatten, Bloom, Bewegungs- und Impulshammer-Spuren
-- Partikel, Trümmer, Einschlagseffekte und Bildschirmerschütterung
-- adaptive Renderauflösung bis 4K
+- optional WebGL2 shader for animated neon fog, rain, and atmospheric glow
+- multilayer parallax megacity with illuminated windows
+- volumetric searchlights and dynamic light cones
+- holographic advertising and flying city traffic
+- animated neon rain, scanlines, and subtle chromatic effects
+- dimensional platform modules with metal, glass, and energy textures
+- dynamic shadows, bloom, movement trails, and pulse-hammer trails
+- particles, debris, impact effects, and screen shake
+- adaptive rendering resolution up to 4K
 
-## Technik
+## Technology
 
-- React 19 und TypeScript
+- React 19 and TypeScript
 - Vite 8
-- Canvas 2D mit WebGL2-Zusatzebene und kompatiblem Fallback
-- Web Audio API für synthetisierte Arcade-Sounds
-- Pointer Events für Maus, Touch und Stift
-- Local Storage für Highscore und Grafikstufe
-- automatische GitHub-Pages-Bereitstellung über GitHub Actions
+- Canvas 2D with a WebGL2 effects layer and compatible fallback
+- Web Audio API for synthesized arcade sounds
+- Pointer Events for mouse, touch, and pen input
+- Local Storage for the high score and graphics level
+- automatic GitHub Pages deployment through GitHub Actions
+- CSS immersive fullscreen fallback for iPhone Safari
 
-## Lokale Entwicklung
+## Local development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Produktions-Build:
+Production build:
 
 ```bash
 npm run build
 ```
 
-## Hinweise zur Geräteleistung
+## Device performance
 
-Ultra kann Smartphones stark belasten und zu höherer Temperatur sowie schnellerem Akkuverbrauch führen. Für iPhones und Android-Geräte ist **Mittel** die empfohlene Einstellung. Bei deutlicher Erwärmung sollte **Niedrig** verwendet werden.
+Ultra can heavily load smartphones, increase temperature, and drain the battery faster. **Medium** is recommended for iPhone and Android devices. Select **Low** if the device becomes noticeably warm.
 
-## Lizenz
+## License
 
-Der Quelltext steht unter der im Repository enthaltenen MIT-Lizenz.
+The source code is available under the MIT license included in this repository.
