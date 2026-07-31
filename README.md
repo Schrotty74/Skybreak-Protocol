@@ -61,7 +61,7 @@ Upgrades apply to the current run and are shown as `P` and `S` values in the lev
 
 ## Original techno soundtrack
 
-The start screen and every level have their own original cyberpunk-techno track. Music begins after the first tap or key press, changes automatically with a short crossfade, loops during the level, and follows the existing sound toggle.
+The start screen and every level have their own original cyberpunk-techno track. Music begins after the first tap or key press, changes automatically with a short crossfade, loops during the level, and can be switched independently from the sound effects.
 
 | Level | Track | BPM | Listen / download |
 |---|---|---:|---|
