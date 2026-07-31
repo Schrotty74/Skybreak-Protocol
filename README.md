@@ -94,7 +94,7 @@ The selected level is stored locally on the device.
 | Ultra | current desktop and mobile GPUs | full-scene WebGPU post-processing, optional Mobile Ultra up to 120 FPS, F16 shaders, GPU instancing, adaptive resolution and effects; WebGL2 fallback |
 
 > [!WARNING]
-> **Mobile Ultra can place a very heavy load on a smartphone. The device may become noticeably or very warm and battery consumption increases. Medium is recommended for longer sessions. If the phone becomes very warm, switch to Low immediately or pause the game.**
+> **Mobile Ultra can place a very heavy load on a smartphone. The device may become noticeably or very warm and battery consumption increases. Mobile Ultra is not recommended in high ambient temperatures or direct sunlight. Medium is recommended for longer sessions. If the phone becomes very warm, switch to Low immediately or pause the game.**
 
 ### What Ultra changes
 
