@@ -6,6 +6,8 @@
 
 # Skybreak Protocol
 
+**Aktuelle Version:** `v1.0.0-beta.1` · [Ausführlicher Changelog](docs/releases/1.0.0-beta.1.md) · [Alle Changelogs](CHANGELOG.md)
+
 Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Kämpfe dich durch zehn optisch eigenständige Level nach oben, durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus und erreiche den Sendeturm über der Megacity. Jedes Level besitzt eine eigene Cyberpunk-Farbwelt, animierte Kulisse, Effekte und separat wählbare Schwierigkeit.
 
 > Skybreak Protocol verwendet keine Grafiken, Musik, Figuren oder Quelltexte von Nintendo oder Ice Climber. Es handelt sich um eine eigenständige Neuinterpretation des klassischen vertikalen Arcade-Spielprinzips.
@@ -18,6 +20,8 @@ Der geprüfte Umgang mit Daten ist im [Datenschutzbericht](DATENSCHUTZ.md) und i
 - **Deutsch:** <https://schrotty74.github.io/Skybreak-Protocol/de/>
 
 Die Web-App funktioniert ohne Installation. Auf iPhone oder iPad kann sie in Safari über **Teilen → Zum Home-Bildschirm** als App-Symbol abgelegt werden. Unter Android steht die entsprechende Funktion im Browsermenü zur Verfügung.
+
+Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protocol einmal die öffentlichen GitHub-Releases und zeigt einen Hinweis an, wenn eine neuere Beta- oder Final-Version verfügbar ist.
 
 ## Handy-Screenshots
 
@@ -131,6 +135,7 @@ Die Hardware-Raytracing-Kerne können von dieser Web-App derzeit nicht direkt an
 - Modul-Web-Worker für Ultra-Instanzsimulation und Leistungssteuerung
 - Web Audio API für synthetisierte Arcade-Sounds
 - Soundtrack-Wiedergabe aus eigenen MP3-Dateien mit automatischer Level-Überblendung
+- öffentliche GitHub-Release-Prüfung für neue Beta- und Final-Versionen
 - Pointer Events für Maus, Touch und Stift
 - Local Storage für Highscore und Grafikstufe
 - automatische GitHub-Pages-Bereitstellung über GitHub Actions
@@ -165,6 +170,8 @@ Produktions-Build:
 ```bash
 npm run build
 ```
+
+Jede Beta- und Final-Version benötigt eine eigene ausführliche Datei unter `docs/releases/`. Der Ablauf ist im [Release-Workflow](docs/RELEASE_WORKFLOW.md) beschrieben.
 
 ## Hinweise zur Geräteleistung
 

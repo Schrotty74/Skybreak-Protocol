@@ -1,0 +1,43 @@
+name: Publish beta or final release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "docs/releases/**"
+      - ".github/workflows/publish-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      - name: Publish versioned release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}"
+          NOTES="docs/releases/${VERSION}.md"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG already exists"
+            exit 0
+          fi
+          if [[ "$VERSION" == *-beta.* ]]; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "Skybreak Protocol $TAG" --notes-file "$NOTES" --prerelease
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "Skybreak Protocol $TAG" --notes-file "$NOTES" --latest
+          fi

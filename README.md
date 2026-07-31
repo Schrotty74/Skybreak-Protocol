@@ -6,6 +6,8 @@
 
 # Skybreak Protocol
 
+**Current release:** `v1.0.0-beta.1` · [Detailed changelog](docs/releases/1.0.0-beta.1.md) · [All changelogs](CHANGELOG.md)
+
 An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through ten visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Each level has its own cyberpunk palette, animated scenery, effects, and independently selectable difficulty.
 
 > Skybreak Protocol uses no graphics, music, characters, or source code from Nintendo or Ice Climber. It is an independent reinterpretation of the classic vertical arcade concept.
@@ -18,6 +20,8 @@ Data handling is documented in the [English Privacy Report](PRIVACY.md) and the 
 - **GitHub Pages — German:** <https://schrotty74.github.io/Skybreak-Protocol/de/>
 
 The web app runs without installation. On iPhone or iPad, use **Share → Add to Home Screen** in Safari to install the app icon. Android browsers offer the equivalent option in their menu.
+
+The current version is shown in the game. On startup, Skybreak Protocol checks the public GitHub releases once and displays a notice when a newer beta or final build is available.
 
 ## Mobile screenshots
 
@@ -131,6 +135,7 @@ Hardware ray-tracing cores cannot currently be addressed directly by this web ap
 - module Web Worker for Ultra instance simulation and performance control
 - Web Audio API for synthesized arcade sounds
 - same-origin MP3 soundtrack playback with automatic level crossfades
+- public GitHub release check for newer beta and final builds
 - Pointer Events for mouse, touch, and pen input
 - Local Storage for the high score and graphics level
 - automatic GitHub Pages deployment through GitHub Actions
@@ -165,6 +170,8 @@ Production build:
 ```bash
 npm run build
 ```
+
+Every beta and final build requires its own detailed file under `docs/releases/`. See the [release workflow](docs/RELEASE_WORKFLOW.md).
 
 ## Device performance
 

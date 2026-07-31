@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { checkForUpdate, type AvailableUpdate } from "./updateCheck";
 
 type GameStatus = "ready" | "playing" | "paused" | "upgrade" | "gameover" | "won";
 type InputKey = "left" | "right" | "jump" | "attack";
@@ -8,6 +9,7 @@ type Quality = "low" | "medium" | "high" | "ultra";
 type Difficulty = "easy" | "medium" | "hard";
 
 const LEVEL_COUNT = 10;
+const APP_VERSION = __APP_VERSION__;
 const LEVEL_HEIGHT = 390;
 const LEVEL_THEMES = [
   { name: "Neon Undercity", top: "#051d35", mid: "#18072f", bottom: "#02040d", accent: "#00f0ff", secondary: "#ff2b8a", warning: "#ffd84d", motif: 0 },
@@ -954,6 +956,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [showInstallHint, setShowInstallHint] = useState(false);
   const [levelDifficulties, setLevelDifficulties] = useState<Difficulty[]>(Array(LEVEL_COUNT).fill("medium"));
   const [pickaxeStats, setPickaxeStats] = useState({ power: 1, style: 1 });
+  const [availableUpdate, setAvailableUpdate] = useState<AvailableUpdate | null>(null);
 
   const syncHud = useCallback((world: World) => {
     setScore(world.score);
@@ -1027,6 +1030,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     } catch {
       // Ignore malformed local settings and keep the balanced defaults.
     }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void checkForUpdate(APP_VERSION).then((update) => {
+      if (active) setAvailableUpdate(update);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -2238,6 +2251,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       </header>
 
       <section className="game-frame" aria-label={isDe ? "Skybreak Protocol Spielfeld" : "Skybreak Protocol game field"}>
+        {availableUpdate && (
+          <aside className="update-notice" role="status">
+            <span>{isDe ? `${availableUpdate.prerelease ? "Beta" : "Final"} ${availableUpdate.version} verfügbar` : `${availableUpdate.prerelease ? "Beta" : "Final"} ${availableUpdate.version} available`}</span>
+            <a href={availableUpdate.url} target="_blank" rel="noopener">{isDe ? "Ansehen" : "View"} ↗</a>
+            <button type="button" onClick={() => setAvailableUpdate(null)} aria-label={isDe ? "Update-Hinweis schließen" : "Dismiss update notice"}>×</button>
+          </aside>
+        )}
         <canvas key={quality === "ultra" ? "webgpu" : "webgl"} ref={fxCanvasRef} className={`fx-canvas${quality === "ultra" ? " full-scene-fx" : ""}`} aria-hidden="true" />
         <canvas ref={canvasRef} aria-label={isDe ? "Spielansicht: Klettere durch die Cyberpunk-Megacity" : "Game view: climb through the cyberpunk megacity"} />
         {status !== "playing" && (
@@ -2248,7 +2268,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
                 <a className="language-link" href={languageHref} lang={isDe ? "en" : "de"}>{isDe ? "ENGLISH" : "DEUTSCH"}</a>
               </>
             )}
-            <p className="eyebrow">{status === "ready" ? "NIGHT CITY // 03:17" : status === "upgrade" ? `PICKAXE CORE // LEVEL ${sector}` : "NEURAL LINK STATUS"}</p>
+            <p className="eyebrow">{status === "ready" ? `NIGHT CITY // 03:17 // v${APP_VERSION}` : status === "upgrade" ? `PICKAXE CORE // LEVEL ${sector}` : "NEURAL LINK STATUS"}</p>
             <h1 className={status === "upgrade" ? "upgrade-title" : undefined}>{overlayTitle}</h1>
             <p>{overlayCopy}</p>
             {status === "upgrade" ? (
@@ -2276,7 +2296,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             )}
           </div>
         )}
-        <div className="sector-tag">LEVEL {sector.toString().padStart(2, "0")} // {LEVEL_THEMES[sector - 1].name} // PICK P{pickaxeStats.power} S{pickaxeStats.style}</div>
+        <div className="sector-tag">LEVEL {sector.toString().padStart(2, "0")} // {LEVEL_THEMES[sector - 1].name} // PICK P{pickaxeStats.power} S{pickaxeStats.style} // v{APP_VERSION}</div>
       </section>
 
       <section className="control-panel">

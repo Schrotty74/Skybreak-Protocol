@@ -35,6 +35,8 @@ Ultra mode checks WebGPU and optional F16 support, local GPU capability limits, 
 
 The soundtrack consists of MP3 files included with the game and loaded from the same GitHub Pages origin after user interaction. Playback and level changes are processed locally. No listening behavior is stored or transmitted.
 
+Once on startup, the update checker requests the public release list from `api.github.com/repos/Schrotty74/Skybreak-Protocol/releases`. The request contains no score, game setting, local-storage value, device measurement, account data, or identifier created by the game. GitHub receives the technically necessary connection data of a normal web request. If the request fails or times out after five seconds, the game continues without an update notice.
+
 ## Not used
 
 - no cookies
@@ -42,8 +44,8 @@ The soundtrack consists of MP3 files included with the game and loaded from the 
 - no location, camera, or microphone permissions
 - no contacts, device, or account data
 - no forms or user input beyond game controls
-- no `fetch`, WebSocket, Beacon, or XHR calls made by the game
-- no externally loaded fonts, images, sounds, or scripts
+- no WebSocket, Beacon, or XHR calls; `fetch` is used only for the public GitHub release check described above
+- no externally loaded fonts, images, sounds, or scripts; the only external runtime request made by the game is the public release check
 
 ## Hosting
 

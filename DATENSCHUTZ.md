@@ -35,6 +35,8 @@ Der Ultra-Modus prüft ausschließlich lokal die Verfügbarkeit von WebGPU und o
 
 Der Soundtrack besteht aus MP3-Dateien, die im Spiel enthalten sind und nach einer Nutzerinteraktion von derselben GitHub-Pages-Adresse geladen werden. Wiedergabe und Levelwechsel erfolgen lokal. Hörverhalten wird weder gespeichert noch übertragen.
 
+Die Update-Prüfung ruft einmal beim Start die öffentliche Release-Liste unter `api.github.com/repos/Schrotty74/Skybreak-Protocol/releases` ab. Die Anfrage enthält weder Punktestand noch Spieleinstellungen, Local-Storage-Werte, Gerätemesswerte, Kontodaten oder eine vom Spiel erzeugte Kennung. GitHub erhält die technisch notwendigen Verbindungsdaten einer normalen Webanfrage. Schlägt der Abruf fehl oder läuft nach fünf Sekunden ab, läuft das Spiel ohne Update-Hinweis weiter.
+
 ## Nicht verwendet
 
 - keine Cookies
@@ -42,8 +44,8 @@ Der Soundtrack besteht aus MP3-Dateien, die im Spiel enthalten sind und nach ein
 - keine Standort-, Kamera- oder Mikrofonberechtigungen
 - keine Kontakt-, Geräte- oder Kontodaten
 - keine Formulare oder Benutzereingaben außerhalb der Spielsteuerung
-- keine `fetch`-, WebSocket-, Beacon- oder XHR-Aufrufe durch das Spiel
-- keine extern geladenen Schriften, Bilder, Sounds oder Skripte
+- keine WebSocket-, Beacon- oder XHR-Aufrufe; `fetch` wird ausschließlich für die oben beschriebene öffentliche GitHub-Release-Prüfung verwendet
+- keine extern geladenen Schriften, Bilder, Sounds oder Skripte; die einzige externe Laufzeitanfrage des Spiels ist die öffentliche Release-Prüfung
 
 ## Hosting
 
