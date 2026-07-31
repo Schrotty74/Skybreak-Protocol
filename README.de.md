@@ -93,6 +93,9 @@ Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
 | Hoch | leistungsfähige Geräte | bis 60 FPS, hohe Auflösung und erweiterte Effekte |
 | Ultra | aktuelle Desktop- und Mobil-GPUs | vollständiges WebGPU-Post-Processing, optionales Mobile Ultra bis 120 FPS, F16-Shader, GPU-Instancing sowie adaptive Auflösung und Effekte; WebGL2-Fallback |
 
+> [!WARNING]
+> **Mobile Ultra kann das Smartphone sehr stark belasten. Das Gerät kann dabei deutlich bis sehr warm werden und der Akkuverbrauch steigt. Für längeres Spielen wird „Mittel“ empfohlen. Bei starker Erwärmung sofort auf „Niedrig“ wechseln oder das Spiel pausieren.**
+
 ### Was Ultra verändert
 
 Ultra ergänzt eine vollständige WebGPU-Pipeline und fordert die **Hochleistungs-GPU** des Browsers an. Unter macOS wird WebGPU vom Browser auf Metal abgebildet; auf aktuellen NVIDIA- und AMD-Systemen kommt die native GPU-Anbindung des Browsers zum Einsatz. Gegenüber Hoch bietet Ultra dichteren mehrschichtigen Nebel und Regen, Energiegitter, animierte Lichtstrahlen, stärkeren Bloom, bildschirmbasierte Neonreflexionen, chromatische Bearbeitung, Tone-Mapping und eine höhere Auflösung bis 4K.
