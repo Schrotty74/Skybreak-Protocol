@@ -188,6 +188,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [quality, setQuality] = useState<Quality>("medium");
   const [nativeFullscreen, setNativeFullscreen] = useState(false);
   const [immersiveMode, setImmersiveMode] = useState(false);
+  const [iPhoneSafari, setIPhoneSafari] = useState(false);
+  const [showInstallHint, setShowInstallHint] = useState(false);
 
   const syncHud = useCallback((world: World) => {
     setScore(world.score);
@@ -221,6 +223,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     qualityRef.current = initialQuality;
     setQuality(initialQuality);
     window.dispatchEvent(new Event("skybreak-quality"));
+    const isIPhone = /iPhone|iPod/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+    setIPhoneSafari(isIPhone && !isStandalone);
   }, []);
 
   useEffect(() => {
@@ -1053,6 +1058,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   };
 
   const toggleFullscreen = async () => {
+    if (iPhoneSafari) {
+      setShowInstallHint(true);
+      return;
+    }
+
     const shell = canvasRef.current?.closest(".game-shell") as HTMLElement | null;
     if (!shell) return;
 
@@ -1121,7 +1131,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <button className="icon-button" onClick={toggleMute} aria-label={muted ? (isDe ? "Ton einschalten" : "Enable sound") : (isDe ? "Ton ausschalten" : "Mute sound")}>
             {muted ? "SOUND OFF" : "SOUND ON"}
           </button>
-          <button className="icon-button" onClick={toggleFullscreen} aria-label={fullscreenActive ? (isDe ? "Vollbild beenden" : "Exit fullscreen") : (isDe ? "Vollbildmodus starten" : "Enter fullscreen")}>{fullscreenActive ? "EXIT" : "FULLSCREEN"}</button>
+          <button className="icon-button" onClick={toggleFullscreen} aria-label={iPhoneSafari ? (isDe ? "App-Modus erklären" : "Explain app mode") : fullscreenActive ? (isDe ? "Vollbild beenden" : "Exit fullscreen") : (isDe ? "Vollbildmodus starten" : "Enter fullscreen")}>{iPhoneSafari ? (isDe ? "APP-MODUS" : "APP MODE") : fullscreenActive ? "EXIT" : "FULLSCREEN"}</button>
           <button className="icon-button" onClick={togglePause} aria-label={isDe ? "Spiel pausieren" : "Pause game"}>PAUSE</button>
         </div>
       </header>
@@ -1174,7 +1184,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         </div>
         <div className="mobile-actions">
           <button onClick={toggleMute}>{muted ? (isDe ? "TON AN" : "SOUND ON") : (isDe ? "TON AUS" : "SOUND OFF")}</button>
-          <button onClick={toggleFullscreen}>{fullscreenActive ? (isDe ? "BEENDEN" : "EXIT") : (isDe ? "VOLLBILD" : "FULLSCREEN")}</button>
+          <button onClick={toggleFullscreen}>{iPhoneSafari ? (isDe ? "APP-MODUS" : "APP MODE") : fullscreenActive ? (isDe ? "BEENDEN" : "EXIT") : (isDe ? "VOLLBILD" : "FULLSCREEN")}</button>
           <button onClick={togglePause}>PAUSE</button>
         </div>
         <label className="quality-picker">
@@ -1191,6 +1201,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <strong>{highScore.toString().padStart(6, "0")}</strong>
         </div>
       </section>
+      {showInstallHint && (
+        <div className="install-hint" role="dialog" aria-modal="true" aria-labelledby="install-hint-title">
+          <div className="install-hint-card">
+            <span>IPHONE // APP MODE</span>
+            <h2 id="install-hint-title">{isDe ? "ECHTES VOLLBILD" : "TRUE FULLSCREEN"}</h2>
+            <p>{isDe ? "Tippe in Safari auf Teilen und dann auf „Zum Home-Bildschirm“. Starte Skybreak anschließend über das App-Symbol." : "In Safari, tap Share and then “Add to Home Screen”. Launch Skybreak from its app icon afterwards."}</p>
+            <button onClick={() => setShowInstallHint(false)}>{isDe ? "VERSTANDEN" : "GOT IT"}</button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

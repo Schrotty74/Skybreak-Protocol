@@ -294,6 +294,53 @@ canvas {
   color: var(--white);
 }
 
+.install-hint {
+  position: fixed;
+  z-index: 20000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(1, 4, 12, .82);
+  backdrop-filter: blur(14px);
+}
+
+.install-hint-card {
+  width: min(100%, 430px);
+  padding: 28px;
+  border: 1px solid rgba(0, 240, 255, .55);
+  background: #06101e;
+  text-align: center;
+  box-shadow: 0 0 50px rgba(0, 240, 255, .18);
+}
+
+.install-hint-card > span {
+  color: var(--pink);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .2em;
+}
+
+.install-hint-card h2 {
+  margin: 12px 0;
+  font-size: 26px;
+}
+
+.install-hint-card p {
+  margin: 0 0 22px;
+  color: #b2cbd8;
+  line-height: 1.55;
+}
+
+.install-hint-card button {
+  min-width: 150px;
+  height: 44px;
+  border: 0;
+  background: var(--cyan);
+  color: #001016;
+  font-weight: 900;
+}
+
 .eyebrow {
   margin: 0 0 12px;
   color: var(--pink);
