@@ -23,6 +23,8 @@ The web app runs without installation. On iPhone or iPad, use **Share → Add to
 
 The current version is shown in the game. On startup, Skybreak Protocol checks the public GitHub releases once and displays a notice when a newer beta or final build is available.
 
+**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.0-beta.1). Extract it and open the matching starter for macOS, Windows, or Linux. All ten music tracks are included; only the optional update check requires internet access.
+
 ## Mobile screenshots
 
 <p align="center">

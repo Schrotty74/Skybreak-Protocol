@@ -1,5 +1,8 @@
 node_modules/
 dist/
+dist-offline/
+release/
+*-offline.zip
 *.tsbuildinfo
 *.local
 .DS_Store

@@ -1,5 +1,7 @@
 import { copyFile, mkdir } from "node:fs/promises";
 
-await mkdir("dist/de", { recursive: true });
-await copyFile("dist/source/index.html", "dist/index.html");
-await copyFile("dist/source/de/index.html", "dist/de/index.html");
+const outputDirectory = process.argv[2] ?? "dist";
+
+await mkdir(`${outputDirectory}/de`, { recursive: true });
+await copyFile(`${outputDirectory}/source/index.html`, `${outputDirectory}/index.html`);
+await copyFile(`${outputDirectory}/source/de/index.html`, `${outputDirectory}/de/index.html`);

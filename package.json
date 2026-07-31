@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run verify:release && tsc -b && vite build && node scripts/promote-pages.mjs",
+    "build:offline": "npm run verify:release && tsc -b && vite build --base / --outDir dist-offline && node scripts/promote-pages.mjs dist-offline && node scripts/package-offline.mjs",
     "verify:release": "node scripts/verify-release.mjs",
     "preview": "vite preview"
   },

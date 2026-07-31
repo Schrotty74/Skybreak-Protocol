@@ -24,6 +24,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - run: npm run build:offline
 
       - name: Publish versioned release notes
         env:
@@ -32,12 +33,16 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           TAG="v${VERSION}"
           NOTES="docs/releases/${VERSION}.md"
+          ARCHIVE="Skybreak-Protocol-${VERSION}-offline.zip"
+          tail -n +3 "$NOTES" > release-notes.md
+          (cd release && zip -r "../${ARCHIVE}" "Skybreak-Protocol-${VERSION}")
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "$TAG already exists"
-            exit 0
-          fi
-          if [[ "$VERSION" == *-beta.* ]]; then
-            gh release create "$TAG" --target "$GITHUB_SHA" --title "Skybreak Protocol $TAG" --notes-file "$NOTES" --prerelease
+            gh release edit "$TAG" --title "Skybreak Protocol $TAG" --notes-file release-notes.md
           else
-            gh release create "$TAG" --target "$GITHUB_SHA" --title "Skybreak Protocol $TAG" --notes-file "$NOTES" --latest
+            if [[ "$VERSION" == *-beta.* ]]; then
+              gh release create "$TAG" --target "$GITHUB_SHA" --title "Skybreak Protocol $TAG" --notes-file release-notes.md --prerelease
+            else
+              gh release create "$TAG" --target "$GITHUB_SHA" --title "Skybreak Protocol $TAG" --notes-file release-notes.md --latest
+            fi
           fi
+          gh release upload "$TAG" "$ARCHIVE" --clobber
