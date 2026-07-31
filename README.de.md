@@ -61,7 +61,7 @@ Die Upgrades gelten für den aktuellen Durchlauf und werden als `P`- und `S`-Wer
 
 ## Eigener Techno-Soundtrack
 
-Der Startbildschirm und jedes Level besitzen einen eigenen Cyberpunk-Techno-Track. Die Musik startet nach der ersten Berührung oder Taste, wechselt automatisch mit einer kurzen Überblendung, läuft im Level als Schleife und folgt dem vorhandenen Ton-Schalter.
+Der Startbildschirm und jedes Level besitzen einen eigenen Cyberpunk-Techno-Track. Die Musik startet nach der ersten Berührung oder Taste, wechselt automatisch mit einer kurzen Überblendung, läuft im Level als Schleife und lässt sich unabhängig von den Soundeffekten ein- und ausschalten.
 
 | Level | Track | BPM | Anhören / Download |
 |---|---|---:|---|
