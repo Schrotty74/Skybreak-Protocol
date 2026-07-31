@@ -247,6 +247,15 @@ canvas {
   filter: none;
 }
 
+@media (pointer: coarse) {
+  .fx-canvas.full-scene-fx {
+    /* Black is neutral in screen mode, so Safari cannot hide the base game
+       canvas when WebGPU canvas-to-texture copying fails. */
+    mix-blend-mode: screen;
+    opacity: .88;
+  }
+}
+
 .game-overlay {
   position: absolute;
   z-index: 5;

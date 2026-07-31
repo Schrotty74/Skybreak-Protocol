@@ -381,7 +381,10 @@ async function startWebGpuUltraRenderer(
   const adapter = await gpu.requestAdapter({ powerPreference: "high-performance" });
   if (!adapter || adapter.info?.isFallbackAdapter) return null;
   const maxTextureSize = Math.min(Number(adapter.limits?.maxTextureDimension2D || 4096), 4096);
-  const supportsF16 = Boolean(adapter.features?.has?.("shader-f16"));
+  const mobile = window.matchMedia("(pointer: coarse)").matches;
+  // Current mobile WebKit builds can expose shader-f16 while producing a black
+  // post-process texture. Keep the stable F32 path on touch devices.
+  const supportsF16 = !mobile && Boolean(adapter.features?.has?.("shader-f16"));
   const device = await adapter.requestDevice({ requiredFeatures: supportsF16 ? ["shader-f16"] : [] });
   const format = gpu.getPreferredCanvasFormat();
   const context = canvas.getContext("webgpu") as any;
@@ -594,7 +597,6 @@ async function startWebGpuUltraRenderer(
 
   const isMac = /Macintosh|Mac OS X/i.test(navigator.userAgent);
   updateRenderer(`${isMac ? "WEBGPU · METAL" : "WEBGPU · NATIVE"}${supportsF16 ? " · F16" : " · F32"} · INSTANCED`);
-  const mobile = window.matchMedia("(pointer: coarse)").matches;
   const worker = new Worker(new URL("./ultraWorker.ts", import.meta.url), { type: "module" });
   let active = true;
   let animation = 0;
