@@ -729,3 +729,18 @@ kbd {
     animation: none;
   }
 }
+
+
+/* Keep the iOS standalone safe area dark instead of WebKit's white canvas. */
+html,
+body,
+#root {
+  min-height: 100%;
+  background-color: #02040d;
+}
+
+html,
+body,
+#root {
+  min-height: 100dvh;
+}
