@@ -93,6 +93,9 @@ The selected level is stored locally on the device.
 | High | powerful devices | up to 60 FPS, high resolution, and extended effects |
 | Ultra | current desktop and mobile GPUs | full-scene WebGPU post-processing, optional Mobile Ultra up to 120 FPS, F16 shaders, GPU instancing, adaptive resolution and effects; WebGL2 fallback |
 
+> [!WARNING]
+> **Mobile Ultra can place a very heavy load on a smartphone. The device may become noticeably or very warm and battery consumption increases. Medium is recommended for longer sessions. If the phone becomes very warm, switch to Low immediately or pause the game.**
+
 ### What Ultra changes
 
 Ultra adds a full-scene WebGPU pipeline that requests the browser's **high-performance GPU**. On macOS the browser maps WebGPU to Metal; on current NVIDIA and AMD systems it uses the browser's native GPU backend. Compared with High, Ultra renders denser multilayer fog and rain, energy grids, animated light beams, stronger bloom, screen-space neon reflections, chromatic treatment, tone mapping, and higher resolution up to 4K.
