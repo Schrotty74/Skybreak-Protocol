@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/icon-512.png" alt="Skybreak Protocol Symbol" width="180" height="180">
+</p>
+
 # Skybreak Protocol
 
 Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus und erreiche den Sendeturm über der Megacity.
