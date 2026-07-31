@@ -56,7 +56,7 @@ The selected level is stored locally on the device.
 | Low | older or warm mobile devices | 30 FPS, reduced resolution, WebGL effects disabled, little rain and fog |
 | Medium | recommended smartphone setting | 40 FPS, WebGL fog, reduced particles and parallax |
 | High | powerful devices | up to 60 FPS, high resolution, and extended effects |
-| Ultra | current desktop GPUs and 4K | full-scene WebGPU post-processing, GPU instancing, adaptive 60/90/120 FPS, maximum effects; WebGL2 fallback |
+| Ultra | current desktop and mobile GPUs | full-scene WebGPU post-processing, optional Mobile Ultra up to 120 FPS, F16 shaders, GPU instancing, adaptive resolution and effects; WebGL2 fallback |
 
 ### What Ultra changes
 
@@ -64,13 +64,15 @@ Ultra adds a full-scene WebGPU pipeline that requests the browser's **high-perfo
 
 Platforms, enemies, debris, gameplay particles, and rain receive GPU-instanced enhancement layers. A dedicated Web Worker calculates atmospheric instances and evaluates frame timing away from the main game thread. On suitable desktop displays the renderer automatically selects 60, 90, or up to 120 FPS and adjusts resolution between 62% and 100% to remain stable.
 
-Unsupported or software-only WebGPU adapters automatically use the existing WebGL2 and Canvas renderer. Mobile devices remain limited to 60 FPS to reduce heat and battery load.
+When supported, Ultra uses efficient 16-bit shader arithmetic for tone mapping and otherwise keeps the compatible 32-bit path. **Mobile Ultra** can be switched from the safer 60 FPS default to adaptive 60/90/120 FPS on high-refresh devices. The browser exposes no temperature sensor, so a local performance controller detects sustained frame-time degradation as a sign of thermal or power throttling and progressively reduces bloom samples, reflections, post-processing, and render resolution. No measurement leaves the device.
+
+Unsupported or software-only WebGPU adapters automatically use the existing WebGL2 and Canvas renderer.
 
 ### iPhone Pro and hardware ray tracing
 
 The iPhone 15 Pro introduced a 6-core Apple GPU with hardware-accelerated ray tracing. The iPhone 17 Pro uses the A19 Pro with a 6-core GPU, hardware-accelerated ray tracing, and improved sustained gaming performance. Skybreak Protocol already benefits from these GPUs through Safari's WebGPU-to-Metal path: Ultra uses full-scene post-processing, GPU instancing, worker-assisted calculations, and adaptive resolution on supported iPhones. [Apple: iPhone 15 Pro](https://www.apple.com/newsroom/2023/09/apple-unveils-iphone-15-pro-and-iphone-15-pro-max/) · [Apple: iPhone 17 Pro specifications](https://www.apple.com/iphone-17-pro/specs/)
 
-Hardware ray-tracing cores cannot currently be addressed directly by this web app because ray tracing is not part of the browser WebGPU feature set. Ultra therefore uses screen-space neon reflections rather than hardware ray tracing. On an iPhone 17 Pro, Ultra remains capped at 60 FPS and dynamically lowers effect resolution when needed to limit heat and battery consumption. [Current WebGPU feature list](https://gpuweb.github.io/types/types/GPUFeatureName.html)
+Hardware ray-tracing cores cannot currently be addressed directly by this web app because ray tracing is not part of the browser WebGPU feature set. Ultra therefore uses screen-space neon reflections rather than hardware ray tracing. On a high-refresh iPhone Pro, the optional Mobile Ultra setting can target up to 120 FPS; the adaptive controller falls back to 90/60 FPS and reduced post-processing when sustained performance drops. [Current WebGPU feature list](https://gpuweb.github.io/types/types/GPUFeatureName.html)
 
 ## Visual effects
 
@@ -80,6 +82,8 @@ Hardware ray-tracing cores cannot currently be addressed directly by this web ap
 - Web Worker for atmospheric instance calculation and adaptive 60/90/120 FPS control
 - automatic use of Metal on macOS and the browser's native GPU backend on current NVIDIA/AMD systems
 - adaptive Ultra effect resolution up to 4K with WebGL2 fallback
+- conditional F16 WebGPU tone mapping with automatic F32 fallback
+- optional Mobile Ultra up to 120 FPS with performance-based thermal protection
 - multilayer parallax megacity with illuminated windows
 - volumetric searchlights and dynamic light cones
 - holographic advertising and flying city traffic

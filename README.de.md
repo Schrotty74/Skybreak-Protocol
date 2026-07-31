@@ -56,7 +56,7 @@ Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
 | Niedrig | ältere oder warme Mobilgeräte | 30 FPS, reduzierte Auflösung, WebGL-Effekte aus, wenig Regen und Nebel |
 | Mittel | empfohlene Smartphone-Einstellung | 40 FPS, WebGL-Nebel, reduzierte Partikel und Parallaxe |
 | Hoch | leistungsfähige Geräte | bis 60 FPS, hohe Auflösung und erweiterte Effekte |
-| Ultra | aktuelle Desktop-GPUs und 4K | vollständiges WebGPU-Post-Processing, GPU-Instancing, adaptive 60/90/120 FPS und maximale Effekte; WebGL2-Fallback |
+| Ultra | aktuelle Desktop- und Mobil-GPUs | vollständiges WebGPU-Post-Processing, optionales Mobile Ultra bis 120 FPS, F16-Shader, GPU-Instancing sowie adaptive Auflösung und Effekte; WebGL2-Fallback |
 
 ### Was Ultra verändert
 
@@ -64,13 +64,15 @@ Ultra ergänzt eine vollständige WebGPU-Pipeline und fordert die **Hochleistung
 
 Plattformen, Gegner, Trümmer, Spielpartikel und Regen erhalten GPU-instanzierte Verstärkungsebenen. Ein eigener Web Worker berechnet atmosphärische Instanzen und wertet die Bildzeiten außerhalb des Hauptthreads aus. Auf geeigneten Desktop-Bildschirmen wählt der Renderer automatisch 60, 90 oder bis zu 120 FPS und passt die Auflösung zwischen 62 und 100 Prozent an.
 
-Bei fehlender WebGPU-Unterstützung oder einem Softwareadapter werden automatisch der vorhandene WebGL2- und Canvas-Renderer verwendet. Mobilgeräte bleiben zur Begrenzung von Wärme und Akkuverbrauch auf 60 FPS beschränkt.
+Wenn verfügbar, verwendet Ultra effiziente 16-Bit-Shader-Berechnungen für das Tone-Mapping und andernfalls den kompatiblen 32-Bit-Pfad. **Mobile Ultra** lässt sich vom schonenderen Standard mit 60 FPS auf adaptive 60/90/120 FPS für Bildschirme mit hoher Bildrate umstellen. Browser stellen keinen Temperatursensor bereit. Deshalb erkennt eine lokale Leistungssteuerung anhaltend schlechtere Bildzeiten als Hinweis auf Wärme- oder Leistungsdrosselung und reduziert stufenweise Bloom-Abtastungen, Reflexionen, Post-Processing und Renderauflösung. Messwerte verlassen das Gerät nicht.
+
+Bei fehlender WebGPU-Unterstützung oder einem Softwareadapter werden automatisch der vorhandene WebGL2- und Canvas-Renderer verwendet.
 
 ### iPhone Pro und Hardware-Raytracing
 
 Mit dem iPhone 15 Pro führte Apple eine 6-Core-GPU mit hardwarebeschleunigtem Raytracing ein. Das iPhone 17 Pro verwendet den A19 Pro mit 6-Core-GPU, hardwarebeschleunigtem Raytracing und verbesserter dauerhafter Spieleleistung. Skybreak Protocol profitiert bereits über Safaris WebGPU-zu-Metal-Anbindung davon: Ultra verwendet auf unterstützten iPhones vollständiges Post-Processing, GPU-Instancing, Worker-gestützte Berechnungen und adaptive Auflösung. [Apple: iPhone 15 Pro](https://www.apple.com/de/newsroom/2023/09/apple-unveils-iphone-15-pro-and-iphone-15-pro-max/) · [Apple: technische Daten des iPhone 17 Pro](https://www.apple.com/iphone-17-pro/specs/)
 
-Die Hardware-Raytracing-Kerne können von dieser Web-App derzeit nicht direkt angesprochen werden, weil Raytracing nicht zum Funktionsumfang der Browser-WebGPU-Schnittstelle gehört. Ultra verwendet deshalb bildschirmbasierte Neonreflexionen statt Hardware-Raytracing. Auf einem iPhone 17 Pro bleibt Ultra auf 60 FPS begrenzt und senkt bei Bedarf automatisch die Effektauflösung, um Wärmeentwicklung und Akkuverbrauch zu begrenzen. [Aktuelle WebGPU-Funktionsliste](https://gpuweb.github.io/types/types/GPUFeatureName.html)
+Die Hardware-Raytracing-Kerne können von dieser Web-App derzeit nicht direkt angesprochen werden, weil Raytracing nicht zum Funktionsumfang der Browser-WebGPU-Schnittstelle gehört. Ultra verwendet deshalb bildschirmbasierte Neonreflexionen statt Hardware-Raytracing. Auf einem Pro-iPhone mit hoher Bildrate kann Mobile Ultra optional bis zu 120 FPS anstreben; bei anhaltendem Leistungseinbruch wird auf 90/60 FPS und reduziertes Post-Processing zurückgeschaltet. [Aktuelle WebGPU-Funktionsliste](https://gpuweb.github.io/types/types/GPUFeatureName.html)
 
 ## Grafische Effekte
 
@@ -80,6 +82,8 @@ Die Hardware-Raytracing-Kerne können von dieser Web-App derzeit nicht direkt an
 - Web Worker für atmosphärische Instanzberechnung und adaptive Steuerung mit 60/90/120 FPS
 - automatische Nutzung von Metal unter macOS und der nativen Browser-GPU-Anbindung auf aktuellen NVIDIA-/AMD-Systemen
 - adaptive Ultra-Effektauflösung bis 4K mit WebGL2-Fallback
+- bedingtes F16-WebGPU-Tone-Mapping mit automatischem F32-Fallback
+- optionales Mobile Ultra bis 120 FPS mit leistungsbasiertem Wärmeschutz
 - mehrstufige Parallax-Megacity mit beleuchteten Fenstern
 - volumetrische Suchscheinwerfer und dynamische Lichtkegel
 - holografische Werbeflächen und fliegender Stadtverkehr

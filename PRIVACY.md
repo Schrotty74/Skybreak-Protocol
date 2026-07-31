@@ -20,17 +20,18 @@ Dependencies (`node_modules`) are not published. The automatically generated loc
 
 ## Processing in the browser
 
-Skybreak Protocol stores only three technically non-personal values in the local storage of the current browser:
+Skybreak Protocol stores only four technically non-personal values in the local storage of the current browser:
 
 | Key | Content | Purpose | Transmission |
 |---|---|---|---|
 | `neon-ascent-highscore` | highest score reached locally | game progress | none |
 | `skybreak-quality` | selected graphics level | retain the device setting | none |
 | `skybreak-level-difficulties` | difficulty selected for each level | retain the game setting | none |
+| `skybreak-mobile-ultra-120` | optional mobile high-refresh setting | retain the device setting | none |
 
 These values never leave the device. They can be removed by deleting the site's browser data.
 
-Ultra mode checks WebGPU availability, local GPU capability limits, and frame timing to select WebGPU or the WebGL2 fallback, adapt render resolution, and choose 60, 90, or 120 FPS. A same-origin module Web Worker performs local effect and timing calculations. No GPU model, adapter information, benchmark result, frame timing, or hardware identifier is stored or transmitted.
+Ultra mode checks WebGPU and optional F16 support, local GPU capability limits, and frame timing to select WebGPU or the WebGL2 fallback, adapt render resolution and post-processing, and choose 60, 90, or 120 FPS. A same-origin module Web Worker performs local effect and timing calculations. Browsers provide no temperature reading to the game; sustained frame-time degradation is used locally as a performance-throttling signal. No GPU model, adapter information, benchmark result, frame timing, temperature, or hardware identifier is stored or transmitted.
 
 ## Not used
 

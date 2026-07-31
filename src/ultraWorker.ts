@@ -3,12 +3,16 @@ type UltraTick = {
   time: number;
   frameDelta: number;
   allowHighRefresh: boolean;
+  mobile: boolean;
   rainCount: number;
 };
 
 let averageFrameTime = 16.67;
 let renderScale = 1;
 let targetFps = 60;
+let peakFps = 60;
+let performancePressure = 0;
+let postQuality = 2;
 
 const hash = (value: number) => {
   const x = Math.sin(value * 127.1 + 311.7) * 43758.5453;
@@ -26,10 +30,21 @@ self.onmessage = (event: MessageEvent<UltraTick>) => {
   if (message.allowHighRefresh && refreshEstimate >= 108 && renderScale >= 0.78) targetFps = 120;
   else if (message.allowHighRefresh && refreshEstimate >= 82 && renderScale >= 0.72) targetFps = 90;
   else targetFps = 60;
+  peakFps = Math.max(peakFps, targetFps);
 
   const targetFrameTime = 1000 / targetFps;
   if (averageFrameTime > targetFrameTime * 1.2) renderScale = Math.max(0.62, renderScale - 0.045);
   else if (averageFrameTime < targetFrameTime * 1.04) renderScale = Math.min(1, renderScale + 0.012);
+
+  // Browsers expose no temperature sensor. Sustained frame-time degradation is
+  // used as a local proxy for thermal or power throttling.
+  const sustainedStress = averageFrameTime > targetFrameTime * 1.16
+    || renderScale <= 0.7
+    || (peakFps >= 120 && targetFps < 120);
+  performancePressure = Math.max(0, Math.min(1,
+    performancePressure + (sustainedStress ? (message.mobile ? 0.035 : 0.022) : -0.012),
+  ));
+  postQuality = performancePressure > 0.72 ? 0 : performancePressure > 0.34 ? 1 : 2;
 
   const count = Math.max(48, Math.min(240, message.rainCount));
   const instances = new Float32Array(count * 8);
@@ -53,6 +68,7 @@ self.onmessage = (event: MessageEvent<UltraTick>) => {
     buffer: instances.buffer,
     renderScale,
     targetFps,
+    postQuality,
     averageFrameTime,
   }, { transfer: [instances.buffer] });
 };

@@ -20,17 +20,18 @@ Abhängigkeiten (`node_modules`) werden nicht veröffentlicht. Der automatisch e
 
 ## Verarbeitung im Browser
 
-Skybreak Protocol speichert nur drei technisch nicht personenbezogene Werte im lokalen Speicher des jeweiligen Browsers:
+Skybreak Protocol speichert nur vier technisch nicht personenbezogene Werte im lokalen Speicher des jeweiligen Browsers:
 
 | Schlüssel | Inhalt | Zweck | Übertragung |
 |---|---|---|---|
 | `neon-ascent-highscore` | höchste lokal erreichte Punktzahl | Spielstand | keine |
 | `skybreak-quality` | gewählte Grafikstufe | Geräteeinstellung beibehalten | keine |
 | `skybreak-level-difficulties` | je Level gewählte Schwierigkeit | Spieleinstellung beibehalten | keine |
+| `skybreak-mobile-ultra-120` | optionale Einstellung für hohe mobile Bildrate | Geräteeinstellung beibehalten | keine |
 
 Diese Werte verlassen das Gerät nicht. Sie können durch Löschen der Websitedaten im Browser entfernt werden.
 
-Der Ultra-Modus prüft ausschließlich lokal die Verfügbarkeit von WebGPU, technische GPU-Grenzwerte und Bildzeiten, um WebGPU oder den WebGL2-Fallback zu wählen, die Renderauflösung anzupassen und 60, 90 oder 120 FPS auszuwählen. Ein Modul-Web-Worker gleicher Herkunft führt lokale Effekt- und Zeitberechnungen aus. GPU-Modell, Adapterinformationen, Messergebnisse, Bildzeiten oder Hardwarekennungen werden weder gespeichert noch übertragen.
+Der Ultra-Modus prüft ausschließlich lokal die Verfügbarkeit von WebGPU und optionalem F16, technische GPU-Grenzwerte und Bildzeiten, um WebGPU oder den WebGL2-Fallback zu wählen, Renderauflösung und Post-Processing anzupassen und 60, 90 oder 120 FPS auszuwählen. Ein Modul-Web-Worker gleicher Herkunft führt lokale Effekt- und Zeitberechnungen aus. Browser stellen dem Spiel keine Temperaturmessung bereit; anhaltend schlechtere Bildzeiten dienen lokal als Signal für Leistungsdrosselung. GPU-Modell, Adapterinformationen, Messergebnisse, Bildzeiten, Temperatur oder Hardwarekennungen werden weder gespeichert noch übertragen.
 
 ## Nicht verwendet
 

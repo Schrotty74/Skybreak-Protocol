@@ -438,6 +438,7 @@ canvas {
 }
 
 .quality-picker,
+.mobile-ultra-picker,
 .difficulty-picker {
   display: flex;
   align-items: center;
@@ -445,6 +446,7 @@ canvas {
 }
 
 .quality-picker span,
+.mobile-ultra-picker span,
 .difficulty-picker span {
   color: #668ca3;
   font-size: 8px;
@@ -453,6 +455,7 @@ canvas {
 }
 
 .quality-picker select,
+.mobile-ultra-picker select,
 .difficulty-picker select {
   height: 34px;
   min-width: 92px;
@@ -462,6 +465,15 @@ canvas {
   background: #071321;
   color: var(--cyan);
   font: 800 9px ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+}
+
+.mobile-ultra-picker small {
+  max-width: 150px;
+  color: #f1ca55;
+  font: 700 7px ui-monospace, SFMono-Regular, Menlo, monospace;
+  line-height: 1.35;
+  letter-spacing: .05em;
   text-transform: uppercase;
 }
 
@@ -660,6 +672,7 @@ kbd {
   }
 
   .quality-picker,
+  .mobile-ultra-picker,
   .difficulty-picker {
     justify-self: center;
   }

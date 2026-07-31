@@ -372,6 +372,8 @@ async function startWebGpuUltraRenderer(
   updateRenderer: (name: string) => void,
   getSceneInstances: () => Float32Array,
   updateFrameRate: (fps: number) => void,
+  getAllowHighRefresh: () => boolean,
+  updateThermalProtection: (active: boolean) => void,
 ): Promise<EffectCleanup | null> {
   const gpu = (navigator as Navigator & { gpu?: any }).gpu;
   if (!gpu) return null;
@@ -379,7 +381,8 @@ async function startWebGpuUltraRenderer(
   const adapter = await gpu.requestAdapter({ powerPreference: "high-performance" });
   if (!adapter || adapter.info?.isFallbackAdapter) return null;
   const maxTextureSize = Math.min(Number(adapter.limits?.maxTextureDimension2D || 4096), 4096);
-  const device = await adapter.requestDevice();
+  const supportsF16 = Boolean(adapter.features?.has?.("shader-f16"));
+  const device = await adapter.requestDevice({ requiredFeatures: supportsF16 ? ["shader-f16"] : [] });
   const format = gpu.getPreferredCanvasFormat();
   const context = canvas.getContext("webgpu") as any;
   if (!context) return null;
@@ -389,7 +392,7 @@ async function startWebGpuUltraRenderer(
   const textureUsage = (globalThis as any).GPUTextureUsage;
   const uniformBuffer = device.createBuffer({
     label: "Skybreak Ultra uniforms",
-    size: 16,
+    size: 32,
     usage: (usage?.UNIFORM ?? 0x40) | (usage?.COPY_DST ?? 0x08),
   });
   const quadBuffer = device.createBuffer({
@@ -411,7 +414,16 @@ async function startWebGpuUltraRenderer(
   const postShader = device.createShaderModule({
     label: "Skybreak full-scene post processing",
     code: `
-      struct Uniforms { resolution: vec2f, time: f32, intensity: f32 };
+      ${supportsF16 ? "enable f16;" : ""}
+      struct Uniforms {
+        resolution: vec2f,
+        time: f32,
+        intensity: f32,
+        postQuality: f32,
+        bloomStrength: f32,
+        reflectionStrength: f32,
+        padding: f32,
+      };
       @group(0) @binding(0) var<uniform> uniforms: Uniforms;
       @group(0) @binding(1) var sceneTexture: texture_2d<f32>;
       @group(0) @binding(2) var sceneSampler: sampler;
@@ -422,6 +434,9 @@ async function startWebGpuUltraRenderer(
         return mix(mix(hash(i), hash(i + vec2f(1.0, 0.0)), f.x),
                    mix(hash(i + vec2f(0.0, 1.0)), hash(i + vec2f(1.0, 1.0)), f.x), f.y);
       }
+      ${supportsF16
+        ? "fn toneMap(color32: vec3f) -> vec3f { let color = vec3<f16>(max(color32, vec3f(0.0))); let mapped = color / (color + vec3<f16>(f16(0.82))); return vec3f(mapped); }"
+        : "fn toneMap(color: vec3f) -> vec3f { return color / (color + vec3f(0.82)); }"}
       @vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
         var points = array<vec2f, 3>(vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
         return vec4f(points[index], 0.0, 1.0);
@@ -436,21 +451,28 @@ async function startWebGpuUltraRenderer(
         let baseB = textureSample(sceneTexture, sceneSampler, clamp(uv - vec2f(chroma.x, 0.0), vec2f(0.0), vec2f(1.0))).b;
         var scene = vec3f(baseR, baseG, baseB);
 
-        var bloom = textureSample(sceneTexture, sceneSampler, uv + texel * vec2f(4.0, 0.0)).rgb;
-        bloom += textureSample(sceneTexture, sceneSampler, uv - texel * vec2f(4.0, 0.0)).rgb;
-        bloom += textureSample(sceneTexture, sceneSampler, uv + texel * vec2f(0.0, 4.0)).rgb;
-        bloom += textureSample(sceneTexture, sceneSampler, uv - texel * vec2f(0.0, 4.0)).rgb;
-        bloom += textureSample(sceneTexture, sceneSampler, uv + texel * vec2f(3.0, 3.0)).rgb;
-        bloom += textureSample(sceneTexture, sceneSampler, uv - texel * vec2f(3.0, 3.0)).rgb;
-        bloom *= 0.1667;
-        bloom = max(bloom - vec3f(0.28), vec3f(0.0));
-        scene += bloom * 0.42;
+        var bloom = vec3f(0.0);
+        if (uniforms.postQuality > 0.25) {
+          bloom += textureSample(sceneTexture, sceneSampler, uv + texel * vec2f(4.0, 0.0)).rgb;
+          bloom += textureSample(sceneTexture, sceneSampler, uv - texel * vec2f(4.0, 0.0)).rgb;
+          if (uniforms.postQuality > 1.25) {
+            bloom += textureSample(sceneTexture, sceneSampler, uv + texel * vec2f(0.0, 4.0)).rgb;
+            bloom += textureSample(sceneTexture, sceneSampler, uv - texel * vec2f(0.0, 4.0)).rgb;
+            bloom += textureSample(sceneTexture, sceneSampler, uv + texel * vec2f(3.0, 3.0)).rgb;
+            bloom += textureSample(sceneTexture, sceneSampler, uv - texel * vec2f(3.0, 3.0)).rgb;
+            bloom *= 0.1667;
+          } else {
+            bloom *= 0.5;
+          }
+          bloom = max(bloom - vec3f(0.28), vec3f(0.0));
+          scene += bloom * uniforms.bloomStrength;
 
-        let distortion = (noise(vec2f(uv.x * 24.0, uniforms.time * 0.45)) - 0.5) * 0.012;
-        let reflectionUv = clamp(vec2f(uv.x + distortion, 1.18 - uv.y), vec2f(0.0), vec2f(1.0));
-        let reflected = textureSample(sceneTexture, sceneSampler, reflectionUv).rgb;
-        let reflectionMask = smoothstep(0.5, 0.96, uv.y) * (1.0 - smoothstep(0.96, 1.0, uv.y));
-        scene += reflected * reflectionMask * 0.16;
+          let distortion = (noise(vec2f(uv.x * 24.0, uniforms.time * 0.45)) - 0.5) * 0.012;
+          let reflectionUv = clamp(vec2f(uv.x + distortion, 1.18 - uv.y), vec2f(0.0), vec2f(1.0));
+          let reflected = textureSample(sceneTexture, sceneSampler, reflectionUv).rgb;
+          let reflectionMask = smoothstep(0.5, 0.96, uv.y) * (1.0 - smoothstep(0.96, 1.0, uv.y));
+          scene += reflected * reflectionMask * uniforms.reflectionStrength;
+        }
 
         var p = uv * 2.0 - 1.0;
         p.x *= uniforms.resolution.x / uniforms.resolution.y;
@@ -467,7 +489,7 @@ async function startWebGpuUltraRenderer(
 
         let vignette = 1.0 - smoothstep(0.55, 1.25, length(p));
         scene *= 0.78 + vignette * 0.28;
-        scene = scene / (scene + vec3f(0.82));
+        scene = toneMap(scene);
         scene = pow(max(scene, vec3f(0.0)), vec3f(0.92));
         return vec4f(scene, 1.0);
       }
@@ -571,8 +593,8 @@ async function startWebGpuUltraRenderer(
   };
 
   const isMac = /Macintosh|Mac OS X/i.test(navigator.userAgent);
-  updateRenderer(isMac ? "WEBGPU · METAL · INSTANCED" : "WEBGPU · NATIVE · INSTANCED");
-  const allowHighRefresh = window.matchMedia("(pointer: fine)").matches;
+  updateRenderer(`${isMac ? "WEBGPU · METAL" : "WEBGPU · NATIVE"}${supportsF16 ? " · F16" : " · F32"} · INSTANCED`);
+  const mobile = window.matchMedia("(pointer: coarse)").matches;
   const worker = new Worker(new URL("./ultraWorker.ts", import.meta.url), { type: "module" });
   let active = true;
   let animation = 0;
@@ -580,14 +602,17 @@ async function startWebGpuUltraRenderer(
   let workerInstances = new Float32Array(0);
   let renderScale = 1;
   let targetFps = 60;
+  let postQuality = 2;
   let lastAnimationFrame = performance.now();
   let lastRenderedFrame = 0;
   let lastWorkerPost = 0;
 
-  worker.onmessage = (event: MessageEvent<{ buffer: ArrayBuffer; renderScale: number; targetFps: number }>) => {
+  worker.onmessage = (event: MessageEvent<{ buffer: ArrayBuffer; renderScale: number; targetFps: number; postQuality: number }>) => {
     workerBusy = false;
     workerInstances = new Float32Array(event.data.buffer);
     renderScale = Math.max(0.62, Math.min(1, event.data.renderScale));
+    postQuality = Math.max(0, Math.min(2, event.data.postQuality));
+    updateThermalProtection(postQuality < 2);
     const nextFps = Math.max(60, Math.min(120, event.data.targetFps));
     if (nextFps !== targetFps) {
       targetFps = nextFps;
@@ -610,7 +635,7 @@ async function startWebGpuUltraRenderer(
     if (!workerBusy && time - lastWorkerPost >= 24) {
       workerBusy = true;
       lastWorkerPost = time;
-      worker.postMessage({ type: "tick", time, frameDelta: animationDelta, allowHighRefresh, rainCount: 220 });
+      worker.postMessage({ type: "tick", time, frameDelta: animationDelta, allowHighRefresh: getAllowHighRefresh(), mobile, rainCount: 220 });
     }
 
     const frameInterval = 1000 / targetFps;
@@ -651,7 +676,11 @@ async function startWebGpuUltraRenderer(
     const sceneCount = Math.min(sceneInstances.length / 8, instanceCapacity - workerCount);
     if (workerCount > 0) device.queue.writeBuffer(instanceBuffer, 0, workerInstances.subarray(0, workerCount * 8));
     if (sceneCount > 0) device.queue.writeBuffer(instanceBuffer, workerCount * 32, sceneInstances.subarray(0, sceneCount * 8));
-    device.queue.writeBuffer(uniformBuffer, 0, new Float32Array([width, height, time * 0.001, 1]));
+    const bloomStrength = postQuality >= 2 ? 0.42 : postQuality >= 1 ? 0.22 : 0;
+    const reflectionStrength = postQuality >= 2 ? 0.16 : postQuality >= 1 ? 0.07 : 0;
+    device.queue.writeBuffer(uniformBuffer, 0, new Float32Array([
+      width, height, time * 0.001, 1, postQuality, bloomStrength, reflectionStrength, 0,
+    ]));
 
     const encoder = device.createCommandEncoder({ label: "Skybreak Ultra frame" });
     const pass = encoder.beginRenderPass({
@@ -680,6 +709,7 @@ async function startWebGpuUltraRenderer(
     active = false;
     cancelAnimationFrame(animation);
     worker.terminate();
+    updateThermalProtection(false);
     sceneTexture?.destroy();
     uniformBuffer.destroy();
     quadBuffer.destroy();
@@ -812,6 +842,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const mutedRef = useRef(false);
   const qualityRef = useRef<Quality>("medium");
   const ultraFpsRef = useRef(60);
+  const mobileUltra120Ref = useRef(false);
   const renderViewRef = useRef({ width: VIEW_W, height: VIEW_H, portrait: false });
   const difficultiesRef = useRef<Difficulty[]>(Array(LEVEL_COUNT).fill("medium"));
   const [status, setStatus] = useState<GameStatus>("ready");
@@ -822,6 +853,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [highScore, setHighScore] = useState(0);
   const [renderer, setRenderer] = useState("CANVAS 2D");
   const [ultraFps, setUltraFps] = useState(60);
+  const [mobileUltra120, setMobileUltra120] = useState(false);
+  const [mobileDevice, setMobileDevice] = useState(false);
+  const [thermalProtection, setThermalProtection] = useState(false);
   const [quality, setQuality] = useState<Quality>("medium");
   const [nativeFullscreen, setNativeFullscreen] = useState(false);
   const [immersiveMode, setImmersiveMode] = useState(false);
@@ -860,6 +894,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       : window.matchMedia("(pointer: coarse)").matches ? "medium" : "high";
     qualityRef.current = initialQuality;
     setQuality(initialQuality);
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    setMobileDevice(coarsePointer);
+    const savedMobileUltra120 = localStorage.getItem("skybreak-mobile-ultra-120") === "true";
+    mobileUltra120Ref.current = savedMobileUltra120;
+    setMobileUltra120(savedMobileUltra120);
     window.dispatchEvent(new Event("skybreak-quality"));
     const isIPhone = /iPhone|iPod/i.test(navigator.userAgent);
     const isStandalone = window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
@@ -891,6 +930,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     setQuality(next);
     localStorage.setItem("skybreak-quality", next);
     window.dispatchEvent(new Event("skybreak-quality"));
+  };
+
+  const chooseMobileUltra120 = (enabled: boolean) => {
+    mobileUltra120Ref.current = enabled;
+    setMobileUltra120(enabled);
+    localStorage.setItem("skybreak-mobile-ultra-120", String(enabled));
   };
 
   const chooseDifficulty = (next: Difficulty) => {
@@ -969,6 +1014,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ultraFpsRef.current = nextFps;
           setUltraFps(nextFps);
         },
+        () => window.matchMedia("(pointer: fine)").matches || mobileUltra120Ref.current,
+        setThermalProtection,
       )
         .then((gpuCleanup) => {
           if (disposed) {
@@ -2019,6 +2066,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             <option value="ultra">Ultra</option>
           </select>
         </label>
+        {quality === "ultra" && mobileDevice && (
+          <label className="mobile-ultra-picker">
+            <span>MOBILE ULTRA</span>
+            <select value={mobileUltra120 ? "120" : "60"} onChange={(event) => chooseMobileUltra120(event.target.value === "120")}>
+              <option value="60">60 FPS</option>
+              <option value="120">{isDe ? "Bis 120 FPS" : "Up to 120 FPS"}</option>
+            </select>
+            <small>{isDe ? "120 FPS erhöht Wärme und Akkuverbrauch" : "120 FPS increases heat and battery use"}</small>
+          </label>
+        )}
         <label className="difficulty-picker">
           <span>{isDe ? `LEVEL ${sector} SCHWIERIGKEIT` : `LEVEL ${sector} DIFFICULTY`}</span>
           <select value={levelDifficulties[sector - 1]} onChange={(event) => chooseDifficulty(event.target.value as Difficulty)}>
@@ -2029,7 +2086,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <small>{LEVEL_THEMES[sector - 1].name}</small>
         </label>
         <div className="run-record">
-          <span>{renderer} · {quality.toUpperCase()}{quality === "ultra" ? ` · ${ultraFps} FPS` : ""} · LOCAL RECORD</span>
+          <span>{renderer} · {quality.toUpperCase()}{quality === "ultra" ? ` · ${ultraFps} FPS${thermalProtection ? ` · ${isDe ? "WÄRMESCHUTZ" : "THERMAL SAFE"}` : ""}` : ""} · LOCAL RECORD</span>
           <strong>{highScore.toString().padStart(6, "0")}</strong>
         </div>
       </section>
