@@ -167,10 +167,12 @@ function makeWorld(): World {
 function createAudio() {
   let context: AudioContext | null = null;
   let music: HTMLAudioElement | null = null;
+  let soundEnabled = true;
   let currentSector = 0;
   let fadeFrame = 0;
   let musicRequest = 0;
   const tone = (frequency: number, duration: number, type: OscillatorType, gain = 0.07) => {
+    if (!soundEnabled) return;
     context ??= new AudioContext();
     if (context.state === "suspended") context.resume();
     const osc = context.createOscillator();
@@ -233,6 +235,13 @@ function createAudio() {
     context = null;
   };
   const pauseMusic = () => music?.pause();
+  const setSoundEnabled = (enabled: boolean) => {
+    soundEnabled = enabled;
+    if (!enabled) {
+      void context?.close();
+      context = null;
+    }
+  };
   return {
     jump: () => tone(330, 0.11, "square", 0.045),
     smash: () => tone(105, 0.16, "sawtooth", 0.08),
@@ -244,6 +253,7 @@ function createAudio() {
     },
     playMusic,
     pauseMusic,
+    setSoundEnabled,
     stop,
   };
 }
@@ -918,7 +928,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const inputRef = useRef<Record<InputKey, boolean>>({ left: false, right: false, jump: false, attack: false });
   const pressedRef = useRef<Record<InputKey, boolean>>({ left: false, right: false, jump: false, attack: false });
   const audioRef = useRef<ReturnType<typeof createAudio> | null>(null);
-  const mutedRef = useRef(false);
+  const soundEnabledRef = useRef(true);
+  const musicEnabledRef = useRef(true);
   const qualityRef = useRef<Quality>("medium");
   const ultraFpsRef = useRef(60);
   const mobileUltra120Ref = useRef(false);
@@ -928,7 +939,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [sector, setSector] = useState(1);
-  const [muted, setMuted] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [musicEnabled, setMusicEnabled] = useState(true);
   const [highScore, setHighScore] = useState(0);
   const [renderer, setRenderer] = useState("CANVAS 2D");
   const [ultraFps, setUltraFps] = useState(60);
@@ -950,6 +962,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     setStatus(world.status);
   }, []);
 
+  const ensureAudio = useCallback(() => {
+    if (!soundEnabledRef.current && !musicEnabledRef.current) return;
+    audioRef.current ??= createAudio();
+    audioRef.current.setSoundEnabled(soundEnabledRef.current);
+    if (musicEnabledRef.current) void audioRef.current.playMusic(worldRef.current.sector);
+  }, []);
+
   const restart = useCallback(() => {
     const next = makeWorld();
     next.status = "playing";
@@ -957,8 +976,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     pressedRef.current = { left: false, right: false, jump: false, attack: false };
     inputRef.current = { left: false, right: false, jump: false, attack: false };
     setPickaxeStats({ power: 1, style: 1 });
-    if (!mutedRef.current) {
+    if (musicEnabledRef.current) {
       audioRef.current ??= createAudio();
+      audioRef.current.setSoundEnabled(soundEnabledRef.current);
       void audioRef.current.playMusic(1);
     }
     syncHud(next);
@@ -1254,6 +1274,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      ensureAudio();
       const map: Record<string, InputKey | undefined> = {
         ArrowLeft: "left",
         KeyA: "left",
@@ -1274,6 +1295,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         const world = worldRef.current;
         if (world.status === "playing" || world.status === "paused") {
           world.status = world.status === "playing" ? "paused" : "playing";
+          if (world.status === "paused") audioRef.current?.pauseMusic();
+          else if (musicEnabledRef.current) void audioRef.current?.playMusic(world.sector);
           setStatus(world.status);
         }
       }
@@ -1305,7 +1328,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", clear);
     };
-  }, [restart, setInput]);
+  }, [ensureAudio, restart, setInput]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -1544,7 +1567,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const newSector = Math.min(LEVEL_COUNT, Math.max(1, Math.floor(-p.y / LEVEL_HEIGHT) + 1));
       if (newSector !== world.sector) {
         world.sector = newSector;
-        void audioRef.current?.playMusic(newSector);
+        if (musicEnabledRef.current) void audioRef.current?.playMusic(newSector);
         if (newSector > world.highestSector) {
           world.highestSector = newSector;
           world.status = "upgrade";
@@ -2105,21 +2128,29 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     if (world.status !== "playing" && world.status !== "paused") return;
     world.status = world.status === "playing" ? "paused" : "playing";
     if (world.status === "paused") audioRef.current?.pauseMusic();
-    else void audioRef.current?.playMusic(world.sector);
+    else if (musicEnabledRef.current) void audioRef.current?.playMusic(world.sector);
     setStatus(world.status);
   };
 
-  const toggleMute = () => {
-    const next = !mutedRef.current;
-    mutedRef.current = next;
-    setMuted(next);
-    if (next) {
-      audioRef.current?.stop();
-      audioRef.current = null;
-    } else {
-      audioRef.current = createAudio();
-      void audioRef.current.playMusic(worldRef.current.sector);
+  const toggleSound = () => {
+    const next = !soundEnabledRef.current;
+    soundEnabledRef.current = next;
+    setSoundEnabled(next);
+    audioRef.current ??= createAudio();
+    audioRef.current.setSoundEnabled(next);
+  };
+
+  const toggleMusic = () => {
+    const next = !musicEnabledRef.current;
+    musicEnabledRef.current = next;
+    setMusicEnabled(next);
+    if (!next) {
+      audioRef.current?.pauseMusic();
+      return;
     }
+    audioRef.current ??= createAudio();
+    audioRef.current.setSoundEnabled(soundEnabledRef.current);
+    void audioRef.current.playMusic(worldRef.current.sector);
   };
 
   const toggleFullscreen = async () => {
@@ -2155,12 +2186,6 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
   const fullscreenActive = nativeFullscreen || immersiveMode;
 
-  const ensureMusic = () => {
-    if (mutedRef.current) return;
-    audioRef.current ??= createAudio();
-    void audioRef.current.playMusic(worldRef.current.sector);
-  };
-
   const controlProps = (key: InputKey) => ({
     onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => {
       event.preventDefault();
@@ -2186,7 +2211,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           : (isDe ? `Dein Lauf endet bei ${score.toLocaleString("de-AT")} Punkten.` : `Your run ends at ${score.toLocaleString("en-US")} points.`);
 
   return (
-    <main className={`game-shell${immersiveMode ? " immersive-mode" : ""}`} onPointerDownCapture={ensureMusic}>
+    <main className={`game-shell${immersiveMode ? " immersive-mode" : ""}`} onPointerDownCapture={ensureAudio}>
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true">SP</span>
@@ -2201,8 +2226,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <div><span>LIVES</span><strong>{"◆".repeat(Math.max(0, lives))}</strong></div>
         </div>
         <div className="header-actions">
-          <button className="icon-button" onClick={toggleMute} aria-label={muted ? (isDe ? "Ton einschalten" : "Enable sound") : (isDe ? "Ton ausschalten" : "Mute sound")}>
-            {muted ? "SOUND OFF" : "SOUND ON"}
+          <button className="icon-button" onClick={toggleSound} aria-pressed={soundEnabled} aria-label={soundEnabled ? (isDe ? "Soundeffekte ausschalten" : "Disable sound effects") : (isDe ? "Soundeffekte einschalten" : "Enable sound effects")}>
+            {soundEnabled ? "SFX ON" : "SFX OFF"}
+          </button>
+          <button className="icon-button" onClick={toggleMusic} aria-pressed={musicEnabled} aria-label={musicEnabled ? (isDe ? "Musik ausschalten" : "Disable music") : (isDe ? "Musik einschalten" : "Enable music")}>
+            {musicEnabled ? "MUSIC ON" : "MUSIC OFF"}
           </button>
           <button className="icon-button" onClick={toggleFullscreen} aria-label={iPhoneSafari ? (isDe ? "App-Modus erklären" : "Explain app mode") : fullscreenActive ? (isDe ? "Vollbild beenden" : "Exit fullscreen") : (isDe ? "Vollbildmodus starten" : "Enter fullscreen")}>{iPhoneSafari ? (isDe ? "APP-MODUS" : "APP MODE") : fullscreenActive ? "EXIT" : "FULLSCREEN"}</button>
           <button className="icon-button" onClick={togglePause} aria-label={isDe ? "Spiel pausieren" : "Pause game"}>PAUSE</button>
@@ -2269,7 +2297,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           </div>
         </div>
         <div className="mobile-actions">
-          <button onClick={toggleMute}>{muted ? (isDe ? "TON AN" : "SOUND ON") : (isDe ? "TON AUS" : "SOUND OFF")}</button>
+          <button onClick={toggleSound} aria-pressed={soundEnabled}>{soundEnabled ? (isDe ? "SFX AUS" : "SFX OFF") : (isDe ? "SFX AN" : "SFX ON")}</button>
+          <button onClick={toggleMusic} aria-pressed={musicEnabled}>{musicEnabled ? (isDe ? "MUSIK AUS" : "MUSIC OFF") : (isDe ? "MUSIK AN" : "MUSIC ON")}</button>
           <button onClick={toggleFullscreen}>{iPhoneSafari ? (isDe ? "APP-MODUS" : "APP MODE") : fullscreenActive ? (isDe ? "BEENDEN" : "EXIT") : (isDe ? "VOLLBILD" : "FULLSCREEN")}</button>
           <button onClick={togglePause}>PAUSE</button>
         </div>
