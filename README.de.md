@@ -154,4 +154,4 @@ Ultra kann Smartphones stark belasten und zu höherer Temperatur sowie schneller
 
 ## Lizenz
 
-Der Quelltext steht unter der im Repository enthaltenen MIT-Lizenz.
+Der Quelltext steht unter der [MIT-Lizenz](LICENSE). Der Name **Skybreak Protocol**, Logos, App-Symbole, Screenshots, Werbegrafiken und visuelle Kunstwerke sind davon ausgenommen; siehe [Asset and Brand License](ASSET_LICENSE.md).

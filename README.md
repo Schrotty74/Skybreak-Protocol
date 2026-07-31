@@ -154,4 +154,4 @@ Ultra can heavily load smartphones, increase temperature, and drain the battery 
 
 ## License
 
-The source code is available under the MIT license included in this repository.
+The source code is available under the [MIT License](LICENSE). The name **Skybreak Protocol**, logos, app icons, screenshots, promotional images, and visual artwork are excluded; see the [Asset and Brand License](ASSET_LICENSE.md).
