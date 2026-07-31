@@ -36,15 +36,15 @@ jobs:
           NOTES_EN="docs/releases/${VERSION}.en.md"
           ARCHIVE="Skybreak-Protocol-${VERSION}-offline.zip"
           {
-            echo "## Deutsch"
-            echo
-            tail -n +3 "$NOTES_DE"
-            echo
-            echo "---"
-            echo
             echo "## English"
             echo
             tail -n +3 "$NOTES_EN"
+            echo
+            echo "---"
+            echo
+            echo "## Deutsch"
+            echo
+            tail -n +3 "$NOTES_DE"
           } > release-notes.md
           (cd release && zip -r "../${ARCHIVE}" "Skybreak-Protocol-${VERSION}")
           if gh release view "$TAG" >/dev/null 2>&1; then

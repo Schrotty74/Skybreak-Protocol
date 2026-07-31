@@ -18,7 +18,7 @@ Skybreak Protocol verwendet zwei öffentliche Release-Stufen:
 
 Der Build führt `scripts/verify-release.mjs` aus. Eine Beta- oder Final-Version kann nicht gebaut werden, wenn einer der beiden ausführlichen Changelogs fehlt, offensichtlich unvollständig ist oder mehr als eine Versionsüberschrift enthält.
 
-Nach dem Push erstellt `.github/workflows/publish-release.yml` automatisch den Tag und den GitHub Release. Versionen mit `-beta.N` werden als Prerelease markiert; Versionen ohne Zusatz als Final Release. Im Release steht die Versionsüberschrift nur einmal; darunter folgen der deutsche und englische Changelog. Der Workflow erzeugt außerdem ein versioniertes Offline-ZIP und lädt es unter **Assets** hoch. Bei einer Korrektur derselben Version werden Release-Text und ZIP aktualisiert.
+Nach dem Push erstellt `.github/workflows/publish-release.yml` automatisch den Tag und den GitHub Release. Versionen mit `-beta.N` werden als Prerelease markiert; Versionen ohne Zusatz als Final Release. Im Release steht die Versionsüberschrift nur einmal; darunter folgen wegen der englischen Standardseite zuerst der englische und danach der deutsche Changelog. Der Workflow erzeugt außerdem ein versioniertes Offline-ZIP und lädt es unter **Assets** hoch. Bei einer Korrektur derselben Version werden Release-Text und ZIP aktualisiert.
 
 ## Update-Prüfung im Spiel
 
