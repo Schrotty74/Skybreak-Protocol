@@ -33,7 +33,8 @@ The web app runs without installation. On iPhone or iPad, use **Share → Add to
 
 - Ascend through ten increasingly difficult cyberpunk levels
 - Break platform modules from below
-- Disable enemies with the pulse hammer or by jumping on them
+- Use the robot's ice pick against enemies and nearby platform modules
+- Choose an ice-pick power or visual-style upgrade when entering each new level
 - Avoid gaps, falling energy fragments, and patrol drones
 - Collect points, preserve lives, and improve the local high score
 
@@ -43,9 +44,20 @@ The web app runs without installation. On iPhone or iPad, use **Share → Add to
 |---|---|---|
 | Move | `A` / `D` or `←` / `→` | Left and right touch buttons |
 | Jump | `W`, `↑`, or `Space` | `JUMP` |
-| Pulse hammer | `X` or `K` | `PULSE` |
+| Ice pick | `X` or `K` | `PICK` |
 | Pause | `P` or `Esc` | `PAUSE` |
 | Fullscreen | `FULLSCREEN` button | Native fullscreen or immersive Safari fallback |
+
+## Robot and ice-pick upgrades
+
+The playable character is a compact cyberpunk climbing robot with separate mechanical limbs, illuminated sensors, antenna, animated joints, and a permanently visible ice pick. When left standing still, the robot inspects and playfully twirls the tool instead of remaining frozen.
+
+The ice pick attacks drones and breaks cracked platform modules in front of the robot. When entering levels 2 through 10 for the first time, the game pauses briefly and offers one upgrade:
+
+- **Power:** increases reach and progressively destroys more adjacent platform modules with one strike
+- **Style:** changes the ice pick's neon color, head geometry, and glow intensity
+
+Upgrades apply to the current run and are shown as `P` and `S` values in the level display.
 
 ## Graphics quality
 
@@ -92,6 +104,7 @@ Hardware ray-tracing cores cannot currently be addressed directly by this web ap
 - dynamic shadows, bloom, movement trails, and pulse-hammer trails
 - particles, debris, impact effects, and screen shake
 - adaptive rendering resolution up to 4K
+- animated cyberpunk robot with an upgradeable ice pick and an idle inspection/twirling animation
 
 ## Technology
 

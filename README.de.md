@@ -33,7 +33,8 @@ Die Web-App funktioniert ohne Installation. Auf iPhone oder iPad kann sie in Saf
 
 - Durch zehn zunehmend schwierigere Cyberpunk-Level aufsteigen
 - Plattformmodule von unten durchbrechen
-- Gegner mit dem Impulshammer oder durch Sprünge ausschalten
+- Gegner und nahe Plattformmodule mit dem Eispickel des Roboters angreifen
+- Beim Eintritt in jedes neue Level Kraft oder Design des Eispickels verbessern
 - Lücken, fallenden Energiesplittern und Patrouillendrohnen ausweichen
 - Punkte sammeln, Leben erhalten und den lokalen Highscore verbessern
 
@@ -43,9 +44,20 @@ Die Web-App funktioniert ohne Installation. Auf iPhone oder iPad kann sie in Saf
 |---|---|---|
 | Bewegen | `A` / `D` oder `←` / `→` | Linke und rechte Bildschirmtaste |
 | Springen | `W`, `↑` oder `Leertaste` | `JUMP` |
-| Impulshammer | `X` oder `K` | `PULSE` |
+| Eispickel | `X` oder `K` | `PICK` |
 | Pause | `P` oder `Esc` | `PAUSE` |
 | Vollbild | Schaltfläche `FULLSCREEN` | natives Vollbild oder immersiver Safari-Fallback |
+
+## Roboter und Eispickel-Upgrades
+
+Die Spielfigur ist ein kompakter Cyberpunk-Kletterroboter mit getrennten mechanischen Gliedmaßen, leuchtenden Sensoren, Antenne, animierten Gelenken und einem ständig sichtbaren Eispickel. Bleibt der Roboter stehen, begutachtet und dreht er spielerisch sein Werkzeug, statt unbewegt zu bleiben.
+
+Der Eispickel greift Drohnen an und zerstört beschädigte Plattformmodule vor dem Roboter. Beim ersten Eintritt in Level 2 bis 10 pausiert das Spiel kurz und bietet jeweils ein Upgrade an:
+
+- **Kraft:** erhöht die Reichweite und zerstört schrittweise mehr benachbarte Plattformmodule mit einem Schlag
+- **Design:** verändert Neonfarbe, Kopfgeometrie und Leuchtstärke des Eispickels
+
+Die Upgrades gelten für den aktuellen Durchlauf und werden als `P`- und `S`-Werte in der Levelanzeige dargestellt.
 
 ## Grafikqualität
 
@@ -92,6 +104,7 @@ Die Hardware-Raytracing-Kerne können von dieser Web-App derzeit nicht direkt an
 - dynamische Schatten, Bloom, Bewegungs- und Impulshammer-Spuren
 - Partikel, Trümmer, Einschlagseffekte und Bildschirmerschütterung
 - adaptive Renderauflösung bis 4K
+- animierter Cyberpunk-Roboter mit aufrüstbarem Eispickel und Leerlaufanimation zum Begutachten und Drehen des Werkzeugs
 
 ## Technik
 

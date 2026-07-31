@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type GameStatus = "ready" | "playing" | "paused" | "gameover" | "won";
+type GameStatus = "ready" | "playing" | "paused" | "upgrade" | "gameover" | "won";
 type InputKey = "left" | "right" | "jump" | "attack";
 type Quality = "low" | "medium" | "high" | "ultra";
 type Difficulty = "easy" | "medium" | "hard";
@@ -66,6 +66,9 @@ type Player = {
   grounded: boolean;
   facing: number;
   attack: number;
+  idleTime: number;
+  pickaxePower: number;
+  pickaxeStyle: number;
   invulnerable: number;
 };
 
@@ -79,6 +82,7 @@ type World = {
   score: number;
   lives: number;
   sector: number;
+  highestSector: number;
   lastTime: number;
   status: GameStatus;
   hazardTimer: number;
@@ -127,6 +131,9 @@ function makeWorld(): World {
       grounded: true,
       facing: 1,
       attack: 0,
+      idleTime: 0,
+      pickaxePower: 1,
+      pickaxeStyle: 1,
       invulnerable: 0,
     },
     particles: [],
@@ -135,6 +142,7 @@ function makeWorld(): World {
     score: 0,
     lives: 3,
     sector: 1,
+    highestSector: 1,
     lastTime: 0,
     status: "ready",
     hazardTimer: 2.4,
@@ -864,6 +872,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [iPhoneSafari, setIPhoneSafari] = useState(false);
   const [showInstallHint, setShowInstallHint] = useState(false);
   const [levelDifficulties, setLevelDifficulties] = useState<Difficulty[]>(Array(LEVEL_COUNT).fill("medium"));
+  const [pickaxeStats, setPickaxeStats] = useState({ power: 1, style: 1 });
 
   const syncHud = useCallback((world: World) => {
     setScore(world.score);
@@ -878,8 +887,20 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     worldRef.current = next;
     pressedRef.current = { left: false, right: false, jump: false, attack: false };
     inputRef.current = { left: false, right: false, jump: false, attack: false };
+    setPickaxeStats({ power: 1, style: 1 });
     if (!mutedRef.current) audioRef.current ??= createAudio();
     syncHud(next);
+  }, [syncHud]);
+
+  const applyPickaxeUpgrade = useCallback((kind: "power" | "style") => {
+    const world = worldRef.current;
+    if (world.status !== "upgrade") return;
+    if (kind === "power") world.player.pickaxePower = Math.min(10, world.player.pickaxePower + 1);
+    else world.player.pickaxeStyle = Math.min(10, world.player.pickaxeStyle + 1);
+    setPickaxeStats({ power: world.player.pickaxePower, style: world.player.pickaxeStyle });
+    world.status = "playing";
+    world.lastTime = performance.now();
+    syncHud(world);
   }, [syncHud]);
 
   const setInput = useCallback((key: InputKey, active: boolean) => {
@@ -1288,12 +1309,15 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
       p.vx = input.left ? -MOVE_SPEED : input.right ? MOVE_SPEED : p.vx * Math.pow(0.002, dt);
       if (p.vx) p.facing = Math.sign(p.vx);
+      const activelyMoving = input.left || input.right || !p.grounded || Math.abs(p.vx) > 18;
+      p.idleTime = activelyMoving || input.attack || input.jump ? 0 : p.idleTime + dt;
       if (pressed.jump && p.grounded) {
         p.vy = -JUMP_SPEED;
         p.grounded = false;
         audioRef.current?.jump();
       }
-      if (pressed.attack) p.attack = 0.22;
+      const startedAttack = pressed.attack;
+      if (startedAttack) p.attack = 0.22;
       pressed.jump = false;
       pressed.attack = false;
 
@@ -1336,6 +1360,28 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             world.score += Math.round(250 * difficulty.score);
             burst(world, enemy.x + 18, enemy.y + 16, "#ffd84d", 14);
             audioRef.current?.enemy();
+            syncHud(world);
+          }
+        }
+        if (startedAttack) {
+          const reach = 42 + p.pickaxePower * 8;
+          const breakCount = Math.min(5, 1 + Math.floor((p.pickaxePower - 1) / 2));
+          const breakableTiles = world.tiles
+            .filter((tile) => {
+              const tileCenter = tile.x + TILE / 2;
+              const inFront = p.facing > 0 ? tileCenter > p.x + PLAYER_W + 6 : tileCenter < p.x - 6;
+              return tile.alive && tile.cracked && inFront
+                && Math.abs(tile.y + 12 - (p.y + PLAYER_H * 0.45)) < 54
+                && Math.abs(tileCenter - attackX) < reach;
+            })
+            .sort((a, b) => Math.abs(a.x + TILE / 2 - attackX) - Math.abs(b.x + TILE / 2 - attackX))
+            .slice(0, breakCount);
+          for (const tile of breakableTiles) {
+            tile.alive = false;
+            world.shake = Math.max(world.shake, 6 + p.pickaxePower * 0.45);
+            world.score += Math.round(75 * difficulty.score);
+            burst(world, tile.x + TILE / 2, tile.y + 12, "#00f0ff", 7 + p.pickaxePower);
+            audioRef.current?.smash();
             syncHud(world);
           }
         }
@@ -1421,6 +1467,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const newSector = Math.min(LEVEL_COUNT, Math.max(1, Math.floor(-p.y / LEVEL_HEIGHT) + 1));
       if (newSector !== world.sector) {
         world.sector = newSector;
+        if (newSector > world.highestSector) {
+          world.highestSector = newSector;
+          world.status = "upgrade";
+          p.vx = 0;
+          p.vy = 0;
+        }
         syncHud(world);
       }
       if (p.y > world.cameraY + view.height + 130) hurt(world);
@@ -1786,62 +1838,117 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           }
           ctx.globalAlpha = 1;
         }
-        ctx.shadowBlur = 26;
+        const pickaxeColors = ["#ffd84d", "#00f0ff", "#ff2b8a", "#72ff4d", "#ff9f32", "#c65cff", "#84fff2", "#9c6bff", "#ffffff", "#ffcf4a"];
+        const pickaxeColor = pickaxeColors[Math.min(9, p.pickaxeStyle - 1)];
+        const metal = ctx.createLinearGradient(-16, -22, 16, 24);
+        metal.addColorStop(0, "#54728a");
+        metal.addColorStop(0.32, "#152b40");
+        metal.addColorStop(1, "#030914");
+
+        // Separate mechanical limbs, torso and head make the character read as a robot.
+        ctx.strokeStyle = "#00f0ff";
+        ctx.lineCap = "round";
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(-8, 17);
+        ctx.lineTo(-11, 31);
+        ctx.moveTo(8, 17);
+        ctx.lineTo(12, 31);
+        ctx.stroke();
+        ctx.fillStyle = "#071321";
+        ctx.strokeStyle = "#83f8ff";
+        ctx.lineWidth = 1.5;
+        roundedRect(ctx, -15, 30, 11, 5, 2);
+        ctx.fill(); ctx.stroke();
+        roundedRect(ctx, 5, 30, 12, 5, 2);
+        ctx.fill(); ctx.stroke();
+
+        ctx.shadowBlur = 22;
         ctx.shadowColor = "#00f0ff";
-        const suit = ctx.createLinearGradient(-17, -24, 17, 24);
-        suit.addColorStop(0, "#1b5d78");
-        suit.addColorStop(0.38, "#071e34");
-        suit.addColorStop(1, "#020813");
-        ctx.fillStyle = suit;
-        roundedRect(ctx, -17, -24, 34, 48, 9);
-        ctx.fill();
+        ctx.fillStyle = metal;
         ctx.strokeStyle = "#00f0ff";
         ctx.lineWidth = 2;
-        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-14, -4);
+        ctx.lineTo(-11, -10);
+        ctx.lineTo(11, -10);
+        ctx.lineTo(15, -4);
+        ctx.lineTo(11, 20);
+        ctx.lineTo(-11, 20);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
         ctx.shadowBlur = 0;
-        const visor = ctx.createLinearGradient(-10, -20, 12, -8);
-        visor.addColorStop(0, "#ffffff");
-        visor.addColorStop(0.4, "#8ffaff");
-        visor.addColorStop(1, "#16496b");
-        ctx.fillStyle = visor;
-        roundedRect(ctx, -10, -20, 22, 12, 5);
-        ctx.fill();
         ctx.fillStyle = "#ff2b8a";
-        ctx.fillRect(2, -16, 6, 3);
-        ctx.strokeStyle = "rgba(255,255,255,.38)";
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "#ff2b8a";
+        ctx.beginPath(); ctx.arc(0, 4, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "rgba(210,250,255,.5)";
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(-11, -2);
-        ctx.lineTo(10, -2);
-        ctx.moveTo(0, 3);
-        ctx.lineTo(0, 18);
+        ctx.moveTo(-8, -3); ctx.lineTo(8, -3);
+        ctx.moveTo(0, 8); ctx.lineTo(0, 17);
         ctx.stroke();
+
+        ctx.fillStyle = metal;
+        ctx.strokeStyle = "#79f7ff";
+        ctx.lineWidth = 2;
+        roundedRect(ctx, -14, -25, 28, 17, 5);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#020b16";
+        roundedRect(ctx, -10, -21, 21, 8, 3);
+        ctx.fill();
+        ctx.fillStyle = "#9dffff";
+        ctx.fillRect(-7, -19, 5, 3);
+        ctx.fillStyle = "#ff2b8a";
+        ctx.fillRect(4, -19, 5, 3);
         ctx.strokeStyle = "#00f0ff";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -25); ctx.lineTo(3, -31); ctx.stroke();
+        ctx.fillStyle = pickaxeColor;
+        ctx.beginPath(); ctx.arc(3, -32, 2, 0, Math.PI * 2); ctx.fill();
+
+        const idlePlaying = p.idleTime > 0.75;
+        const attackProgress = p.attack > 0 ? 1 - p.attack / 0.22 : 0;
+        const pickAngle = p.attack > 0
+          ? -1.2 + attackProgress * 2.15
+          : idlePlaying ? -0.25 + Math.sin(world.fxTime * 4.2) * 0.72 : -0.42;
+        const handX = 13 + Math.cos(pickAngle) * 14;
+        const handY = -1 + Math.sin(pickAngle) * 14;
+        ctx.strokeStyle = "#5b8298";
         ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(12, -3); ctx.lineTo(handX, handY); ctx.stroke();
+        ctx.fillStyle = "#9afcff";
+        ctx.beginPath(); ctx.arc(handX, handY, 3.2, 0, Math.PI * 2); ctx.fill();
+
+        ctx.save();
+        ctx.translate(handX, handY);
+        ctx.rotate(pickAngle);
+        ctx.shadowBlur = 9 + p.pickaxeStyle;
+        ctx.shadowColor = pickaxeColor;
+        ctx.strokeStyle = pickaxeColor;
+        ctx.lineWidth = 3 + Math.min(2, p.pickaxePower * 0.16);
+        ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(29, 0); ctx.stroke();
+        ctx.strokeStyle = "#dffcff";
+        ctx.lineWidth = 2.5;
+        const styleShape = (p.pickaxeStyle - 1) % 3;
+        const headSize = 11 + Math.min(8, p.pickaxePower) + styleShape * 1.5;
         ctx.beginPath();
-        ctx.moveTo(-9, 23);
-        ctx.lineTo(-11, 32);
-        ctx.moveTo(9, 23);
-        ctx.lineTo(12, 32);
+        ctx.moveTo(24, -headSize);
+        ctx.quadraticCurveTo(31, -4, 27, 0);
+        ctx.quadraticCurveTo(31 + styleShape * 2, 5, 22 - styleShape, headSize * (styleShape === 2 ? 0.9 : 0.65));
         ctx.stroke();
-        ctx.strokeStyle = "#ffd84d";
-        ctx.lineWidth = 4;
-        const arm = p.attack > 0 ? -20 : -4;
-        ctx.beginPath();
-        ctx.moveTo(13, -2);
-        ctx.lineTo(27, arm);
-        ctx.stroke();
+        ctx.fillStyle = pickaxeColor;
+        ctx.beginPath(); ctx.arc(28, 0, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
         if (p.attack > 0) {
-          ctx.fillStyle = "#ffd84d";
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = "#ffd84d";
-          roundedRect(ctx, 22, -29, 24, 12, 4);
-          ctx.fill();
-          ctx.globalAlpha = 0.42;
-          ctx.strokeStyle = "#fff1a6";
-          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.34;
+          ctx.strokeStyle = pickaxeColor;
+          ctx.lineWidth = 3;
           ctx.beginPath();
-          ctx.arc(34, -23, 17 + Math.sin(world.fxTime * 16) * 3, -0.8, 0.8);
+          ctx.arc(14, -2, 33 + p.pickaxePower, -1.25, 0.95);
           ctx.stroke();
         }
         ctx.restore();
@@ -1974,12 +2081,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   });
 
   const overlayTitle =
-    status === "ready" ? "SKYBREAK PROTOCOL" : status === "paused" ? (isDe ? "SYSTEM PAUSIERT" : "SYSTEM PAUSED") : status === "won" ? (isDe ? "GIPFEL ERREICHT" : "SUMMIT REACHED") : (isDe ? "LAUF BEENDET" : "RUN TERMINATED");
+    status === "ready" ? "SKYBREAK PROTOCOL" : status === "paused" ? (isDe ? "SYSTEM PAUSIERT" : "SYSTEM PAUSED") : status === "upgrade" ? (isDe ? "EISPICKEL-UPGRADE" : "ICE PICK UPGRADE") : status === "won" ? (isDe ? "GIPFEL ERREICHT" : "SUMMIT REACHED") : (isDe ? "LAUF BEENDET" : "RUN TERMINATED");
   const overlayCopy =
     status === "ready"
       ? (isDe ? "Durchbrich 10 Cyberpunk-Level und erreiche den Sendeturm." : "Break through 10 cyberpunk levels and reach the transmission tower.")
       : status === "paused"
         ? (isDe ? "Die Zeit steht still. Noch." : "Time stands still. For now.")
+        : status === "upgrade"
+          ? (isDe ? `Level ${sector} erreicht. Verbessere Kraft oder Design deines Eispickels.` : `Level ${sector} reached. Upgrade the power or design of your ice pick.`)
         : status === "won"
           ? (isDe ? `Level 10 befreit · ${score.toLocaleString("de-AT")} Punkte` : `Level 10 liberated · ${score.toLocaleString("en-US")} points`)
           : (isDe ? `Dein Lauf endet bei ${score.toLocaleString("de-AT")} Punkten.` : `Your run ends at ${score.toLocaleString("en-US")} points.`);
@@ -2019,12 +2128,25 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
                 <a className="language-link" href={languageHref} lang={isDe ? "en" : "de"}>{isDe ? "ENGLISH" : "DEUTSCH"}</a>
               </>
             )}
-            <p className="eyebrow">{status === "ready" ? "NIGHT CITY // 03:17" : "NEURAL LINK STATUS"}</p>
-            <h1>{overlayTitle}</h1>
+            <p className="eyebrow">{status === "ready" ? "NIGHT CITY // 03:17" : status === "upgrade" ? `PICKAXE CORE // LEVEL ${sector}` : "NEURAL LINK STATUS"}</p>
+            <h1 className={status === "upgrade" ? "upgrade-title" : undefined}>{overlayTitle}</h1>
             <p>{overlayCopy}</p>
-            <button className="primary-button" onClick={status === "paused" ? togglePause : restart}>
-              {status === "paused" ? (isDe ? "WEITER" : "RESUME") : status === "ready" ? (isDe ? "AUFSTIEG STARTEN" : "START ASCENT") : (isDe ? "NEUER VERSUCH" : "TRY AGAIN")}
-            </button>
+            {status === "upgrade" ? (
+              <div className="upgrade-grid">
+                <button onClick={() => applyPickaxeUpgrade("power")}>
+                  <strong>{isDe ? "KRAFT" : "POWER"} {pickaxeStats.power + 1}</strong>
+                  <span>{isDe ? "Mehr Plattformmodule pro Schlag zerstören" : "Destroy more platform modules per strike"}</span>
+                </button>
+                <button onClick={() => applyPickaxeUpgrade("style")}>
+                  <strong>{isDe ? "DESIGN" : "STYLE"} {pickaxeStats.style + 1}</strong>
+                  <span>{isDe ? "Neue Farbe, Form und stärkeres Leuchten" : "New color, shape, and stronger glow"}</span>
+                </button>
+              </div>
+            ) : (
+              <button className="primary-button" onClick={status === "paused" ? togglePause : restart}>
+                {status === "paused" ? (isDe ? "WEITER" : "RESUME") : status === "ready" ? (isDe ? "AUFSTIEG STARTEN" : "START ASCENT") : (isDe ? "NEUER VERSUCH" : "TRY AGAIN")}
+              </button>
+            )}
             {status === "ready" && (
               <div className="mission-grid">
                 <span><b>01</b> {isDe ? "Ebenen von unten durchbrechen" : "Break levels from below"}</span>
@@ -2034,14 +2156,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             )}
           </div>
         )}
-        <div className="sector-tag">LEVEL {sector.toString().padStart(2, "0")} // {LEVEL_THEMES[sector - 1].name}</div>
+        <div className="sector-tag">LEVEL {sector.toString().padStart(2, "0")} // {LEVEL_THEMES[sector - 1].name} // PICK P{pickaxeStats.power} S{pickaxeStats.style}</div>
       </section>
 
       <section className="control-panel">
         <div className="desktop-help">
           <span><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> {isDe ? "Bewegen" : "Move"}</span>
           <span><kbd>W</kbd> / <kbd>SPACE</kbd> {isDe ? "Springen" : "Jump"}</span>
-          <span><kbd>X</kbd> {isDe ? "Impulshammer" : "Pulse hammer"}</span>
+          <span><kbd>X</kbd> {isDe ? "Eispickel" : "Ice pick"}</span>
           <span><kbd>P</kbd> Pause</span>
         </div>
         <div className="touch-controls" aria-label={isDe ? "Touch-Steuerung" : "Touch controls"}>
@@ -2051,7 +2173,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           </div>
           <div className="touch-group">
             <button className="jump" {...controlProps("jump")} aria-label={isDe ? "Springen" : "Jump"}>JUMP</button>
-            <button className="attack" {...controlProps("attack")} aria-label={isDe ? "Impulshammer" : "Pulse hammer"}>PULSE</button>
+            <button className="attack" {...controlProps("attack")} aria-label={isDe ? "Eispickel einsetzen" : "Use ice pick"}>PICK</button>
           </div>
         </div>
         <div className="mobile-actions">
