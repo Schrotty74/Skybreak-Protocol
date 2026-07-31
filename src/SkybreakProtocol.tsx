@@ -22,6 +22,19 @@ const LEVEL_THEMES = [
   { name: "Skybreak Apex", top: "#3a143f", mid: "#082d45", bottom: "#02040d", accent: "#ffffff", secondary: "#00f0ff", warning: "#ffcf4a", motif: 9 },
 ] as const;
 
+const MUSIC_TRACKS = [
+  "audio/level-01-neon-undercity.mp3",
+  "audio/level-02-chrome-bazaar.mp3",
+  "audio/level-03-toxic-transit.mp3",
+  "audio/level-04-crimson-firewall.mp3",
+  "audio/level-05-azure-data-sea.mp3",
+  "audio/level-06-violet-reactor.mp3",
+  "audio/level-07-solar-megagrid.mp3",
+  "audio/level-08-ghost-network.mp3",
+  "audio/level-09-quantum-rift.mp3",
+  "audio/level-10-skybreak-apex.mp3",
+].map((path) => `${import.meta.env.BASE_URL}${path}`);
+
 const DIFFICULTY_SETTINGS: Record<Difficulty, { enemy: number; hazards: number; hazardSpeed: number; score: number }> = {
   easy: { enemy: 0.78, hazards: 0.72, hazardSpeed: 0.82, score: 0.85 },
   medium: { enemy: 1, hazards: 1, hazardSpeed: 1, score: 1 },
@@ -153,6 +166,10 @@ function makeWorld(): World {
 
 function createAudio() {
   let context: AudioContext | null = null;
+  let music: HTMLAudioElement | null = null;
+  let currentSector = 0;
+  let fadeFrame = 0;
+  let musicRequest = 0;
   const tone = (frequency: number, duration: number, type: OscillatorType, gain = 0.07) => {
     context ??= new AudioContext();
     if (context.state === "suspended") context.resume();
@@ -167,6 +184,55 @@ function createAudio() {
     osc.start();
     osc.stop(context.currentTime + duration);
   };
+  const playMusic = async (sector: number) => {
+    const nextSector = Math.max(1, Math.min(LEVEL_COUNT, sector));
+    if (music && currentSector === nextSector) {
+      if (music.paused) await music.play().catch(() => undefined);
+      return;
+    }
+    const previous = music;
+    const request = ++musicRequest;
+    const next = new Audio(MUSIC_TRACKS[nextSector - 1]);
+    next.loop = true;
+    next.preload = "auto";
+    next.volume = 0;
+    try {
+      await next.play();
+    } catch {
+      return;
+    }
+    if (request !== musicRequest) {
+      next.pause();
+      next.src = "";
+      return;
+    }
+    music = next;
+    currentSector = nextSector;
+    cancelAnimationFrame(fadeFrame);
+    const started = performance.now();
+    const fade = (time: number) => {
+      const progress = Math.min(1, (time - started) / 900);
+      next.volume = 0.28 * progress;
+      if (previous) previous.volume = 0.28 * (1 - progress);
+      if (progress < 1) fadeFrame = requestAnimationFrame(fade);
+      else {
+        previous?.pause();
+        if (previous) previous.src = "";
+      }
+    };
+    fadeFrame = requestAnimationFrame(fade);
+  };
+  const stop = () => {
+    musicRequest += 1;
+    cancelAnimationFrame(fadeFrame);
+    music?.pause();
+    if (music) music.src = "";
+    music = null;
+    currentSector = 0;
+    void context?.close();
+    context = null;
+  };
+  const pauseMusic = () => music?.pause();
   return {
     jump: () => tone(330, 0.11, "square", 0.045),
     smash: () => tone(105, 0.16, "sawtooth", 0.08),
@@ -176,6 +242,9 @@ function createAudio() {
       tone(520, 0.22, "sine", 0.07);
       window.setTimeout(() => tone(780, 0.32, "sine", 0.07), 130);
     },
+    playMusic,
+    pauseMusic,
+    stop,
   };
 }
 
@@ -888,7 +957,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     pressedRef.current = { left: false, right: false, jump: false, attack: false };
     inputRef.current = { left: false, right: false, jump: false, attack: false };
     setPickaxeStats({ power: 1, style: 1 });
-    if (!mutedRef.current) audioRef.current ??= createAudio();
+    if (!mutedRef.current) {
+      audioRef.current ??= createAudio();
+      void audioRef.current.playMusic(1);
+    }
     syncHud(next);
   }, [syncHud]);
 
@@ -941,6 +1013,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const syncFullscreen = () => setNativeFullscreen(Boolean(document.fullscreenElement));
     document.addEventListener("fullscreenchange", syncFullscreen);
     return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
+
+  useEffect(() => () => {
+    audioRef.current?.stop();
+    audioRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -1467,6 +1544,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const newSector = Math.min(LEVEL_COUNT, Math.max(1, Math.floor(-p.y / LEVEL_HEIGHT) + 1));
       if (newSector !== world.sector) {
         world.sector = newSector;
+        void audioRef.current?.playMusic(newSector);
         if (newSector > world.highestSector) {
           world.highestSector = newSector;
           world.status = "upgrade";
@@ -2014,6 +2092,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const world = worldRef.current;
       if (document.hidden && world.status === "playing") {
         world.status = "paused";
+        audioRef.current?.pauseMusic();
         setStatus("paused");
       }
     };
@@ -2025,6 +2104,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const world = worldRef.current;
     if (world.status !== "playing" && world.status !== "paused") return;
     world.status = world.status === "playing" ? "paused" : "playing";
+    if (world.status === "paused") audioRef.current?.pauseMusic();
+    else void audioRef.current?.playMusic(world.sector);
     setStatus(world.status);
   };
 
@@ -2032,8 +2113,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const next = !mutedRef.current;
     mutedRef.current = next;
     setMuted(next);
-    if (next) audioRef.current = null;
-    else audioRef.current = createAudio();
+    if (next) {
+      audioRef.current?.stop();
+      audioRef.current = null;
+    } else {
+      audioRef.current = createAudio();
+      void audioRef.current.playMusic(worldRef.current.sector);
+    }
   };
 
   const toggleFullscreen = async () => {
@@ -2069,6 +2155,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
   const fullscreenActive = nativeFullscreen || immersiveMode;
 
+  const ensureMusic = () => {
+    if (mutedRef.current) return;
+    audioRef.current ??= createAudio();
+    void audioRef.current.playMusic(worldRef.current.sector);
+  };
+
   const controlProps = (key: InputKey) => ({
     onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => {
       event.preventDefault();
@@ -2094,7 +2186,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           : (isDe ? `Dein Lauf endet bei ${score.toLocaleString("de-AT")} Punkten.` : `Your run ends at ${score.toLocaleString("en-US")} points.`);
 
   return (
-    <main className={`game-shell${immersiveMode ? " immersive-mode" : ""}`}>
+    <main className={`game-shell${immersiveMode ? " immersive-mode" : ""}`} onPointerDownCapture={ensureMusic}>
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true">SP</span>

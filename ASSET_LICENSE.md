@@ -7,6 +7,7 @@ The following materials are not licensed under the MIT License:
 - the name **Skybreak Protocol**
 - logos, app icons, and other brand elements
 - screenshots, promotional images, and visual artwork
+- music, soundtrack files, and other audio recordings
 
 Copyright © 2026 Schrotty74. All rights reserved.
 

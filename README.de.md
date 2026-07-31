@@ -59,6 +59,23 @@ Der Eispickel greift Drohnen an und zerstört beschädigte Plattformmodule vor d
 
 Die Upgrades gelten für den aktuellen Durchlauf und werden als `P`- und `S`-Werte in der Levelanzeige dargestellt.
 
+## Eigener Techno-Soundtrack
+
+Der Startbildschirm und jedes Level besitzen einen eigenen Cyberpunk-Techno-Track. Die Musik startet nach der ersten Berührung oder Taste, wechselt automatisch mit einer kurzen Überblendung, läuft im Level als Schleife und folgt dem vorhandenen Ton-Schalter.
+
+| Level | Track | BPM | Anhören / Download |
+|---|---|---:|---|
+| 1 + Start | Neon Undercity | 126 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-01-neon-undercity.mp3) |
+| 2 | Chrome Bazaar | 128 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-02-chrome-bazaar.mp3) |
+| 3 | Toxic Transit | 130 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-03-toxic-transit.mp3) |
+| 4 | Crimson Firewall | 132 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-04-crimson-firewall.mp3) |
+| 5 | Azure Data Sea | 124 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-05-azure-data-sea.mp3) |
+| 6 | Violet Reactor | 134 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-06-violet-reactor.mp3) |
+| 7 | Solar Megagrid | 136 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-07-solar-megagrid.mp3) |
+| 8 | Ghost Network | 128 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-08-ghost-network.mp3) |
+| 9 | Quantum Rift | 138 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-09-quantum-rift.mp3) |
+| 10 | Skybreak Apex | 142 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-10-skybreak-apex.mp3) |
+
 ## Grafikqualität
 
 Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
@@ -101,7 +118,7 @@ Die Hardware-Raytracing-Kerne können von dieser Web-App derzeit nicht direkt an
 - holografische Werbeflächen und fliegender Stadtverkehr
 - animierter Neonregen, Scanlines und subtile chromatische Effekte
 - dreidimensional wirkende Plattformmodule mit Metall-, Glas- und Energietexturen
-- dynamische Schatten, Bloom, Bewegungs- und Impulshammer-Spuren
+- dynamische Schatten, Bloom, Bewegungs- und Eispickel-Spuren
 - Partikel, Trümmer, Einschlagseffekte und Bildschirmerschütterung
 - adaptive Renderauflösung bis 4K
 - animierter Cyberpunk-Roboter mit aufrüstbarem Eispickel und Leerlaufanimation zum Begutachten und Drehen des Werkzeugs
@@ -113,6 +130,7 @@ Die Hardware-Raytracing-Kerne können von dieser Web-App derzeit nicht direkt an
 - Canvas 2D mit WebGPU-Ultra-Effektebene und WebGL2-kompatiblem Fallback
 - Modul-Web-Worker für Ultra-Instanzsimulation und Leistungssteuerung
 - Web Audio API für synthetisierte Arcade-Sounds
+- Soundtrack-Wiedergabe aus eigenen MP3-Dateien mit automatischer Level-Überblendung
 - Pointer Events für Maus, Touch und Stift
 - Local Storage für Highscore und Grafikstufe
 - automatische GitHub-Pages-Bereitstellung über GitHub Actions

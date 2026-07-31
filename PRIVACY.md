@@ -33,6 +33,8 @@ These values never leave the device. They can be removed by deleting the site's 
 
 Ultra mode checks WebGPU and optional F16 support, local GPU capability limits, and frame timing to select WebGPU or the WebGL2 fallback, adapt render resolution and post-processing, and choose 60, 90, or 120 FPS. A same-origin module Web Worker performs local effect and timing calculations. Browsers provide no temperature reading to the game; sustained frame-time degradation is used locally as a performance-throttling signal. No GPU model, adapter information, benchmark result, frame timing, temperature, or hardware identifier is stored or transmitted.
 
+The soundtrack consists of MP3 files included with the game and loaded from the same GitHub Pages origin after user interaction. Playback and level changes are processed locally. No listening behavior is stored or transmitted.
+
 ## Not used
 
 - no cookies

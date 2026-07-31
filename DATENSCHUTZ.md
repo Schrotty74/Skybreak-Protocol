@@ -33,6 +33,8 @@ Diese Werte verlassen das Gerät nicht. Sie können durch Löschen der Websiteda
 
 Der Ultra-Modus prüft ausschließlich lokal die Verfügbarkeit von WebGPU und optionalem F16, technische GPU-Grenzwerte und Bildzeiten, um WebGPU oder den WebGL2-Fallback zu wählen, Renderauflösung und Post-Processing anzupassen und 60, 90 oder 120 FPS auszuwählen. Ein Modul-Web-Worker gleicher Herkunft führt lokale Effekt- und Zeitberechnungen aus. Browser stellen dem Spiel keine Temperaturmessung bereit; anhaltend schlechtere Bildzeiten dienen lokal als Signal für Leistungsdrosselung. GPU-Modell, Adapterinformationen, Messergebnisse, Bildzeiten, Temperatur oder Hardwarekennungen werden weder gespeichert noch übertragen.
 
+Der Soundtrack besteht aus MP3-Dateien, die im Spiel enthalten sind und nach einer Nutzerinteraktion von derselben GitHub-Pages-Adresse geladen werden. Wiedergabe und Levelwechsel erfolgen lokal. Hörverhalten wird weder gespeichert noch übertragen.
+
 ## Nicht verwendet
 
 - keine Cookies

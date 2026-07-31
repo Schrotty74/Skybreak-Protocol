@@ -59,6 +59,23 @@ The ice pick attacks drones and breaks cracked platform modules in front of the 
 
 Upgrades apply to the current run and are shown as `P` and `S` values in the level display.
 
+## Original techno soundtrack
+
+The start screen and every level have their own original cyberpunk-techno track. Music begins after the first tap or key press, changes automatically with a short crossfade, loops during the level, and follows the existing sound toggle.
+
+| Level | Track | BPM | Listen / download |
+|---|---|---:|---|
+| 1 + start | Neon Undercity | 126 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-01-neon-undercity.mp3) |
+| 2 | Chrome Bazaar | 128 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-02-chrome-bazaar.mp3) |
+| 3 | Toxic Transit | 130 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-03-toxic-transit.mp3) |
+| 4 | Crimson Firewall | 132 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-04-crimson-firewall.mp3) |
+| 5 | Azure Data Sea | 124 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-05-azure-data-sea.mp3) |
+| 6 | Violet Reactor | 134 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-06-violet-reactor.mp3) |
+| 7 | Solar Megagrid | 136 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-07-solar-megagrid.mp3) |
+| 8 | Ghost Network | 128 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-08-ghost-network.mp3) |
+| 9 | Quantum Rift | 138 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-09-quantum-rift.mp3) |
+| 10 | Skybreak Apex | 142 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-10-skybreak-apex.mp3) |
+
 ## Graphics quality
 
 The selected level is stored locally on the device.
@@ -101,7 +118,7 @@ Hardware ray-tracing cores cannot currently be addressed directly by this web ap
 - holographic advertising and flying city traffic
 - animated neon rain, scanlines, and subtle chromatic effects
 - dimensional platform modules with metal, glass, and energy textures
-- dynamic shadows, bloom, movement trails, and pulse-hammer trails
+- dynamic shadows, bloom, movement trails, and ice-pick trails
 - particles, debris, impact effects, and screen shake
 - adaptive rendering resolution up to 4K
 - animated cyberpunk robot with an upgradeable ice pick and an idle inspection/twirling animation
@@ -113,6 +130,7 @@ Hardware ray-tracing cores cannot currently be addressed directly by this web ap
 - Canvas 2D with a WebGPU Ultra effects layer and WebGL2-compatible fallback
 - module Web Worker for Ultra instance simulation and performance control
 - Web Audio API for synthesized arcade sounds
+- same-origin MP3 soundtrack playback with automatic level crossfades
 - Pointer Events for mouse, touch, and pen input
 - Local Storage for the high score and graphics level
 - automatic GitHub Pages deployment through GitHub Actions
