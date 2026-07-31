@@ -94,7 +94,7 @@ Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
 | Ultra | aktuelle Desktop- und Mobil-GPUs | vollständiges WebGPU-Post-Processing, optionales Mobile Ultra bis 120 FPS, F16-Shader, GPU-Instancing sowie adaptive Auflösung und Effekte; WebGL2-Fallback |
 
 > [!WARNING]
-> **Mobile Ultra kann das Smartphone sehr stark belasten. Das Gerät kann dabei deutlich bis sehr warm werden und der Akkuverbrauch steigt. Für längeres Spielen wird „Mittel“ empfohlen. Bei starker Erwärmung sofort auf „Niedrig“ wechseln oder das Spiel pausieren.**
+> **Mobile Ultra kann das Smartphone sehr stark belasten. Das Gerät kann dabei deutlich bis sehr warm werden und der Akkuverbrauch steigt. Bei hohen Umgebungstemperaturen oder direkter Sonneneinstrahlung wird von Mobile Ultra abgeraten. Für längeres Spielen wird „Mittel“ empfohlen. Bei starker Erwärmung sofort auf „Niedrig“ wechseln oder das Spiel pausieren.**
 
 ### Was Ultra verändert
 
