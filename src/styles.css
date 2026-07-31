@@ -584,6 +584,21 @@ canvas {
   text-transform: uppercase;
 }
 
+.mobile-ultra-warning {
+  justify-self: center;
+  max-width: 420px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 216, 77, .65);
+  background: rgba(60, 35, 0, .45);
+  color: #ffd84d;
+  font: 800 8px ui-monospace, SFMono-Regular, Menlo, monospace;
+  line-height: 1.45;
+  letter-spacing: .06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .difficulty-picker small {
   max-width: 108px;
   color: var(--pink);
