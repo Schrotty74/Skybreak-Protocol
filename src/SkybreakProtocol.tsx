@@ -2334,6 +2334,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           </select>
         </label>
         {quality === "ultra" && mobileDevice && (
+          <p className="mobile-ultra-warning" role="alert">
+            {isDe
+              ? "ULTRA KANN DAS HANDY SEHR ERWÄRMEN. NICHT BEI HITZE ODER DIREKTER SONNE NUTZEN."
+              : "ULTRA CAN MAKE THE PHONE VERY WARM. DO NOT USE IN HOT WEATHER OR DIRECT SUNLIGHT."}
+          </p>
+        )}
+        {quality === "ultra" && mobileDevice && (
           <label className="mobile-ultra-picker">
             <span>MOBILE ULTRA</span>
             <select value={mobileUltra120 ? "120" : "60"} onChange={(event) => chooseMobileUltra120(event.target.value === "120")}>
