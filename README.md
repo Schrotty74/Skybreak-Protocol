@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Break through platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity.
+An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through ten visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Each level has its own cyberpunk palette, animated scenery, effects, and independently selectable difficulty.
 
 > Skybreak Protocol uses no graphics, music, characters, or source code from Nintendo or Ice Climber. It is an independent reinterpretation of the classic vertical arcade concept.
 
@@ -16,9 +16,18 @@ Data handling is documented in the [English Privacy Report](PRIVACY.md) and the 
 
 - **GitHub Pages — English:** <https://schrotty74.github.io/Skybreak-Protocol/>
 - **GitHub Pages — German:** <https://schrotty74.github.io/Skybreak-Protocol/de/>
-- **Alternative OpenAI Sites version:** <https://neon-ascent.bk-bezahlen.chatgpt.site>
 
 The web app runs without installation. On iPhone or iPad, use **Share → Add to Home Screen** in Safari to install the app icon. Android browsers offer the equivalent option in their menu.
+
+## Mobile screenshots
+
+<p align="center">
+  <a href="docs/screenshots/mobile-start.jpeg?raw=1"><img src="docs/screenshots/mobile-start.jpeg" alt="Skybreak Protocol mobile start screen" width="260"></a>
+  &nbsp;&nbsp;
+  <a href="docs/screenshots/mobile-gameplay.jpeg?raw=1"><img src="docs/screenshots/mobile-gameplay.jpeg" alt="Skybreak Protocol mobile gameplay" width="260"></a>
+</p>
+
+<p align="center"><em>Click a preview to open the full-size image. Desktop screenshots will follow.</em></p>
 
 ## Gameplay
 
@@ -74,9 +83,20 @@ The selected level is stored locally on the device.
 
 ## Ten level environments
 
-Each level has its own color palette, animated background motif, lighting, atmospheric effects, and rising enemy pressure: Neon Undercity, Chrome Bazaar, Toxic Transit, Crimson Firewall, Azure Data Sea, Violet Reactor, Solar Megagrid, Ghost Network, Quantum Rift, and Skybreak Apex.
+| Level | Environment | Visual identity and effect |
+|---:|---|---|
+| 1 | Neon Undercity | cyan and magenta city depths with moving neon scan bars |
+| 2 | Chrome Bazaar | pink, mint, and chrome tones with animated holographic frames |
+| 3 | Toxic Transit | toxic green infrastructure with rising energy bubbles |
+| 4 | Crimson Firewall | red-orange security zone with pulsing firewall columns |
+| 5 | Azure Data Sea | deep-blue data district with flowing digital waves |
+| 6 | Violet Reactor | violet power core with expanding reactor rings |
+| 7 | Solar Megagrid | amber-red energy grid with a radiant solar glow |
+| 8 | Ghost Network | pale-cyan network ruins with drifting spectral streaks |
+| 9 | Quantum Rift | purple-blue dimensional zone with a moving quantum path |
+| 10 | Skybreak Apex | bright cyan summit with rotating transmission rays |
 
-Every level can independently use **Easy**, **Medium**, or **Hard**. The choice is stored locally. Higher levels remain progressively faster and more hazardous at every selected difficulty.
+Enemy density and environmental hazards increase from level to level. Every level can independently use **Easy**, **Medium**, or **Hard**; the selected setting changes enemy speed, hazard frequency, hazard speed, and score multiplier. Choices are stored only in the browser on the device.
 
 ## Local development
 
