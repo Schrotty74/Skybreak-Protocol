@@ -426,26 +426,29 @@ canvas {
 .control-panel {
   min-height: 55px;
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
   align-items: center;
   gap: 20px;
   padding: 0 4px;
 }
 
-.quality-picker {
+.quality-picker,
+.difficulty-picker {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.quality-picker span {
+.quality-picker span,
+.difficulty-picker span {
   color: #668ca3;
   font-size: 8px;
   font-weight: 800;
   letter-spacing: .18em;
 }
 
-.quality-picker select {
+.quality-picker select,
+.difficulty-picker select {
   height: 34px;
   min-width: 92px;
   padding: 0 26px 0 10px;
@@ -454,6 +457,14 @@ canvas {
   background: #071321;
   color: var(--cyan);
   font: 800 9px ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+}
+
+.difficulty-picker small {
+  max-width: 108px;
+  color: var(--pink);
+  font: 700 8px ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .08em;
   text-transform: uppercase;
 }
 
@@ -592,7 +603,7 @@ kbd {
   }
 
   .control-panel {
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto;
   }
 
   .touch-controls {
@@ -643,8 +654,13 @@ kbd {
     display: flex;
   }
 
-  .quality-picker {
+  .quality-picker,
+  .difficulty-picker {
     justify-self: center;
+  }
+
+  .difficulty-picker small {
+    display: none;
   }
 
   .run-record {

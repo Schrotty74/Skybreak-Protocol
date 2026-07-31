@@ -22,7 +22,7 @@ The web app runs without installation. On iPhone or iPad, use **Share → Add to
 
 ## Gameplay
 
-- Ascend vertically through nine megacity sectors
+- Ascend through ten increasingly difficult cyberpunk levels
 - Break platform modules from below
 - Disable enemies with the pulse hammer or by jumping on them
 - Avoid gaps, falling energy fragments, and patrol drones
@@ -71,6 +71,12 @@ The selected level is stored locally on the device.
 - Local Storage for the high score and graphics level
 - automatic GitHub Pages deployment through GitHub Actions
 - CSS immersive fullscreen fallback for iPhone Safari
+
+## Ten level environments
+
+Each level has its own color palette, animated background motif, lighting, atmospheric effects, and rising enemy pressure: Neon Undercity, Chrome Bazaar, Toxic Transit, Crimson Firewall, Azure Data Sea, Violet Reactor, Solar Megagrid, Ghost Network, Quantum Rift, and Skybreak Apex.
+
+Every level can independently use **Easy**, **Medium**, or **Hard**. The choice is stored locally. Higher levels remain progressively faster and more hazardous at every selected difficulty.
 
 ## Local development
 

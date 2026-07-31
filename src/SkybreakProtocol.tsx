@@ -5,6 +5,28 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type GameStatus = "ready" | "playing" | "paused" | "gameover" | "won";
 type InputKey = "left" | "right" | "jump" | "attack";
 type Quality = "low" | "medium" | "high" | "ultra";
+type Difficulty = "easy" | "medium" | "hard";
+
+const LEVEL_COUNT = 10;
+const LEVEL_HEIGHT = 390;
+const LEVEL_THEMES = [
+  { name: "Neon Undercity", top: "#051d35", mid: "#18072f", bottom: "#02040d", accent: "#00f0ff", secondary: "#ff2b8a", warning: "#ffd84d", motif: 0 },
+  { name: "Chrome Bazaar", top: "#24113f", mid: "#35102d", bottom: "#08040f", accent: "#ff5bd6", secondary: "#39f5c8", warning: "#ffe66d", motif: 1 },
+  { name: "Toxic Transit", top: "#102b22", mid: "#132d12", bottom: "#030b08", accent: "#72ff4d", secondary: "#00eaff", warning: "#f5ff73", motif: 2 },
+  { name: "Crimson Firewall", top: "#351018", mid: "#280617", bottom: "#090208", accent: "#ff365f", secondary: "#ff9b35", warning: "#fff06a", motif: 3 },
+  { name: "Azure Data Sea", top: "#062b45", mid: "#071a45", bottom: "#020612", accent: "#36bfff", secondary: "#7c5cff", warning: "#7fffee", motif: 4 },
+  { name: "Violet Reactor", top: "#29104a", mid: "#19072d", bottom: "#05020c", accent: "#c65cff", secondary: "#ff3dbb", warning: "#70f7ff", motif: 5 },
+  { name: "Solar Megagrid", top: "#4a1d0a", mid: "#35100e", bottom: "#0c0304", accent: "#ff9f32", secondary: "#ff355d", warning: "#fff26b", motif: 6 },
+  { name: "Ghost Network", top: "#0e3034", mid: "#11202e", bottom: "#03070b", accent: "#84fff2", secondary: "#b1a3ff", warning: "#ffffff", motif: 7 },
+  { name: "Quantum Rift", top: "#25104b", mid: "#071f3b", bottom: "#03020e", accent: "#9c6bff", secondary: "#00f6ff", warning: "#ff61d2", motif: 8 },
+  { name: "Skybreak Apex", top: "#3a143f", mid: "#082d45", bottom: "#02040d", accent: "#ffffff", secondary: "#00f0ff", warning: "#ffcf4a", motif: 9 },
+] as const;
+
+const DIFFICULTY_SETTINGS: Record<Difficulty, { enemy: number; hazards: number; hazardSpeed: number; score: number }> = {
+  easy: { enemy: 0.78, hazards: 0.72, hazardSpeed: 0.82, score: 0.85 },
+  medium: { enemy: 1, hazards: 1, hazardSpeed: 1, score: 1 },
+  hard: { enemy: 1.28, hazards: 1.42, hazardSpeed: 1.3, score: 1.35 },
+};
 
 const QUALITY_SETTINGS: Record<Quality, {
   fps: number;
@@ -31,7 +53,7 @@ const PLAYER_H = 50;
 const GRAVITY = 1450;
 const MOVE_SPEED = 255;
 const JUMP_SPEED = 610;
-const WORLD_TOP = -3150;
+const WORLD_TOP = -(LEVEL_COUNT - 1) * LEVEL_HEIGHT - 80;
 
 type Tile = { x: number; y: number; alive: boolean; cracked: boolean };
 type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean };
@@ -68,7 +90,7 @@ function buildLevel(): Pick<World, "tiles" | "enemies"> {
   const tiles: Tile[] = [];
   const enemies: Enemy[] = [];
 
-  for (let row = 0; row < 39; row++) {
+  for (let row = 0; row < 45; row++) {
     const y = 475 - row * 92;
     const gapStart = row === 0 ? -10 : (row * 5 + 2) % 11;
     for (let col = 0; col < 15; col++) {
@@ -78,7 +100,8 @@ function buildLevel(): Pick<World, "tiles" | "enemies"> {
         tiles.push({ x: col * TILE, y, alive: true, cracked: row > 0 });
       }
     }
-    if (row > 2 && row % 4 === 1) {
+    const enemyStep = Math.max(2, 5 - Math.floor(row / 11));
+    if (row > 2 && row % enemyStep === 1) {
       enemies.push({
         x: ((row * 137) % 720) + 110,
         y: y - 34,
@@ -178,6 +201,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const audioRef = useRef<ReturnType<typeof createAudio> | null>(null);
   const mutedRef = useRef(false);
   const qualityRef = useRef<Quality>("medium");
+  const difficultiesRef = useRef<Difficulty[]>(Array(LEVEL_COUNT).fill("medium"));
   const [status, setStatus] = useState<GameStatus>("ready");
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
@@ -190,6 +214,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [immersiveMode, setImmersiveMode] = useState(false);
   const [iPhoneSafari, setIPhoneSafari] = useState(false);
   const [showInstallHint, setShowInstallHint] = useState(false);
+  const [levelDifficulties, setLevelDifficulties] = useState<Difficulty[]>(Array(LEVEL_COUNT).fill("medium"));
 
   const syncHud = useCallback((world: World) => {
     setScore(world.score);
@@ -226,6 +251,15 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const isIPhone = /iPhone|iPod/i.test(navigator.userAgent);
     const isStandalone = window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
     setIPhoneSafari(isIPhone && !isStandalone);
+    try {
+      const savedDifficulties = JSON.parse(localStorage.getItem("skybreak-level-difficulties") || "[]") as Difficulty[];
+      if (savedDifficulties.length === LEVEL_COUNT && savedDifficulties.every((value) => value in DIFFICULTY_SETTINGS)) {
+        difficultiesRef.current = savedDifficulties;
+        setLevelDifficulties(savedDifficulties);
+      }
+    } catch {
+      // Ignore malformed local settings and keep the balanced defaults.
+    }
   }, []);
 
   useEffect(() => {
@@ -244,6 +278,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     setQuality(next);
     localStorage.setItem("skybreak-quality", next);
     window.dispatchEvent(new Event("skybreak-quality"));
+  };
+
+  const chooseDifficulty = (next: Difficulty) => {
+    const updated = [...difficultiesRef.current];
+    updated[Math.max(0, sector - 1)] = next;
+    difficultiesRef.current = updated;
+    setLevelDifficulties(updated);
+    localStorage.setItem("skybreak-level-difficulties", JSON.stringify(updated));
   };
 
   useEffect(() => {
@@ -491,6 +533,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
     const update = (world: World, dt: number) => {
       if (world.status !== "playing") return;
+      const difficulty = DIFFICULTY_SETTINGS[difficultiesRef.current[Math.max(0, world.sector - 1)] || "medium"];
+      const levelPressure = 1 + (world.sector - 1) * 0.075;
       world.fxTime += dt;
       world.shake = Math.max(0, world.shake - dt * 38);
       const p = world.player;
@@ -533,7 +577,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           tile.alive = false;
           world.shake = 9;
           p.vy *= 0.78;
-          world.score += 100;
+          world.score += Math.round(100 * difficulty.score);
           burst(world, tile.x + TILE / 2, tile.y + 12, "#00f0ff", 12);
           audioRef.current?.smash();
           syncHud(world);
@@ -546,7 +590,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           if (!enemy.alive) continue;
           if (Math.abs(enemy.x - attackX) < 48 && Math.abs(enemy.y - p.y) < 50) {
             enemy.alive = false;
-            world.score += 250;
+            world.score += Math.round(250 * difficulty.score);
             burst(world, enemy.x + 18, enemy.y + 16, "#ffd84d", 14);
             audioRef.current?.enemy();
             syncHud(world);
@@ -558,7 +602,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         if (!enemy.alive) continue;
         const enemyOldY = enemy.y;
         enemy.vy += GRAVITY * 0.78 * dt;
-        enemy.x += enemy.vx * dt;
+        enemy.x += enemy.vx * difficulty.enemy * levelPressure * dt;
         enemy.y += enemy.vy * dt;
         if (enemy.x < 18 || enemy.x > VIEW_W - 54) enemy.vx *= -1;
         enemy.grounded = false;
@@ -588,7 +632,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           if (p.vy > 110 && p.y + PLAYER_H - enemy.y < 22) {
             enemy.alive = false;
             p.vy = -320;
-            world.score += 200;
+            world.score += Math.round(200 * difficulty.score);
             burst(world, enemy.x + 18, enemy.y + 16, "#ffd84d", 12);
             audioRef.current?.enemy();
             syncHud(world);
@@ -598,12 +642,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
       world.hazardTimer -= dt;
       if (world.hazardTimer <= 0 && world.cameraY < -400) {
-        world.hazardTimer = 2.3 + Math.random() * 2.2;
+        world.hazardTimer = (2.3 + Math.random() * 2.2) / (difficulty.hazards * levelPressure);
         world.particles.push({
           x: 50 + Math.random() * 860,
           y: world.cameraY - 30,
           vx: (Math.random() - 0.5) * 35,
-          vy: 360,
+          vy: 360 * difficulty.hazardSpeed * levelPressure,
           life: 4,
           color: "#ff2b8a",
         });
@@ -631,7 +675,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       world.cameraX += (targetCameraX - world.cameraX) * Math.min(1, dt * 5.5);
       const targetCamera = Math.min(0, p.y - view.height * (view.portrait ? 0.66 : 0.61));
       world.cameraY += (targetCamera - world.cameraY) * Math.min(1, dt * 4.5);
-      const newSector = Math.min(9, Math.max(1, Math.floor(-p.y / 385) + 1));
+      const newSector = Math.min(LEVEL_COUNT, Math.max(1, Math.floor(-p.y / LEVEL_HEIGHT) + 1));
       if (newSector !== world.sector) {
         world.sector = newSector;
         syncHud(world);
@@ -650,6 +694,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
     const draw = (world: World) => {
       const settings = QUALITY_SETTINGS[qualityRef.current];
+      const theme = LEVEL_THEMES[Math.max(0, world.sector - 1)] || LEVEL_THEMES[0];
       const sx = canvas.width / view.width;
       const sy = canvas.height / view.height;
       ctx.setTransform(sx, 0, 0, sy, 0, 0);
@@ -659,12 +704,94 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       ctx.translate(shakeX, shakeY);
 
       const bg = ctx.createLinearGradient(0, 0, 0, view.height);
-      bg.addColorStop(0, "#061b37");
-      bg.addColorStop(0.42, "#10072b");
-      bg.addColorStop(0.76, "#09031a");
-      bg.addColorStop(1, "#01030a");
+      bg.addColorStop(0, theme.top);
+      bg.addColorStop(0.48, theme.mid);
+      bg.addColorStop(1, theme.bottom);
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, view.width, view.height);
+
+      // Each level has a distinct animated skyline signature.
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.strokeStyle = theme.accent;
+      ctx.fillStyle = theme.secondary;
+      ctx.lineWidth = 1.4;
+      const pulse = world.fxTime;
+      if (theme.motif === 0) {
+        for (let i = 0; i < 9; i++) ctx.fillRect((i * 127 + pulse * 34) % view.width, 45 + i * 57, 48, 2);
+      } else if (theme.motif === 1) {
+        for (let i = 0; i < 8; i++) {
+          const x = (i * 149 - pulse * 21) % (view.width + 80);
+          const y = 60 + (i * 83) % Math.max(120, view.height - 100);
+          ctx.strokeRect(x, y, 32 + (i % 3) * 13, 18 + (i % 2) * 10);
+        }
+      } else if (theme.motif === 2) {
+        ctx.globalAlpha = 0.22;
+        for (let i = 0; i < 13; i++) {
+          ctx.beginPath();
+          ctx.arc((i * 91 + pulse * 19) % view.width, view.height - ((i * 67 + pulse * 31) % view.height), 5 + (i % 4) * 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (theme.motif === 3) {
+        for (let i = 0; i < 12; i++) {
+          const x = i * (view.width / 11);
+          const h = 35 + Math.sin(pulse * 3 + i) * 22;
+          ctx.globalAlpha = 0.18;
+          ctx.fillRect(x, view.height - h, 3, h);
+        }
+      } else if (theme.motif === 4) {
+        ctx.globalAlpha = 0.22;
+        for (let band = 0; band < 5; band++) {
+          ctx.beginPath();
+          for (let x = 0; x <= view.width; x += 18) {
+            const y = 80 + band * 82 + Math.sin(x * 0.025 + pulse * 2 + band) * 14;
+            if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      } else if (theme.motif === 5) {
+        ctx.globalAlpha = 0.2;
+        for (let i = 0; i < 6; i++) {
+          ctx.beginPath();
+          ctx.arc(view.width * 0.5, view.height * 0.48, 45 + i * 38 + Math.sin(pulse * 2) * 5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      } else if (theme.motif === 6) {
+        const sun = ctx.createRadialGradient(view.width * 0.5, view.height * 0.7, 8, view.width * 0.5, view.height * 0.7, 170);
+        sun.addColorStop(0, theme.warning);
+        sun.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = sun;
+        ctx.fillRect(0, 0, view.width, view.height);
+      } else if (theme.motif === 7) {
+        ctx.globalAlpha = 0.2;
+        for (let i = 0; i < 16; i++) {
+          const x = (i * 73 + Math.sin(pulse + i) * 35) % view.width;
+          const y = (i * 109 + pulse * 43) % view.height;
+          ctx.fillRect(x, y, 2, 28 + (i % 5) * 9);
+        }
+      } else if (theme.motif === 8) {
+        ctx.globalAlpha = 0.24;
+        ctx.beginPath();
+        for (let i = 0; i < 11; i++) {
+          const angle = pulse * 0.16 + i * 1.9;
+          const radius = 55 + i * 21;
+          const x = view.width * 0.52 + Math.cos(angle) * radius;
+          const y = view.height * 0.45 + Math.sin(angle) * radius * 0.62;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      } else {
+        ctx.globalAlpha = 0.24;
+        for (let i = 0; i < 18; i++) {
+          const angle = (Math.PI * 2 * i) / 18 + pulse * 0.05;
+          ctx.beginPath();
+          ctx.moveTo(view.width / 2, view.height * 0.42);
+          ctx.lineTo(view.width / 2 + Math.cos(angle) * view.width, view.height * 0.42 + Math.sin(angle) * view.height);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
 
       // Volumetric searchlights and atmospheric neon bloom.
       ctx.save();
@@ -673,7 +800,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       for (let i = 0; i < 4; i++) {
         const origin = ((i * 281 + world.fxTime * (i % 2 ? 13 : -9)) % (view.width + 260)) - 130;
         const beam = ctx.createLinearGradient(origin, 0, origin + 190, view.height);
-        beam.addColorStop(0, i % 2 ? "rgba(255,43,138,.52)" : "rgba(0,240,255,.48)");
+        beam.addColorStop(0, i % 2 ? theme.secondary : theme.accent);
         beam.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = beam;
         ctx.beginPath();
@@ -693,7 +820,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         const speed = 18 + (i % 5) * 8;
         const x = (i * 151 + world.fxTime * speed) % (view.width + 120) - 60;
         const y = 35 + ((i * 89 - world.cameraY * 0.025) % Math.max(100, view.height * 0.62));
-        const color = i % 3 === 0 ? "#ff2b8a" : "#00eaff";
+        const color = i % 3 === 0 ? theme.secondary : theme.accent;
         const trail = ctx.createLinearGradient(x - 34, y, x + 8, y);
         trail.addColorStop(0, "rgba(0,0,0,0)");
         trail.addColorStop(1, color);
@@ -725,7 +852,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.lineTo(x + width, top);
           ctx.lineTo(x + width, view.height);
           ctx.fill();
-          ctx.fillStyle = i % 3 ? "#00d8ff" : "#ff2b8a";
+          ctx.fillStyle = i % 3 ? theme.accent : theme.secondary;
           for (let wy = top + 21; wy < view.height - 8; wy += 19 + layer * 3) {
             ctx.globalAlpha = alpha * (0.45 + ((i + Math.floor(wy)) % 3) * 0.2);
             ctx.fillRect(x + 9, wy, Math.max(3, width * 0.09), 1.5);
@@ -743,13 +870,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         const by = view.height * (0.26 + i * 0.16) + ((-world.cameraY * 0.045) % 70);
         const pulse = 0.4 + Math.sin(world.fxTime * 2.2 + i) * 0.12;
         ctx.globalAlpha = pulse;
-        ctx.strokeStyle = i % 2 ? "#ff2b8a" : "#00f0ff";
+        ctx.strokeStyle = i % 2 ? theme.secondary : theme.accent;
         ctx.lineWidth = 1;
         ctx.strokeRect(bx, by, 88, 32);
         ctx.fillStyle = i % 2 ? "rgba(255,43,138,.08)" : "rgba(0,240,255,.08)";
         ctx.fillRect(bx, by, 88, 32);
         ctx.font = "700 8px ui-monospace, monospace";
-        ctx.fillStyle = i % 2 ? "#ff78b7" : "#8ffaff";
+        ctx.fillStyle = i % 2 ? theme.secondary : theme.accent;
         ctx.fillText(i === 0 ? "SKY//BREAK" : i === 1 ? "SECTOR 09" : "ASCEND", bx + 9, by + 19);
       }
       ctx.restore();
@@ -773,7 +900,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       }
       ctx.restore();
 
-      ctx.strokeStyle = "rgba(0,240,255,.08)";
+      ctx.strokeStyle = theme.accent;
+      ctx.globalAlpha = 0.08;
       ctx.lineWidth = 1;
       for (let x = 0; x < view.width; x += 48) {
         ctx.beginPath();
@@ -787,12 +915,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.lineTo(view.width, y);
         ctx.stroke();
       }
+      ctx.globalAlpha = 1;
 
       ctx.save();
       ctx.translate(-world.cameraX, -world.cameraY);
       for (const tile of world.tiles) {
         if (!tile.alive || tile.y < world.cameraY - 80 || tile.y > world.cameraY + view.height + 50) continue;
-        const glow = tile.cracked ? "#00f0ff" : "#ffd84d";
+        const glow = tile.cracked ? theme.accent : theme.warning;
         // Deep extrusion, animated power core and polished wet-metal edge.
         const underside = ctx.createLinearGradient(tile.x, tile.y + 16, tile.x, tile.y + 40);
         underside.addColorStop(0, "#101c2f");
@@ -1105,11 +1234,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     status === "ready" ? "SKYBREAK PROTOCOL" : status === "paused" ? (isDe ? "SYSTEM PAUSIERT" : "SYSTEM PAUSED") : status === "won" ? (isDe ? "GIPFEL ERREICHT" : "SUMMIT REACHED") : (isDe ? "LAUF BEENDET" : "RUN TERMINATED");
   const overlayCopy =
     status === "ready"
-      ? (isDe ? "Durchbrich die Ebenen der Megacity und erreiche den Sendeturm." : "Break through the megacity levels and reach the transmission tower.")
+      ? (isDe ? "Durchbrich 10 Cyberpunk-Level und erreiche den Sendeturm." : "Break through 10 cyberpunk levels and reach the transmission tower.")
       : status === "paused"
         ? (isDe ? "Die Zeit steht still. Noch." : "Time stands still. For now.")
         : status === "won"
-          ? (isDe ? `Sektor 9 befreit · ${score.toLocaleString("de-AT")} Punkte` : `Sector 9 liberated · ${score.toLocaleString("en-US")} points`)
+          ? (isDe ? `Level 10 befreit · ${score.toLocaleString("de-AT")} Punkte` : `Level 10 liberated · ${score.toLocaleString("en-US")} points`)
           : (isDe ? `Dein Lauf endet bei ${score.toLocaleString("de-AT")} Punkten.` : `Your run ends at ${score.toLocaleString("en-US")} points.`);
 
   return (
@@ -1124,7 +1253,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         </div>
         <div className="hud" aria-live="polite">
           <div><span>SCORE</span><strong>{score.toString().padStart(6, "0")}</strong></div>
-          <div><span>SECTOR</span><strong>{sector} / 9</strong></div>
+          <div><span>LEVEL</span><strong>{sector} / {LEVEL_COUNT}</strong></div>
           <div><span>LIVES</span><strong>{"◆".repeat(Math.max(0, lives))}</strong></div>
         </div>
         <div className="header-actions">
@@ -1162,7 +1291,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             )}
           </div>
         )}
-        <div className="sector-tag">ALTITUDE {Math.max(0, Math.round(-worldRef.current.player.y + 415)).toString().padStart(4, "0")} M</div>
+        <div className="sector-tag">LEVEL {sector.toString().padStart(2, "0")} // {LEVEL_THEMES[sector - 1].name}</div>
       </section>
 
       <section className="control-panel">
@@ -1195,6 +1324,15 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             <option value="high">{isDe ? "Hoch" : "High"}</option>
             <option value="ultra">Ultra</option>
           </select>
+        </label>
+        <label className="difficulty-picker">
+          <span>{isDe ? `LEVEL ${sector} SCHWIERIGKEIT` : `LEVEL ${sector} DIFFICULTY`}</span>
+          <select value={levelDifficulties[sector - 1]} onChange={(event) => chooseDifficulty(event.target.value as Difficulty)}>
+            <option value="easy">{isDe ? "Leicht" : "Easy"}</option>
+            <option value="medium">{isDe ? "Mittel" : "Medium"}</option>
+            <option value="hard">{isDe ? "Schwer" : "Hard"}</option>
+          </select>
+          <small>{LEVEL_THEMES[sector - 1].name}</small>
         </label>
         <div className="run-record">
           <span>{renderer} · {quality.toUpperCase()} · LOCAL RECORD</span>

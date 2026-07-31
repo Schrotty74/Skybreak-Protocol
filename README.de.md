@@ -22,7 +22,7 @@ Die Web-App funktioniert ohne Installation. Auf iPhone oder iPad kann sie in Saf
 
 ## Spielprinzip
 
-- Vertikal durch neun Sektoren der Megacity aufsteigen
+- Durch zehn zunehmend schwierigere Cyberpunk-Level aufsteigen
 - Plattformmodule von unten durchbrechen
 - Gegner mit dem Impulshammer oder durch Sprünge ausschalten
 - Lücken, fallenden Energiesplittern und Patrouillendrohnen ausweichen
@@ -71,6 +71,12 @@ Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
 - Local Storage für Highscore und Grafikstufe
 - automatische GitHub-Pages-Bereitstellung über GitHub Actions
 - CSS-basierter immersiver Vollbild-Fallback für Safari auf dem iPhone
+
+## Zehn Level-Umgebungen
+
+Jedes Level besitzt eine eigene Farbpalette, ein animiertes Hintergrundmotiv, eigene Beleuchtung und atmosphärische Effekte: Neon Undercity, Chrome Bazaar, Toxic Transit, Crimson Firewall, Azure Data Sea, Violet Reactor, Solar Megagrid, Ghost Network, Quantum Rift und Skybreak Apex.
+
+Für jedes Level kann unabhängig **Leicht**, **Mittel** oder **Schwer** gewählt werden. Die Auswahl wird lokal gespeichert. Höhere Level werden auf jeder gewählten Stufe zusätzlich schneller und gefährlicher.
 
 ## Lokale Entwicklung
 
