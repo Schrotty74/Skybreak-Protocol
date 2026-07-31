@@ -32,9 +32,20 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TAG="v${VERSION}"
-          NOTES="docs/releases/${VERSION}.md"
+          NOTES_DE="docs/releases/${VERSION}.md"
+          NOTES_EN="docs/releases/${VERSION}.en.md"
           ARCHIVE="Skybreak-Protocol-${VERSION}-offline.zip"
-          tail -n +3 "$NOTES" > release-notes.md
+          {
+            echo "## Deutsch"
+            echo
+            tail -n +3 "$NOTES_DE"
+            echo
+            echo "---"
+            echo
+            echo "## English"
+            echo
+            tail -n +3 "$NOTES_EN"
+          } > release-notes.md
           (cd release && zip -r "../${ARCHIVE}" "Skybreak-Protocol-${VERSION}")
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release edit "$TAG" --title "Skybreak Protocol $TAG" --notes-file release-notes.md

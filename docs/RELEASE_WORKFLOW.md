@@ -8,7 +8,7 @@ Skybreak Protocol verwendet zwei öffentliche Release-Stufen:
 ## Neue Beta oder Final-Version
 
 1. Version in `package.json` und `package-lock.json` aktualisieren.
-2. Für genau diese Version einen ausführlichen Changelog unter `docs/releases/<version>.md` erstellen.
+2. Für genau diese Version ausführliche deutsche und englische Changelogs unter `docs/releases/<version>.md` und `docs/releases/<version>.en.md` erstellen.
 3. `CHANGELOG.md` um den neuen Eintrag ergänzen.
 4. Änderungen aus `docs/UNRELEASED.md` in den Versions-Changelog übernehmen und die Datei anschließend zurücksetzen.
 5. Datenschutzberichte anpassen, falls sich Speicherung oder Netzwerkzugriffe geändert haben.
@@ -16,9 +16,9 @@ Skybreak Protocol verwendet zwei öffentliche Release-Stufen:
 7. Vor der Veröffentlichung Portfolio und GitHub-Profil aktualisieren, wenn sich sichtbare Projektinformationen geändert haben.
 8. Den geprüften Stand auf `main` veröffentlichen.
 
-Der Build führt `scripts/verify-release.mjs` aus. Eine Beta- oder Final-Version kann nicht gebaut werden, wenn der passende ausführliche Changelog fehlt oder offensichtlich unvollständig ist.
+Der Build führt `scripts/verify-release.mjs` aus. Eine Beta- oder Final-Version kann nicht gebaut werden, wenn einer der beiden ausführlichen Changelogs fehlt, offensichtlich unvollständig ist oder mehr als eine Versionsüberschrift enthält.
 
-Nach dem Push erstellt `.github/workflows/publish-release.yml` automatisch den Tag und den GitHub Release. Versionen mit `-beta.N` werden als Prerelease markiert; Versionen ohne Zusatz als Final Release. Der Workflow erzeugt außerdem ein versioniertes Offline-ZIP und lädt es unter **Assets** hoch. Bei einer Korrektur derselben Version werden Release-Text und ZIP aktualisiert.
+Nach dem Push erstellt `.github/workflows/publish-release.yml` automatisch den Tag und den GitHub Release. Versionen mit `-beta.N` werden als Prerelease markiert; Versionen ohne Zusatz als Final Release. Im Release steht die Versionsüberschrift nur einmal; darunter folgen der deutsche und englische Changelog. Der Workflow erzeugt außerdem ein versioniertes Offline-ZIP und lädt es unter **Assets** hoch. Bei einer Korrektur derselben Version werden Release-Text und ZIP aktualisiert.
 
 ## Update-Prüfung im Spiel
 

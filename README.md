@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-**Current release:** `v1.0.0-beta.1` · [Detailed changelog](docs/releases/1.0.0-beta.1.md) · [All changelogs](CHANGELOG.md)
+**Current release:** `v1.0.0-beta.1` · [Detailed changelog](docs/releases/1.0.0-beta.1.en.md) · [All changelogs](CHANGELOG.md)
 
 An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through ten visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Each level has its own cyberpunk palette, animated scenery, effects, and independently selectable difficulty.
 

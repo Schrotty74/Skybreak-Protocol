@@ -10,6 +10,7 @@ type Difficulty = "easy" | "medium" | "hard";
 
 const LEVEL_COUNT = 10;
 const APP_VERSION = __APP_VERSION__;
+const CHANGELOG_BASE_URL = "https://github.com/Schrotty74/Skybreak-Protocol/blob/main/docs/releases";
 const LEVEL_HEIGHT = 390;
 const LEVEL_THEMES = [
   { name: "Neon Undercity", top: "#051d35", mid: "#18072f", bottom: "#02040d", accent: "#00f0ff", secondary: "#ff2b8a", warning: "#ffd84d", motif: 0 },
@@ -2265,6 +2266,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             {status === "ready" && (
               <>
                 <img className="game-logo" src={iconSrc} alt="Skybreak Protocol emblem" />
+                <a className="changelog-link" href={`${CHANGELOG_BASE_URL}/${APP_VERSION}${isDe ? "" : ".en"}.md`} target="_blank" rel="noopener">CHANGELOG ↗</a>
                 <a className="language-link" href={languageHref} lang={isDe ? "en" : "de"}>{isDe ? "ENGLISH" : "DEUTSCH"}</a>
               </>
             )}

@@ -323,10 +323,10 @@ canvas {
   transform: translateX(-50%);
 }
 
-.language-link {
+.language-link,
+.changelog-link {
   position: absolute;
   top: clamp(18px, 3.5vh, 40px);
-  right: clamp(14px, 2.5vw, 34px);
   padding: 9px 12px;
   border: 1px solid rgba(0, 240, 255, .45);
   background: rgba(2, 9, 20, .78);
@@ -338,8 +338,18 @@ canvas {
   backdrop-filter: blur(10px);
 }
 
+.language-link {
+  right: clamp(14px, 2.5vw, 34px);
+}
+
+.changelog-link {
+  left: clamp(14px, 2.5vw, 34px);
+}
+
 .language-link:hover,
-.language-link:focus-visible {
+.language-link:focus-visible,
+.changelog-link:hover,
+.changelog-link:focus-visible {
   border-color: var(--pink);
   color: var(--white);
 }

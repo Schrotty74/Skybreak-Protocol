@@ -6,14 +6,21 @@ if (!/^\d+\.\d+\.\d+(?:-beta\.\d+)?$/.test(version)) {
   throw new Error(`Unsupported release version: ${version}`);
 }
 
-const notesPath = `docs/releases/${version}.md`;
-await access(notesPath).catch(() => {
-  throw new Error(`Missing release changelog: ${notesPath}`);
-});
+const changelogs = [
+  `docs/releases/${version}.md`,
+  `docs/releases/${version}.en.md`,
+];
 
-const notes = await readFile(notesPath, "utf8");
-if (!notes.includes(version) || notes.length < 500) {
-  throw new Error(`Release changelog is incomplete: ${notesPath}`);
+for (const notesPath of changelogs) {
+  await access(notesPath).catch(() => {
+    throw new Error(`Missing release changelog: ${notesPath}`);
+  });
+
+  const notes = await readFile(notesPath, "utf8");
+  const topLevelHeadings = notes.match(/^# /gm)?.length ?? 0;
+  if (!notes.startsWith(`# Skybreak Protocol ${version}\n`) || notes.length < 500 || topLevelHeadings !== 1) {
+    throw new Error(`Release changelog is incomplete or has an invalid title: ${notesPath}`);
+  }
 }
 
-console.log(`Release metadata verified: ${version}`);
+console.log(`German and English release metadata verified: ${version}`);
