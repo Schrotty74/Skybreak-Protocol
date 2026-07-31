@@ -20,14 +20,17 @@ Abhängigkeiten (`node_modules`) werden nicht veröffentlicht. Der automatisch e
 
 ## Verarbeitung im Browser
 
-Skybreak Protocol speichert nur zwei technisch nicht personenbezogene Werte im lokalen Speicher des jeweiligen Browsers:
+Skybreak Protocol speichert nur drei technisch nicht personenbezogene Werte im lokalen Speicher des jeweiligen Browsers:
 
 | Schlüssel | Inhalt | Zweck | Übertragung |
 |---|---|---|---|
 | `neon-ascent-highscore` | höchste lokal erreichte Punktzahl | Spielstand | keine |
 | `skybreak-quality` | gewählte Grafikstufe | Geräteeinstellung beibehalten | keine |
+| `skybreak-level-difficulties` | je Level gewählte Schwierigkeit | Spieleinstellung beibehalten | keine |
 
 Diese Werte verlassen das Gerät nicht. Sie können durch Löschen der Websitedaten im Browser entfernt werden.
+
+Der Ultra-Modus prüft ausschließlich lokal die Verfügbarkeit von WebGPU und technische GPU-Grenzwerte, um WebGPU oder den WebGL2-Fallback zu wählen und die Renderauflösung anzupassen. GPU-Modell, Adapterinformationen, Messergebnisse oder Hardwarekennungen werden weder gespeichert noch übertragen.
 
 ## Nicht verwendet
 
@@ -41,7 +44,7 @@ Diese Werte verlassen das Gerät nicht. Sie können durch Löschen der Websiteda
 
 ## Hosting
 
-Beim Abruf über GitHub Pages verarbeitet GitHub technisch notwendige Verbindungsdaten wie IP-Adresse und Browser-Anfrage außerhalb des Spielcodes. Dafür gelten die Datenschutzbedingungen von GitHub. Die alternative OpenAI-Sites-Bereitstellung unterliegt entsprechend den Bedingungen des jeweiligen Hostinganbieters. Skybreak Protocol selbst erhält keinen Zugriff auf diese Hosting-Protokolle.
+Beim Abruf über GitHub Pages verarbeitet GitHub technisch notwendige Verbindungsdaten wie IP-Adresse und Browser-Anfrage außerhalb des Spielcodes. Dafür gelten die Datenschutzbedingungen von GitHub. Skybreak Protocol selbst erhält keinen Zugriff auf diese Hosting-Protokolle.
 
 ## Veröffentlichte Bezeichnungen
 

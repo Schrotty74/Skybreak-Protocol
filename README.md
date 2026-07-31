@@ -56,11 +56,13 @@ The selected level is stored locally on the device.
 | Low | older or warm mobile devices | 30 FPS, reduced resolution, WebGL effects disabled, little rain and fog |
 | Medium | recommended smartphone setting | 40 FPS, WebGL fog, reduced particles and parallax |
 | High | powerful devices | up to 60 FPS, high resolution, and extended effects |
-| Ultra | current desktop GPUs and 4K | full render resolution, maximum particles, WebGL2, lighting, and parallax |
+| Ultra | current desktop GPUs and 4K | WebGPU effects, full render resolution, maximum particles, lighting, and parallax; WebGL2 fallback |
 
 ## Visual effects
 
-- optional WebGL2 shader for animated neon fog, rain, and atmospheric glow
+- WebGPU Ultra shader for multilayer neon fog, denser rain, energy grids, light beams, and atmospheric bloom
+- automatic use of Metal on macOS and the browser's native GPU backend on current NVIDIA/AMD systems
+- adaptive Ultra effect resolution up to 4K with WebGL2 fallback
 - multilayer parallax megacity with illuminated windows
 - volumetric searchlights and dynamic light cones
 - holographic advertising and flying city traffic
@@ -74,7 +76,7 @@ The selected level is stored locally on the device.
 
 - React 19 and TypeScript
 - Vite 8
-- Canvas 2D with a WebGL2 effects layer and compatible fallback
+- Canvas 2D with a WebGPU Ultra effects layer and WebGL2-compatible fallback
 - Web Audio API for synthesized arcade sounds
 - Pointer Events for mouse, touch, and pen input
 - Local Storage for the high score and graphics level

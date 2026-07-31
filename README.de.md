@@ -56,11 +56,13 @@ Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
 | Niedrig | ältere oder warme Mobilgeräte | 30 FPS, reduzierte Auflösung, WebGL-Effekte aus, wenig Regen und Nebel |
 | Mittel | empfohlene Smartphone-Einstellung | 40 FPS, WebGL-Nebel, reduzierte Partikel und Parallaxe |
 | Hoch | leistungsfähige Geräte | bis 60 FPS, hohe Auflösung und erweiterte Effekte |
-| Ultra | aktuelle Desktop-GPUs und 4K | volle Renderauflösung, maximale Partikel, WebGL2, Beleuchtung und Parallaxe |
+| Ultra | aktuelle Desktop-GPUs und 4K | WebGPU-Effekte, volle Renderauflösung, maximale Partikel, Beleuchtung und Parallaxe; WebGL2-Fallback |
 
 ## Grafische Effekte
 
-- optionaler WebGL2-Shader für animierten Neon-Nebel, Regen und atmosphärisches Leuchten
+- WebGPU-Ultra-Shader für mehrschichtigen Neonnebel, dichteren Regen, Energiegitter, Lichtstrahlen und atmosphärischen Bloom
+- automatische Nutzung von Metal unter macOS und der nativen Browser-GPU-Anbindung auf aktuellen NVIDIA-/AMD-Systemen
+- adaptive Ultra-Effektauflösung bis 4K mit WebGL2-Fallback
 - mehrstufige Parallax-Megacity mit beleuchteten Fenstern
 - volumetrische Suchscheinwerfer und dynamische Lichtkegel
 - holografische Werbeflächen und fliegender Stadtverkehr
@@ -74,7 +76,7 @@ Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
 
 - React 19 und TypeScript
 - Vite 8
-- Canvas 2D mit WebGL2-Zusatzebene und kompatiblem Fallback
+- Canvas 2D mit WebGPU-Ultra-Effektebene und WebGL2-kompatiblem Fallback
 - Web Audio API für synthetisierte Arcade-Sounds
 - Pointer Events für Maus, Touch und Stift
 - Local Storage für Highscore und Grafikstufe

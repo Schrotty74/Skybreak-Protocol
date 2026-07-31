@@ -183,6 +183,294 @@ function roundedRect(
   ctx.roundRect(x, y, w, h, radius);
 }
 
+type EffectCleanup = () => void;
+
+async function startWebGpuEffects(
+  canvas: HTMLCanvasElement,
+  updateRenderer: (name: string) => void,
+): Promise<EffectCleanup | null> {
+  const gpu = (navigator as Navigator & { gpu?: any }).gpu;
+  if (!gpu) return null;
+
+  const adapter = await gpu.requestAdapter({ powerPreference: "high-performance" });
+  if (!adapter) return null;
+  if (adapter.info?.isFallbackAdapter) return null;
+  const maxTextureSize = Math.min(Number(adapter.limits?.maxTextureDimension2D || 4096), 4096);
+  const device = await adapter.requestDevice();
+  const format = gpu.getPreferredCanvasFormat();
+  const shader = device.createShaderModule({
+    label: "Skybreak Ultra atmosphere",
+    code: `
+      struct Uniforms {
+        resolution: vec2f,
+        time: f32,
+        intensity: f32,
+      };
+      @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+
+      fn hash(p: vec2f) -> f32 {
+        return fract(sin(dot(p, vec2f(127.1, 311.7))) * 43758.5453);
+      }
+
+      fn noise(p: vec2f) -> f32 {
+        let i = floor(p);
+        var f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2f(1.0, 0.0)), f.x),
+                   mix(hash(i + vec2f(0.0, 1.0)), hash(i + vec2f(1.0, 1.0)), f.x), f.y);
+      }
+
+      @vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
+        var points = array<vec2f, 3>(vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
+        return vec4f(points[index], 0.0, 1.0);
+      }
+
+      @fragment fn fragmentMain(@builtin(position) position: vec4f) -> @location(0) vec4f {
+        let uv = position.xy / uniforms.resolution;
+        var p = uv * 2.0 - 1.0;
+        p.x *= uniforms.resolution.x / uniforms.resolution.y;
+        let t = uniforms.time;
+        let n1 = noise(p * 3.1 + vec2f(t * 0.05, -t * 0.08));
+        let n2 = noise(p * 6.3 - vec2f(t * 0.08, t * 0.04));
+
+        let fogA = exp(-7.0 * abs(p.y + 0.28 + sin(p.x * 2.4 + t * 0.25) * 0.13));
+        let fogB = exp(-10.0 * abs(p.y - 0.34 + sin(p.x * 3.7 - t * 0.19) * 0.09));
+        let fogC = exp(-14.0 * abs(p.y + 0.02 + sin(p.x * 5.1 + t * 0.31) * 0.05));
+        var color = vec3f(0.0, 0.82, 1.0) * fogA * n1 * 0.2;
+        color += vec3f(1.0, 0.03, 0.4) * fogB * (1.0 - n1) * 0.18;
+        color += vec3f(0.42, 0.18, 1.0) * fogC * n2 * 0.1;
+
+        let rainUv = uv * vec2f(150.0, 32.0);
+        let lane = floor(rainUv.x);
+        let drop = fract(rainUv.y + t * (3.0 + hash(vec2f(lane, 4.0))) + hash(vec2f(lane, 7.0)) * 9.0);
+        let rain = smoothstep(0.93, 1.0, drop) * step(0.73, hash(vec2f(lane, floor(rainUv.y))));
+        color += mix(vec3f(0.0, 0.78, 1.0), vec3f(1.0, 0.06, 0.48), hash(vec2f(lane, 2.0))) * rain * 0.15;
+
+        let gridX = 1.0 - smoothstep(0.0, 0.035, abs(fract(uv.x * 28.0) - 0.5));
+        let gridY = 1.0 - smoothstep(0.0, 0.045, abs(fract(uv.y * 18.0 + t * 0.05) - 0.5));
+        color += vec3f(0.0, 0.45, 0.62) * max(gridX, gridY) * 0.035;
+
+        let beamA = exp(-18.0 * abs(p.x - sin(t * 0.16) * 0.5 - p.y * 0.28));
+        let beamB = exp(-21.0 * abs(p.x + cos(t * 0.13) * 0.62 + p.y * 0.34));
+        color += vec3f(0.0, 0.62, 0.82) * beamA * 0.045;
+        color += vec3f(0.85, 0.02, 0.34) * beamB * 0.04;
+
+        let bloom = exp(-5.5 * length(p - vec2f(sin(t * 0.11) * 0.5, 0.18)));
+        color += vec3f(0.18, 0.72, 1.0) * bloom * 0.065;
+        let scan = sin(position.y * 1.7 + t * 3.2) * 0.5 + 0.5;
+        color += vec3f(0.02, 0.05, 0.08) * scan * 0.035;
+        color *= uniforms.intensity;
+
+        let alpha = clamp(max(max(color.r, color.g), color.b) * 1.75, 0.0, 0.34);
+        return vec4f(color, alpha);
+      }
+    `,
+  });
+  const pipeline = device.createRenderPipeline({
+    label: "Skybreak Ultra pipeline",
+    layout: "auto",
+    vertex: { module: shader, entryPoint: "vertexMain" },
+    fragment: {
+      module: shader,
+      entryPoint: "fragmentMain",
+      targets: [{
+        format,
+        blend: {
+          color: { srcFactor: "src-alpha", dstFactor: "one", operation: "add" },
+          alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
+        },
+      }],
+    },
+    primitive: { topology: "triangle-list" },
+  });
+  const context = canvas.getContext("webgpu") as any;
+  if (!context) return null;
+  context.configure({ device, format, alphaMode: "premultiplied" });
+
+  const usage = (globalThis as any).GPUBufferUsage;
+  const uniformBuffer = device.createBuffer({
+    label: "Skybreak Ultra uniforms",
+    size: 16,
+    usage: (usage?.UNIFORM ?? 0x40) | (usage?.COPY_DST ?? 0x08),
+  });
+  const bindGroup = device.createBindGroup({
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+  });
+
+  const isMac = /Macintosh|Mac OS X/i.test(navigator.userAgent);
+  updateRenderer(isMac ? "WEBGPU · METAL" : "WEBGPU · NATIVE GPU");
+  let active = true;
+  let animation = 0;
+  let lastFrame = performance.now();
+  let dynamicScale = 1;
+  let sampleFrames = 0;
+  let sampleTime = 0;
+
+  void device.lost.then(() => {
+    if (active) updateRenderer("WEBGPU LOST");
+  });
+
+  const render = (time: number) => {
+    if (!active) return;
+    const delta = Math.min(50, time - lastFrame);
+    lastFrame = time;
+    sampleTime += delta;
+    sampleFrames += 1;
+    if (sampleFrames >= 30) {
+      const average = sampleTime / sampleFrames;
+      if (average > 20.5) dynamicScale = Math.max(0.65, dynamicScale - 0.06);
+      else if (average < 17.2) dynamicScale = Math.min(1, dynamicScale + 0.025);
+      sampleFrames = 0;
+      sampleTime = 0;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const dprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
+    const baseDpr = Math.min(
+      window.devicePixelRatio || 1,
+      dprLimit,
+      maxTextureSize / Math.max(1, rect.width),
+      Math.min(2160, maxTextureSize) / Math.max(1, rect.height),
+    );
+    const width = Math.max(1, Math.round(rect.width * baseDpr * dynamicScale));
+    const height = Math.max(1, Math.round(rect.height * baseDpr * dynamicScale));
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    device.queue.writeBuffer(uniformBuffer, 0, new Float32Array([width, height, time * 0.001, 1]));
+    const encoder = device.createCommandEncoder({ label: "Skybreak Ultra frame" });
+    const pass = encoder.beginRenderPass({
+      colorAttachments: [{
+        view: context.getCurrentTexture().createView(),
+        clearValue: { r: 0, g: 0, b: 0, a: 0 },
+        loadOp: "clear",
+        storeOp: "store",
+      }],
+    });
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
+    pass.draw(3);
+    pass.end();
+    device.queue.submit([encoder.finish()]);
+    animation = requestAnimationFrame(render);
+  };
+  animation = requestAnimationFrame(render);
+  return () => {
+    active = false;
+    cancelAnimationFrame(animation);
+    uniformBuffer.destroy();
+    device.destroy();
+  };
+}
+
+function startWebGlEffects(
+  canvas: HTMLCanvasElement,
+  updateRenderer: (name: string) => void,
+  getQuality: () => Quality,
+): EffectCleanup | null {
+  const gl = canvas.getContext("webgl2", {
+    alpha: true,
+    antialias: false,
+    depth: false,
+    powerPreference: "high-performance",
+    premultipliedAlpha: true,
+  });
+  if (!gl) return null;
+  updateRenderer("WEBGL2");
+
+  const vertexSource = `#version 300 es
+    precision highp float;
+    const vec2 points[3] = vec2[3](vec2(-1.0,-1.0), vec2(3.0,-1.0), vec2(-1.0,3.0));
+    void main(){ gl_Position = vec4(points[gl_VertexID], 0.0, 1.0); }
+  `;
+  const fragmentSource = `#version 300 es
+    precision highp float;
+    uniform vec2 u_resolution;
+    uniform float u_time;
+    out vec4 outColor;
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+    float noise(vec2 p) {
+      vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash(i), hash(i + vec2(1,0)), f.x), mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x), f.y);
+    }
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_resolution; vec2 p = uv * 2.0 - 1.0;
+      p.x *= u_resolution.x / u_resolution.y;
+      float n = noise(p * 2.8 + vec2(u_time * .035, -u_time * .06));
+      float fogA = exp(-7.0 * abs(p.y + .26 + sin(p.x * 2.2 + u_time * .22) * .12));
+      float fogB = exp(-9.0 * abs(p.y - .38 + sin(p.x * 3.4 - u_time * .17) * .08));
+      vec3 color = vec3(0.0, .85, 1.0) * fogA * n * .16;
+      color += vec3(1.0, .04, .42) * fogB * (1.0 - n) * .13;
+      vec2 rainUv = uv * vec2(95.0, 24.0); float lane = floor(rainUv.x);
+      float drop = fract(rainUv.y + u_time * (2.4 + hash(vec2(lane, 4.0))) + hash(vec2(lane, 7.0)) * 7.0);
+      float rain = smoothstep(.94, 1.0, drop) * step(.82, hash(vec2(lane, floor(rainUv.y))));
+      color += mix(vec3(0.0,.75,1.0), vec3(1.0,.08,.5), hash(vec2(lane,2.0))) * rain * .1;
+      float scan = sin(gl_FragCoord.y * 1.55 + u_time * 3.0) * .5 + .5;
+      color += vec3(.02,.05,.08) * scan * .035;
+      float alpha = clamp(max(max(color.r, color.g), color.b) * 1.7, 0.0, .28);
+      outColor = vec4(color, alpha);
+    }
+  `;
+  const compile = (type: number, source: string) => {
+    const shader = gl.createShader(type);
+    if (!shader) return null;
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      gl.deleteShader(shader);
+      return null;
+    }
+    return shader;
+  };
+  const vertex = compile(gl.VERTEX_SHADER, vertexSource);
+  const fragment = compile(gl.FRAGMENT_SHADER, fragmentSource);
+  if (!vertex || !fragment) return null;
+  const program = gl.createProgram();
+  if (!program) return null;
+  gl.attachShader(program, vertex);
+  gl.attachShader(program, fragment);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return null;
+  const resolutionLocation = gl.getUniformLocation(program, "u_resolution");
+  const timeLocation = gl.getUniformLocation(program, "u_time");
+  let animation = 0;
+  let lastGlFrame = 0;
+  const render = (time: number) => {
+    const settings = QUALITY_SETTINGS[getQuality()];
+    const frameInterval = 1000 / settings.glFps;
+    if (time - lastGlFrame < frameInterval) {
+      animation = requestAnimationFrame(render);
+      return;
+    }
+    lastGlFrame = time;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, settings.glDpr);
+    const width = Math.max(1, Math.round(rect.width * dpr));
+    const height = Math.max(1, Math.round(rect.height * dpr));
+    if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+    gl.viewport(0, 0, width, height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    if (settings.webgl) {
+      gl.useProgram(program);
+      gl.uniform2f(resolutionLocation, width, height);
+      gl.uniform1f(timeLocation, time * 0.001);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    animation = requestAnimationFrame(render);
+  };
+  animation = requestAnimationFrame(render);
+  return () => {
+    cancelAnimationFrame(animation);
+    gl.deleteProgram(program);
+    gl.deleteShader(vertex);
+    gl.deleteShader(fragment);
+  };
+}
+
 type Language = "en" | "de";
 
 type NeonAscentProps = {
@@ -291,6 +579,25 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   useEffect(() => {
     const canvas = fxCanvasRef.current;
     if (!canvas) return;
+    if (quality === "ultra") {
+      let disposed = false;
+      let cleanup: EffectCleanup | null = null;
+      void startWebGpuEffects(canvas, setRenderer)
+        .then((gpuCleanup) => {
+          if (disposed) {
+            gpuCleanup?.();
+            return;
+          }
+          cleanup = gpuCleanup ?? startWebGlEffects(canvas, setRenderer, () => qualityRef.current);
+        })
+        .catch(() => {
+          if (!disposed) cleanup = startWebGlEffects(canvas, setRenderer, () => qualityRef.current);
+        });
+      return () => {
+        disposed = true;
+        cleanup?.();
+      };
+    }
     const gl = canvas.getContext("webgl2", {
       alpha: true,
       antialias: false,
@@ -409,7 +716,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       gl.deleteShader(vertex);
       gl.deleteShader(fragment);
     };
-  }, []);
+  }, [quality]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1266,7 +1573,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       </header>
 
       <section className="game-frame" aria-label={isDe ? "Skybreak Protocol Spielfeld" : "Skybreak Protocol game field"}>
-        <canvas ref={fxCanvasRef} className="fx-canvas" aria-hidden="true" />
+        <canvas key={quality === "ultra" ? "webgpu" : "webgl"} ref={fxCanvasRef} className="fx-canvas" aria-hidden="true" />
         <canvas ref={canvasRef} aria-label={isDe ? "Spielansicht: Klettere durch die Cyberpunk-Megacity" : "Game view: climb through the cyberpunk megacity"} />
         {status !== "playing" && (
           <div className="game-overlay">

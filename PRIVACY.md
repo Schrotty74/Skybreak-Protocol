@@ -20,14 +20,17 @@ Dependencies (`node_modules`) are not published. The automatically generated loc
 
 ## Processing in the browser
 
-Skybreak Protocol stores only two technically non-personal values in the local storage of the current browser:
+Skybreak Protocol stores only three technically non-personal values in the local storage of the current browser:
 
 | Key | Content | Purpose | Transmission |
 |---|---|---|---|
 | `neon-ascent-highscore` | highest score reached locally | game progress | none |
 | `skybreak-quality` | selected graphics level | retain the device setting | none |
+| `skybreak-level-difficulties` | difficulty selected for each level | retain the game setting | none |
 
 These values never leave the device. They can be removed by deleting the site's browser data.
+
+Ultra mode checks WebGPU availability and local GPU capability limits to select WebGPU or the WebGL2 fallback and adapt render resolution. No GPU model, adapter information, benchmark result, or hardware identifier is stored or transmitted.
 
 ## Not used
 
@@ -41,7 +44,7 @@ These values never leave the device. They can be removed by deleting the site's 
 
 ## Hosting
 
-When the game is opened through GitHub Pages, GitHub processes technically necessary connection data such as the IP address and browser request outside the game code. GitHub's privacy terms apply to that processing. The alternative OpenAI Sites deployment is likewise subject to the relevant hosting provider's terms. Skybreak Protocol itself has no access to those hosting logs.
+When the game is opened through GitHub Pages, GitHub processes technically necessary connection data such as the IP address and browser request outside the game code. GitHub's privacy terms apply to that processing. Skybreak Protocol itself has no access to those hosting logs.
 
 ## Published identifiers
 
