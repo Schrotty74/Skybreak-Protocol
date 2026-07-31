@@ -56,19 +56,22 @@ Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
 | Niedrig | ältere oder warme Mobilgeräte | 30 FPS, reduzierte Auflösung, WebGL-Effekte aus, wenig Regen und Nebel |
 | Mittel | empfohlene Smartphone-Einstellung | 40 FPS, WebGL-Nebel, reduzierte Partikel und Parallaxe |
 | Hoch | leistungsfähige Geräte | bis 60 FPS, hohe Auflösung und erweiterte Effekte |
-| Ultra | aktuelle Desktop-GPUs und 4K | WebGPU-Effekte, volle Renderauflösung, maximale Partikel, Beleuchtung und Parallaxe; WebGL2-Fallback |
+| Ultra | aktuelle Desktop-GPUs und 4K | vollständiges WebGPU-Post-Processing, GPU-Instancing, adaptive 60/90/120 FPS und maximale Effekte; WebGL2-Fallback |
 
 ### Was Ultra verändert
 
-Ultra ergänzt eine eigene WebGPU-Effektebene und fordert die **Hochleistungs-GPU** des Browsers an. Unter macOS wird WebGPU vom Browser auf Metal abgebildet; auf aktuellen NVIDIA- und AMD-Systemen kommt die native GPU-Anbindung des Browsers zum Einsatz. Gegenüber Hoch bietet Ultra dichteren mehrschichtigen Nebel und Regen, Energiegitter, animierte Lichtstrahlen, stärkeren atmosphärischen Bloom, maximale Canvas-Partikel und eine höhere Auflösung bis 4K.
+Ultra ergänzt eine vollständige WebGPU-Pipeline und fordert die **Hochleistungs-GPU** des Browsers an. Unter macOS wird WebGPU vom Browser auf Metal abgebildet; auf aktuellen NVIDIA- und AMD-Systemen kommt die native GPU-Anbindung des Browsers zum Einsatz. Gegenüber Hoch bietet Ultra dichteren mehrschichtigen Nebel und Regen, Energiegitter, animierte Lichtstrahlen, stärkeren Bloom, bildschirmbasierte Neonreflexionen, chromatische Bearbeitung, Tone-Mapping und eine höhere Auflösung bis 4K.
 
-Die Effektauflösung wird anhand der gemessenen Bildzeiten automatisch zwischen 65 und 100 Prozent angepasst. Bei fehlender WebGPU-Unterstützung oder einem Softwareadapter wird automatisch der vorhandene WebGL2-Renderer verwendet.
+Plattformen, Gegner, Trümmer, Spielpartikel und Regen erhalten GPU-instanzierte Verstärkungsebenen. Ein eigener Web Worker berechnet atmosphärische Instanzen und wertet die Bildzeiten außerhalb des Hauptthreads aus. Auf geeigneten Desktop-Bildschirmen wählt der Renderer automatisch 60, 90 oder bis zu 120 FPS und passt die Auflösung zwischen 62 und 100 Prozent an.
 
-**Aktuelle Grenze:** Die eigentliche Spielszene, Plattformen, Gegner, Trümmer und Spielpartikel werden weiterhin mit Canvas 2D gezeichnet. GPU-Instancing, Web Worker, Reflexionen, Post-Processing der gesamten Spielszene und ein adaptiver Ultra+-Modus mit 120 FPS sind noch nicht umgesetzt.
+Bei fehlender WebGPU-Unterstützung oder einem Softwareadapter werden automatisch der vorhandene WebGL2- und Canvas-Renderer verwendet. Mobilgeräte bleiben zur Begrenzung von Wärme und Akkuverbrauch auf 60 FPS beschränkt.
 
 ## Grafische Effekte
 
 - WebGPU-Ultra-Shader für mehrschichtigen Neonnebel, dichteren Regen, Energiegitter, Lichtstrahlen und atmosphärischen Bloom
+- vollständiger Bloom, bildschirmbasierte Neonreflexionen, chromatische Bearbeitung, Tone-Mapping und Vignette
+- GPU-instanzierte Verstärkungsebenen für Plattformen, Gegner, Trümmer, Spielpartikel und Regen
+- Web Worker für atmosphärische Instanzberechnung und adaptive Steuerung mit 60/90/120 FPS
 - automatische Nutzung von Metal unter macOS und der nativen Browser-GPU-Anbindung auf aktuellen NVIDIA-/AMD-Systemen
 - adaptive Ultra-Effektauflösung bis 4K mit WebGL2-Fallback
 - mehrstufige Parallax-Megacity mit beleuchteten Fenstern
@@ -85,6 +88,7 @@ Die Effektauflösung wird anhand der gemessenen Bildzeiten automatisch zwischen 
 - React 19 und TypeScript
 - Vite 8
 - Canvas 2D mit WebGPU-Ultra-Effektebene und WebGL2-kompatiblem Fallback
+- Modul-Web-Worker für Ultra-Instanzsimulation und Leistungssteuerung
 - Web Audio API für synthetisierte Arcade-Sounds
 - Pointer Events für Maus, Touch und Stift
 - Local Storage für Highscore und Grafikstufe

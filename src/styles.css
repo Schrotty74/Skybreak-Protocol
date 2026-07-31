@@ -242,6 +242,11 @@ canvas {
   filter: saturate(1.25);
 }
 
+.fx-canvas.full-scene-fx {
+  mix-blend-mode: normal;
+  filter: none;
+}
+
 .game-overlay {
   position: absolute;
   z-index: 5;

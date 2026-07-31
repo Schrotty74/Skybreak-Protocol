@@ -30,7 +30,7 @@ Skybreak Protocol speichert nur drei technisch nicht personenbezogene Werte im l
 
 Diese Werte verlassen das Gerät nicht. Sie können durch Löschen der Websitedaten im Browser entfernt werden.
 
-Der Ultra-Modus prüft ausschließlich lokal die Verfügbarkeit von WebGPU und technische GPU-Grenzwerte, um WebGPU oder den WebGL2-Fallback zu wählen und die Renderauflösung anzupassen. GPU-Modell, Adapterinformationen, Messergebnisse oder Hardwarekennungen werden weder gespeichert noch übertragen.
+Der Ultra-Modus prüft ausschließlich lokal die Verfügbarkeit von WebGPU, technische GPU-Grenzwerte und Bildzeiten, um WebGPU oder den WebGL2-Fallback zu wählen, die Renderauflösung anzupassen und 60, 90 oder 120 FPS auszuwählen. Ein Modul-Web-Worker gleicher Herkunft führt lokale Effekt- und Zeitberechnungen aus. GPU-Modell, Adapterinformationen, Messergebnisse, Bildzeiten oder Hardwarekennungen werden weder gespeichert noch übertragen.
 
 ## Nicht verwendet
 

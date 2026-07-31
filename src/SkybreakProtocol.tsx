@@ -366,6 +366,328 @@ async function startWebGpuEffects(
   };
 }
 
+async function startWebGpuUltraRenderer(
+  canvas: HTMLCanvasElement,
+  sourceCanvas: HTMLCanvasElement,
+  updateRenderer: (name: string) => void,
+  getSceneInstances: () => Float32Array,
+  updateFrameRate: (fps: number) => void,
+): Promise<EffectCleanup | null> {
+  const gpu = (navigator as Navigator & { gpu?: any }).gpu;
+  if (!gpu) return null;
+
+  const adapter = await gpu.requestAdapter({ powerPreference: "high-performance" });
+  if (!adapter || adapter.info?.isFallbackAdapter) return null;
+  const maxTextureSize = Math.min(Number(adapter.limits?.maxTextureDimension2D || 4096), 4096);
+  const device = await adapter.requestDevice();
+  const format = gpu.getPreferredCanvasFormat();
+  const context = canvas.getContext("webgpu") as any;
+  if (!context) return null;
+  context.configure({ device, format, alphaMode: "premultiplied" });
+
+  const usage = (globalThis as any).GPUBufferUsage;
+  const textureUsage = (globalThis as any).GPUTextureUsage;
+  const uniformBuffer = device.createBuffer({
+    label: "Skybreak Ultra uniforms",
+    size: 16,
+    usage: (usage?.UNIFORM ?? 0x40) | (usage?.COPY_DST ?? 0x08),
+  });
+  const quadBuffer = device.createBuffer({
+    label: "Skybreak instance quad",
+    size: 48,
+    usage: (usage?.VERTEX ?? 0x20) | (usage?.COPY_DST ?? 0x08),
+  });
+  device.queue.writeBuffer(quadBuffer, 0, new Float32Array([
+    -0.5, -0.5, 0.5, -0.5, -0.5, 0.5,
+    -0.5, 0.5, 0.5, -0.5, 0.5, 0.5,
+  ]));
+  const instanceCapacity = 1024;
+  const instanceBuffer = device.createBuffer({
+    label: "Skybreak Ultra instances",
+    size: instanceCapacity * 8 * 4,
+    usage: (usage?.VERTEX ?? 0x20) | (usage?.COPY_DST ?? 0x08),
+  });
+
+  const postShader = device.createShaderModule({
+    label: "Skybreak full-scene post processing",
+    code: `
+      struct Uniforms { resolution: vec2f, time: f32, intensity: f32 };
+      @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+      @group(0) @binding(1) var sceneTexture: texture_2d<f32>;
+      @group(0) @binding(2) var sceneSampler: sampler;
+
+      fn hash(p: vec2f) -> f32 { return fract(sin(dot(p, vec2f(127.1, 311.7))) * 43758.5453); }
+      fn noise(p: vec2f) -> f32 {
+        let i = floor(p); var f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2f(1.0, 0.0)), f.x),
+                   mix(hash(i + vec2f(0.0, 1.0)), hash(i + vec2f(1.0, 1.0)), f.x), f.y);
+      }
+      @vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
+        var points = array<vec2f, 3>(vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
+        return vec4f(points[index], 0.0, 1.0);
+      }
+      @fragment fn fragmentMain(@builtin(position) position: vec4f) -> @location(0) vec4f {
+        let uv = position.xy / uniforms.resolution;
+        let textureSize = vec2f(textureDimensions(sceneTexture));
+        let texel = 1.0 / max(textureSize, vec2f(1.0));
+        let chroma = texel * (1.4 + sin(uniforms.time * 0.7) * 0.25);
+        let baseR = textureSample(sceneTexture, sceneSampler, clamp(uv + vec2f(chroma.x, 0.0), vec2f(0.0), vec2f(1.0))).r;
+        let baseG = textureSample(sceneTexture, sceneSampler, uv).g;
+        let baseB = textureSample(sceneTexture, sceneSampler, clamp(uv - vec2f(chroma.x, 0.0), vec2f(0.0), vec2f(1.0))).b;
+        var scene = vec3f(baseR, baseG, baseB);
+
+        var bloom = textureSample(sceneTexture, sceneSampler, uv + texel * vec2f(4.0, 0.0)).rgb;
+        bloom += textureSample(sceneTexture, sceneSampler, uv - texel * vec2f(4.0, 0.0)).rgb;
+        bloom += textureSample(sceneTexture, sceneSampler, uv + texel * vec2f(0.0, 4.0)).rgb;
+        bloom += textureSample(sceneTexture, sceneSampler, uv - texel * vec2f(0.0, 4.0)).rgb;
+        bloom += textureSample(sceneTexture, sceneSampler, uv + texel * vec2f(3.0, 3.0)).rgb;
+        bloom += textureSample(sceneTexture, sceneSampler, uv - texel * vec2f(3.0, 3.0)).rgb;
+        bloom *= 0.1667;
+        bloom = max(bloom - vec3f(0.28), vec3f(0.0));
+        scene += bloom * 0.42;
+
+        let distortion = (noise(vec2f(uv.x * 24.0, uniforms.time * 0.45)) - 0.5) * 0.012;
+        let reflectionUv = clamp(vec2f(uv.x + distortion, 1.18 - uv.y), vec2f(0.0), vec2f(1.0));
+        let reflected = textureSample(sceneTexture, sceneSampler, reflectionUv).rgb;
+        let reflectionMask = smoothstep(0.5, 0.96, uv.y) * (1.0 - smoothstep(0.96, 1.0, uv.y));
+        scene += reflected * reflectionMask * 0.16;
+
+        var p = uv * 2.0 - 1.0;
+        p.x *= uniforms.resolution.x / uniforms.resolution.y;
+        let n = noise(p * 3.1 + vec2f(uniforms.time * 0.05, -uniforms.time * 0.08));
+        let fogA = exp(-7.0 * abs(p.y + 0.28 + sin(p.x * 2.4 + uniforms.time * 0.25) * 0.13));
+        let fogB = exp(-10.0 * abs(p.y - 0.34 + sin(p.x * 3.7 - uniforms.time * 0.19) * 0.09));
+        scene += vec3f(0.0, 0.82, 1.0) * fogA * n * 0.09;
+        scene += vec3f(1.0, 0.03, 0.4) * fogB * (1.0 - n) * 0.075;
+
+        let beamA = exp(-18.0 * abs(p.x - sin(uniforms.time * 0.16) * 0.5 - p.y * 0.28));
+        let beamB = exp(-21.0 * abs(p.x + cos(uniforms.time * 0.13) * 0.62 + p.y * 0.34));
+        scene += vec3f(0.0, 0.62, 0.82) * beamA * 0.035;
+        scene += vec3f(0.85, 0.02, 0.34) * beamB * 0.03;
+
+        let vignette = 1.0 - smoothstep(0.55, 1.25, length(p));
+        scene *= 0.78 + vignette * 0.28;
+        scene = scene / (scene + vec3f(0.82));
+        scene = pow(max(scene, vec3f(0.0)), vec3f(0.92));
+        return vec4f(scene, 1.0);
+      }
+    `,
+  });
+  const postPipeline = await device.createRenderPipelineAsync({
+    label: "Skybreak full-scene post pipeline",
+    layout: "auto",
+    vertex: { module: postShader, entryPoint: "vertexMain" },
+    fragment: { module: postShader, entryPoint: "fragmentMain", targets: [{ format }] },
+    primitive: { topology: "triangle-list" },
+  });
+
+  const instanceShader = device.createShaderModule({
+    label: "Skybreak instanced highlights",
+    code: `
+      struct VertexInput {
+        @location(0) corner: vec2f,
+        @location(1) center: vec2f,
+        @location(2) size: vec2f,
+        @location(3) color: vec4f,
+      };
+      struct VertexOutput {
+        @builtin(position) position: vec4f,
+        @location(0) color: vec4f,
+        @location(1) local: vec2f,
+      };
+      @vertex fn vertexMain(input: VertexInput) -> VertexOutput {
+        var output: VertexOutput;
+        let point = input.center + input.corner * input.size;
+        output.position = vec4f(point.x * 2.0 - 1.0, 1.0 - point.y * 2.0, 0.0, 1.0);
+        output.color = input.color;
+        output.local = input.corner;
+        return output;
+      }
+      @fragment fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+        let glow = 1.0 - smoothstep(0.24, 0.72, length(input.local));
+        return vec4f(input.color.rgb, input.color.a * (0.45 + glow * 0.55));
+      }
+    `,
+  });
+  const instancePipeline = await device.createRenderPipelineAsync({
+    label: "Skybreak GPU instancing pipeline",
+    layout: "auto",
+    vertex: {
+      module: instanceShader,
+      entryPoint: "vertexMain",
+      buffers: [
+        { arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }] },
+        {
+          arrayStride: 32,
+          stepMode: "instance",
+          attributes: [
+            { shaderLocation: 1, offset: 0, format: "float32x2" },
+            { shaderLocation: 2, offset: 8, format: "float32x2" },
+            { shaderLocation: 3, offset: 16, format: "float32x4" },
+          ],
+        },
+      ],
+    },
+    fragment: {
+      module: instanceShader,
+      entryPoint: "fragmentMain",
+      targets: [{
+        format,
+        blend: {
+          color: { srcFactor: "src-alpha", dstFactor: "one", operation: "add" },
+          alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
+        },
+      }],
+    },
+    primitive: { topology: "triangle-list" },
+  });
+
+  const sampler = device.createSampler({ magFilter: "linear", minFilter: "linear" });
+  let sceneTexture: any = null;
+  let sceneTextureWidth = 0;
+  let sceneTextureHeight = 0;
+  let postBindGroup: any = null;
+  const ensureSceneTexture = () => {
+    const width = Math.max(1, Math.min(maxTextureSize, sourceCanvas.width));
+    const height = Math.max(1, Math.min(maxTextureSize, sourceCanvas.height));
+    if (sceneTexture && width === sceneTextureWidth && height === sceneTextureHeight) return;
+    sceneTexture?.destroy();
+    sceneTextureWidth = width;
+    sceneTextureHeight = height;
+    sceneTexture = device.createTexture({
+      label: "Skybreak Canvas scene texture",
+      size: [width, height, 1],
+      format: "rgba8unorm",
+      usage: (textureUsage?.TEXTURE_BINDING ?? 0x04) | (textureUsage?.COPY_DST ?? 0x02),
+    });
+    postBindGroup = device.createBindGroup({
+      layout: postPipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: sceneTexture.createView() },
+        { binding: 2, resource: sampler },
+      ],
+    });
+  };
+
+  const isMac = /Macintosh|Mac OS X/i.test(navigator.userAgent);
+  updateRenderer(isMac ? "WEBGPU · METAL · INSTANCED" : "WEBGPU · NATIVE · INSTANCED");
+  const allowHighRefresh = window.matchMedia("(pointer: fine)").matches;
+  const worker = new Worker(new URL("./ultraWorker.ts", import.meta.url), { type: "module" });
+  let active = true;
+  let animation = 0;
+  let workerBusy = false;
+  let workerInstances = new Float32Array(0);
+  let renderScale = 1;
+  let targetFps = 60;
+  let lastAnimationFrame = performance.now();
+  let lastRenderedFrame = 0;
+  let lastWorkerPost = 0;
+
+  worker.onmessage = (event: MessageEvent<{ buffer: ArrayBuffer; renderScale: number; targetFps: number }>) => {
+    workerBusy = false;
+    workerInstances = new Float32Array(event.data.buffer);
+    renderScale = Math.max(0.62, Math.min(1, event.data.renderScale));
+    const nextFps = Math.max(60, Math.min(120, event.data.targetFps));
+    if (nextFps !== targetFps) {
+      targetFps = nextFps;
+      updateFrameRate(nextFps);
+    }
+  };
+  worker.onerror = () => {
+    workerBusy = false;
+    targetFps = 60;
+    updateFrameRate(60);
+  };
+  void device.lost.then(() => {
+    if (active) updateRenderer("WEBGPU LOST");
+  });
+
+  const render = (time: number) => {
+    if (!active) return;
+    const animationDelta = Math.max(4, Math.min(40, time - lastAnimationFrame));
+    lastAnimationFrame = time;
+    if (!workerBusy && time - lastWorkerPost >= 24) {
+      workerBusy = true;
+      lastWorkerPost = time;
+      worker.postMessage({ type: "tick", time, frameDelta: animationDelta, allowHighRefresh, rainCount: 220 });
+    }
+
+    const frameInterval = 1000 / targetFps;
+    if (time - lastRenderedFrame < frameInterval - 0.35) {
+      animation = requestAnimationFrame(render);
+      return;
+    }
+    lastRenderedFrame = time;
+    const rect = canvas.getBoundingClientRect();
+    const dprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
+    const baseDpr = Math.min(
+      window.devicePixelRatio || 1,
+      dprLimit,
+      maxTextureSize / Math.max(1, rect.width),
+      Math.min(2160, maxTextureSize) / Math.max(1, rect.height),
+    );
+    const width = Math.max(1, Math.round(rect.width * baseDpr * renderScale));
+    const height = Math.max(1, Math.round(rect.height * baseDpr * renderScale));
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    ensureSceneTexture();
+    try {
+      device.queue.copyExternalImageToTexture(
+        { source: sourceCanvas },
+        { texture: sceneTexture },
+        [sceneTextureWidth, sceneTextureHeight],
+      );
+    } catch {
+      animation = requestAnimationFrame(render);
+      return;
+    }
+
+    const sceneInstances = getSceneInstances();
+    const workerCount = Math.min(workerInstances.length / 8, instanceCapacity);
+    const sceneCount = Math.min(sceneInstances.length / 8, instanceCapacity - workerCount);
+    if (workerCount > 0) device.queue.writeBuffer(instanceBuffer, 0, workerInstances.subarray(0, workerCount * 8));
+    if (sceneCount > 0) device.queue.writeBuffer(instanceBuffer, workerCount * 32, sceneInstances.subarray(0, sceneCount * 8));
+    device.queue.writeBuffer(uniformBuffer, 0, new Float32Array([width, height, time * 0.001, 1]));
+
+    const encoder = device.createCommandEncoder({ label: "Skybreak Ultra frame" });
+    const pass = encoder.beginRenderPass({
+      colorAttachments: [{
+        view: context.getCurrentTexture().createView(),
+        clearValue: { r: 0, g: 0, b: 0, a: 0 },
+        loadOp: "clear",
+        storeOp: "store",
+      }],
+    });
+    pass.setPipeline(postPipeline);
+    pass.setBindGroup(0, postBindGroup);
+    pass.draw(3);
+    if (workerCount + sceneCount > 0) {
+      pass.setPipeline(instancePipeline);
+      pass.setVertexBuffer(0, quadBuffer);
+      pass.setVertexBuffer(1, instanceBuffer);
+      pass.draw(6, workerCount + sceneCount);
+    }
+    pass.end();
+    device.queue.submit([encoder.finish()]);
+    animation = requestAnimationFrame(render);
+  };
+  animation = requestAnimationFrame(render);
+  return () => {
+    active = false;
+    cancelAnimationFrame(animation);
+    worker.terminate();
+    sceneTexture?.destroy();
+    uniformBuffer.destroy();
+    quadBuffer.destroy();
+    instanceBuffer.destroy();
+    device.destroy();
+  };
+}
+
 function startWebGlEffects(
   canvas: HTMLCanvasElement,
   updateRenderer: (name: string) => void,
@@ -489,6 +811,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const audioRef = useRef<ReturnType<typeof createAudio> | null>(null);
   const mutedRef = useRef(false);
   const qualityRef = useRef<Quality>("medium");
+  const ultraFpsRef = useRef(60);
+  const renderViewRef = useRef({ width: VIEW_W, height: VIEW_H, portrait: false });
   const difficultiesRef = useRef<Difficulty[]>(Array(LEVEL_COUNT).fill("medium"));
   const [status, setStatus] = useState<GameStatus>("ready");
   const [score, setScore] = useState(0);
@@ -497,6 +821,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [muted, setMuted] = useState(false);
   const [highScore, setHighScore] = useState(0);
   const [renderer, setRenderer] = useState("CANVAS 2D");
+  const [ultraFps, setUltraFps] = useState(60);
   const [quality, setQuality] = useState<Quality>("medium");
   const [nativeFullscreen, setNativeFullscreen] = useState(false);
   const [immersiveMode, setImmersiveMode] = useState(false);
@@ -576,13 +901,75 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     localStorage.setItem("skybreak-level-difficulties", JSON.stringify(updated));
   };
 
+  const getUltraSceneInstances = useCallback(() => {
+    const world = worldRef.current;
+    const view = renderViewRef.current;
+    const instances: number[] = [];
+    const add = (x: number, y: number, width: number, height: number, r: number, g: number, b: number, alpha: number) => {
+      if (x < -0.1 || x > 1.1 || y < -0.1 || y > 1.1 || instances.length >= 800 * 8) return;
+      instances.push(x, y, width, height, r, g, b, alpha);
+    };
+
+    for (const tile of world.tiles) {
+      if (!tile.alive || tile.y < world.cameraY - 80 || tile.y > world.cameraY + view.height + 60) continue;
+      add(
+        (tile.x - world.cameraX + TILE * 0.5) / view.width,
+        (tile.y - world.cameraY + 4) / view.height,
+        TILE / view.width,
+        5 / view.height,
+        tile.cracked ? 0 : 1,
+        tile.cracked ? 0.88 : 0.76,
+        tile.cracked ? 1 : 0.18,
+        0.2,
+      );
+    }
+    for (const enemy of world.enemies) {
+      if (!enemy.alive || enemy.y < world.cameraY - 70 || enemy.y > world.cameraY + view.height + 70) continue;
+      add(
+        (enemy.x - world.cameraX + 18) / view.width,
+        (enemy.y - world.cameraY + 17) / view.height,
+        44 / view.width,
+        44 / view.height,
+        1,
+        0.04,
+        0.45,
+        0.22,
+      );
+    }
+    for (const particle of world.particles) {
+      if (particle.y < world.cameraY - 50 || particle.y > world.cameraY + view.height + 50) continue;
+      const pink = particle.color === "#ff2b8a";
+      add(
+        (particle.x - world.cameraX) / view.width,
+        (particle.y - world.cameraY) / view.height,
+        (pink ? 11 : 7) / view.width,
+        (pink ? 11 : 7) / view.height,
+        pink ? 1 : 0.08,
+        pink ? 0.05 : 0.82,
+        pink ? 0.44 : 1,
+        Math.min(0.42, Math.max(0.08, particle.life * 0.3)),
+      );
+    }
+    return new Float32Array(instances);
+  }, []);
+
   useEffect(() => {
     const canvas = fxCanvasRef.current;
-    if (!canvas) return;
+    const sourceCanvas = canvasRef.current;
+    if (!canvas || !sourceCanvas) return;
     if (quality === "ultra") {
       let disposed = false;
       let cleanup: EffectCleanup | null = null;
-      void startWebGpuEffects(canvas, setRenderer)
+      void startWebGpuUltraRenderer(
+        canvas,
+        sourceCanvas,
+        setRenderer,
+        getUltraSceneInstances,
+        (nextFps) => {
+          ultraFpsRef.current = nextFps;
+          setUltraFps(nextFps);
+        },
+      )
         .then((gpuCleanup) => {
           if (disposed) {
             gpuCleanup?.();
@@ -716,7 +1103,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       gl.deleteShader(vertex);
       gl.deleteShader(fragment);
     };
-  }, [quality]);
+  }, [getUltraSceneInstances, quality]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -780,7 +1167,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     if (!ctx) return;
 
     let frame = 0;
-    const view = { width: VIEW_W, height: VIEW_H, portrait: false };
+    const view = renderViewRef.current;
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       const settings = QUALITY_SETTINGS[qualityRef.current];
@@ -1445,7 +1832,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
     let lastRenderedFrame = 0;
     const loop = (time: number) => {
-      const frameInterval = 1000 / QUALITY_SETTINGS[qualityRef.current].fps;
+      const frameInterval = 1000 / (qualityRef.current === "ultra" ? ultraFpsRef.current : QUALITY_SETTINGS[qualityRef.current].fps);
       if (time - lastRenderedFrame < frameInterval) {
         frame = requestAnimationFrame(loop);
         return;
@@ -1573,7 +1960,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       </header>
 
       <section className="game-frame" aria-label={isDe ? "Skybreak Protocol Spielfeld" : "Skybreak Protocol game field"}>
-        <canvas key={quality === "ultra" ? "webgpu" : "webgl"} ref={fxCanvasRef} className="fx-canvas" aria-hidden="true" />
+        <canvas key={quality === "ultra" ? "webgpu" : "webgl"} ref={fxCanvasRef} className={`fx-canvas${quality === "ultra" ? " full-scene-fx" : ""}`} aria-hidden="true" />
         <canvas ref={canvasRef} aria-label={isDe ? "Spielansicht: Klettere durch die Cyberpunk-Megacity" : "Game view: climb through the cyberpunk megacity"} />
         {status !== "playing" && (
           <div className="game-overlay">
@@ -1642,7 +2029,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <small>{LEVEL_THEMES[sector - 1].name}</small>
         </label>
         <div className="run-record">
-          <span>{renderer} · {quality.toUpperCase()} · LOCAL RECORD</span>
+          <span>{renderer} · {quality.toUpperCase()}{quality === "ultra" ? ` · ${ultraFps} FPS` : ""} · LOCAL RECORD</span>
           <strong>{highScore.toString().padStart(6, "0")}</strong>
         </div>
       </section>

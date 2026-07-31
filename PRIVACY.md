@@ -30,7 +30,7 @@ Skybreak Protocol stores only three technically non-personal values in the local
 
 These values never leave the device. They can be removed by deleting the site's browser data.
 
-Ultra mode checks WebGPU availability and local GPU capability limits to select WebGPU or the WebGL2 fallback and adapt render resolution. No GPU model, adapter information, benchmark result, or hardware identifier is stored or transmitted.
+Ultra mode checks WebGPU availability, local GPU capability limits, and frame timing to select WebGPU or the WebGL2 fallback, adapt render resolution, and choose 60, 90, or 120 FPS. A same-origin module Web Worker performs local effect and timing calculations. No GPU model, adapter information, benchmark result, frame timing, or hardware identifier is stored or transmitted.
 
 ## Not used
 
