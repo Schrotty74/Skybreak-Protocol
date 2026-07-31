@@ -1,5 +1,11 @@
 # Unveröffentlichte Änderungen seit Skybreak Protocol 1.0.0-beta.1
 
+## Umgesetzt
+
+- Holztruhen erscheinen alle drei bis vier Plattform-Etagen.
+- Truhen enthalten Schutzschild, Extraleben, Punktebonus oder einen zwölf Sekunden langen Eispickel-Overdrive.
+- Schutzschild, Overdrive, geöffnete Truhen und Power-up-Meldungen werden im Spiel sichtbar dargestellt.
+
 ## Geplant: Grafik und Präsentation
 
 - [ ] Level-Übergänge mit kurzer Kamerafahrt, Sektorname, Farbwelt und Umgebungsvorschau

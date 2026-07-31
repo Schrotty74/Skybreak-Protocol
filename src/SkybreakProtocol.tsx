@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { checkForUpdate, type AvailableUpdate } from "./updateCheck";
+import { applyPowerUp, buildChestSpawns, type PowerUpKind } from "./powerUps";
 
 type GameStatus = "ready" | "playing" | "paused" | "upgrade" | "gameover" | "won";
 type InputKey = "left" | "right" | "jump" | "attack";
@@ -74,6 +75,7 @@ const WORLD_TOP = -(LEVEL_COUNT - 1) * LEVEL_HEIGHT - 80;
 type Tile = { x: number; y: number; alive: boolean; cracked: boolean };
 type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean };
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; color: string };
+type Chest = { x: number; y: number; opened: boolean; powerUp: PowerUpKind };
 type Player = {
   x: number;
   y: number;
@@ -86,12 +88,15 @@ type Player = {
   pickaxePower: number;
   pickaxeStyle: number;
   invulnerable: number;
+  shield: number;
+  overdrive: number;
 };
 
 type World = {
   player: Player;
   tiles: Tile[];
   enemies: Enemy[];
+  chests: Chest[];
   particles: Particle[];
   cameraX: number;
   cameraY: number;
@@ -104,21 +109,36 @@ type World = {
   hazardTimer: number;
   fxTime: number;
   shake: number;
+  powerUpMessage: string;
+  powerUpMessageTime: number;
 };
 
-function buildLevel(): Pick<World, "tiles" | "enemies"> {
+function buildLevel(): Pick<World, "tiles" | "enemies" | "chests"> {
   const tiles: Tile[] = [];
   const enemies: Enemy[] = [];
+  const chests: Chest[] = [];
+  const chestSpawns = new Map(buildChestSpawns(45).map((spawn) => [spawn.row, spawn.powerUp]));
 
   for (let row = 0; row < 45; row++) {
     const y = 475 - row * 92;
     const gapStart = row === 0 ? -10 : (row * 5 + 2) % 11;
+    const rowTiles: Tile[] = [];
     for (let col = 0; col < 15; col++) {
       const safeEdge = col === 0 || col === 14;
       const gap = !safeEdge && (col === gapStart || (row % 7 === 4 && col === gapStart + 1));
       if (!gap) {
-        tiles.push({ x: col * TILE, y, alive: true, cracked: row > 0 });
+        const tile = { x: col * TILE, y, alive: true, cracked: row > 0 };
+        tiles.push(tile);
+        rowTiles.push(tile);
       }
+    }
+    const powerUp = chestSpawns.get(row);
+    if (powerUp) {
+      const preferredX = (2 + ((row * 7 + 3) % 11)) * TILE;
+      const support = rowTiles.reduce((closest, tile) =>
+        Math.abs(tile.x - preferredX) < Math.abs(closest.x - preferredX) ? tile : closest,
+      );
+      chests.push({ x: support.x + 13, y: y - 30, opened: false, powerUp });
     }
     const enemyStep = Math.max(2, 5 - Math.floor(row / 11));
     if (row > 2 && row % enemyStep === 1) {
@@ -132,7 +152,7 @@ function buildLevel(): Pick<World, "tiles" | "enemies"> {
       });
     }
   }
-  return { tiles, enemies };
+  return { tiles, enemies, chests };
 }
 
 function makeWorld(): World {
@@ -151,6 +171,8 @@ function makeWorld(): World {
       pickaxePower: 1,
       pickaxeStyle: 1,
       invulnerable: 0,
+      shield: 0,
+      overdrive: 0,
     },
     particles: [],
     cameraX: 210,
@@ -164,6 +186,8 @@ function makeWorld(): World {
     hazardTimer: 2.4,
     fxTime: 0,
     shake: 0,
+    powerUpMessage: "",
+    powerUpMessageTime: 0,
   };
 }
 
@@ -250,6 +274,11 @@ function createAudio() {
     smash: () => tone(105, 0.16, "sawtooth", 0.08),
     hit: () => tone(65, 0.3, "sawtooth", 0.1),
     enemy: () => tone(520, 0.1, "square", 0.06),
+    powerUp: () => {
+      tone(440, 0.12, "sine", 0.065);
+      window.setTimeout(() => tone(660, 0.16, "sine", 0.06), 90);
+    },
+    shield: () => tone(210, 0.24, "sine", 0.08),
     win: () => {
       tone(520, 0.22, "sine", 0.07);
       window.setTimeout(() => tone(780, 0.32, "sine", 0.07), 130);
@@ -1115,6 +1144,19 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         0.22,
       );
     }
+    for (const chest of world.chests) {
+      if (chest.opened || chest.y < world.cameraY - 50 || chest.y > world.cameraY + view.height + 50) continue;
+      add(
+        (chest.x - world.cameraX + 19) / view.width,
+        (chest.y - world.cameraY + 14) / view.height,
+        48 / view.width,
+        36 / view.height,
+        1,
+        0.62,
+        0.08,
+        0.25,
+      );
+    }
     for (const particle of world.particles) {
       if (particle.y < world.cameraY - 50 || particle.y > world.cameraY + view.height + 50) continue;
       const pink = particle.color === "#ff2b8a";
@@ -1389,6 +1431,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const hurt = (world: World) => {
       const p = world.player;
       if (p.invulnerable > 0) return;
+      if (p.shield > 0) {
+        p.shield -= 1;
+        p.invulnerable = 0.8;
+        world.shake = 8;
+        world.powerUpMessage = isDe ? "SCHUTZSCHILD HAT DEN TREFFER ABGEFANGEN" : "SHIELD ABSORBED THE HIT";
+        world.powerUpMessageTime = 1.8;
+        audioRef.current?.shield();
+        burst(world, p.x + PLAYER_W / 2, p.y + PLAYER_H / 2, "#72ffef", 22);
+        return;
+      }
       world.lives -= 1;
       world.shake = 18;
       audioRef.current?.hit();
@@ -1420,6 +1472,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const pressed = pressedRef.current;
       p.invulnerable = Math.max(0, p.invulnerable - dt);
       p.attack = Math.max(0, p.attack - dt);
+      p.overdrive = Math.max(0, p.overdrive - dt);
+      world.powerUpMessageTime = Math.max(0, world.powerUpMessageTime - dt);
 
       p.vx = input.left ? -MOVE_SPEED : input.right ? MOVE_SPEED : p.vx * Math.pow(0.002, dt);
       if (p.vx) p.facing = Math.sign(p.vx);
@@ -1465,6 +1519,36 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         }
       }
 
+      for (const chest of world.chests) {
+        if (chest.opened) continue;
+        const intersects = p.x + PLAYER_W > chest.x
+          && p.x < chest.x + 38
+          && p.y + PLAYER_H > chest.y
+          && p.y < chest.y + 30;
+        if (!intersects) continue;
+        chest.opened = true;
+        const reward = applyPowerUp(chest.powerUp, {
+          lives: world.lives,
+          shield: p.shield,
+          overdrive: p.overdrive,
+          score: world.score,
+        }, difficulty.score);
+        world.lives = reward.lives;
+        world.score = reward.score;
+        p.shield = reward.shield;
+        p.overdrive = reward.overdrive;
+        if (reward.message === "shield") world.powerUpMessage = isDe ? "SCHUTZSCHILD AKTIV" : "SHIELD ACTIVE";
+        else if (reward.message === "life") world.powerUpMessage = isDe ? "EXTRALEBEN ERHALTEN" : "EXTRA LIFE ACQUIRED";
+        else if (reward.message === "life-full") world.powerUpMessage = `${isDe ? "LEBEN VOLL" : "LIVES FULL"} // +${reward.awardedScore}`;
+        else if (reward.message === "score") world.powerUpMessage = `${isDe ? "DATENBONUS" : "DATA BONUS"} // +${reward.awardedScore}`;
+        else world.powerUpMessage = isDe ? "EISPICKEL-OVERDRIVE // 12 SEKUNDEN" : "ICE PICK OVERDRIVE // 12 SECONDS";
+        world.powerUpMessageTime = 2.5;
+        world.shake = 5;
+        audioRef.current?.powerUp();
+        burst(world, chest.x + 19, chest.y + 14, chest.powerUp === "shield" ? "#72ffef" : "#ffd84d", 24);
+        syncHud(world);
+      }
+
       if (p.attack > 0) {
         const attackX = p.x + (p.facing > 0 ? PLAYER_W - 2 : -28);
         for (const enemy of world.enemies) {
@@ -1478,8 +1562,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           }
         }
         if (startedAttack) {
-          const reach = 42 + p.pickaxePower * 8;
-          const breakCount = Math.min(5, 1 + Math.floor((p.pickaxePower - 1) / 2));
+          const effectivePower = Math.min(10, p.pickaxePower + (p.overdrive > 0 ? 3 : 0));
+          const reach = 42 + effectivePower * 8;
+          const breakCount = Math.min(5, 1 + Math.floor((effectivePower - 1) / 2));
           const breakableTiles = world.tiles
             .filter((tile) => {
               const tileCenter = tile.x + TILE / 2;
@@ -1492,13 +1577,63 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             .slice(0, breakCount);
           for (const tile of breakableTiles) {
             tile.alive = false;
-            world.shake = Math.max(world.shake, 6 + p.pickaxePower * 0.45);
+            world.shake = Math.max(world.shake, 6 + effectivePower * 0.45);
             world.score += Math.round(75 * difficulty.score);
-            burst(world, tile.x + TILE / 2, tile.y + 12, "#00f0ff", 7 + p.pickaxePower);
+            burst(world, tile.x + TILE / 2, tile.y + 12, "#00f0ff", 7 + effectivePower);
             audioRef.current?.smash();
             syncHud(world);
           }
         }
+      }
+
+      for (const chest of world.chests) {
+        if (chest.y < world.cameraY - 70 || chest.y > world.cameraY + view.height + 60) continue;
+        ctx.save();
+        const bob = chest.opened ? 0 : Math.sin(world.fxTime * 3.2 + chest.x * 0.02) * 1.5;
+        ctx.translate(chest.x, chest.y + bob);
+        ctx.globalAlpha = chest.opened ? 0.38 : 1;
+        ctx.shadowBlur = chest.opened ? 0 : 18;
+        ctx.shadowColor = "#ffd84d";
+        const wood = ctx.createLinearGradient(0, 0, 0, 30);
+        wood.addColorStop(0, "#8b5427");
+        wood.addColorStop(0.45, "#4b2818");
+        wood.addColorStop(1, "#24110c");
+        ctx.fillStyle = wood;
+        ctx.strokeStyle = "#d59a42";
+        ctx.lineWidth = 2;
+        roundedRect(ctx, 0, 10, 38, 20, 4);
+        ctx.fill();
+        ctx.stroke();
+        if (chest.opened) {
+          ctx.beginPath();
+          ctx.moveTo(1, 9);
+          ctx.lineTo(5, 0);
+          ctx.lineTo(35, 0);
+          ctx.lineTo(38, 9);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          roundedRect(ctx, 0, 3, 38, 13, 5);
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "rgba(255,214,117,.72)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(8, 5); ctx.lineTo(8, 29);
+        ctx.moveTo(30, 5); ctx.lineTo(30, 29);
+        ctx.stroke();
+        if (!chest.opened) {
+          const lockColor = chest.powerUp === "shield" ? "#72ffef" : chest.powerUp === "life" ? "#ff5b95" : chest.powerUp === "score" ? "#ffd84d" : "#c65cff";
+          ctx.fillStyle = lockColor;
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = lockColor;
+          roundedRect(ctx, 15, 12, 8, 9, 2);
+          ctx.fill();
+        }
+        ctx.restore();
       }
 
       for (const enemy of world.enemies) {
@@ -1943,6 +2078,32 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.save();
         ctx.translate(p.x + PLAYER_W / 2, p.y + PLAYER_H / 2);
         ctx.scale(p.facing, 1);
+        if (p.shield > 0) {
+          ctx.globalAlpha = 0.32 + Math.sin(world.fxTime * 5) * 0.08;
+          ctx.fillStyle = "rgba(114,255,239,.12)";
+          ctx.strokeStyle = "#72ffef";
+          ctx.lineWidth = 2.5;
+          ctx.shadowBlur = 18;
+          ctx.shadowColor = "#72ffef";
+          ctx.beginPath();
+          ctx.ellipse(0, 3, 29, 40, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
+        }
+        if (p.overdrive > 0) {
+          ctx.globalAlpha = 0.22 + Math.sin(world.fxTime * 9) * 0.08;
+          ctx.strokeStyle = "#ffd84d";
+          ctx.lineWidth = 2;
+          ctx.shadowBlur = 16;
+          ctx.shadowColor = "#ffd84d";
+          ctx.beginPath();
+          ctx.arc(0, 2, 34 + Math.sin(world.fxTime * 6) * 3, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
+        }
         // Motion trail and suit aura.
         if (Math.abs(p.vy) > 90 || Math.abs(p.vx) > 100) {
           ctx.globalAlpha = 0.18;
@@ -1954,7 +2115,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.globalAlpha = 1;
         }
         const pickaxeColors = ["#ffd84d", "#00f0ff", "#ff2b8a", "#72ff4d", "#ff9f32", "#c65cff", "#84fff2", "#9c6bff", "#ffffff", "#ffcf4a"];
-        const pickaxeColor = pickaxeColors[Math.min(9, p.pickaxeStyle - 1)];
+        const pickaxeColor = p.overdrive > 0 ? "#ffd84d" : pickaxeColors[Math.min(9, p.pickaxeStyle - 1)];
+        const renderPower = Math.min(10, p.pickaxePower + (p.overdrive > 0 ? 3 : 0));
         const metal = ctx.createLinearGradient(-16, -22, 16, 24);
         metal.addColorStop(0, "#54728a");
         metal.addColorStop(0.32, "#152b40");
@@ -2043,12 +2205,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.shadowBlur = 9 + p.pickaxeStyle;
         ctx.shadowColor = pickaxeColor;
         ctx.strokeStyle = pickaxeColor;
-        ctx.lineWidth = 3 + Math.min(2, p.pickaxePower * 0.16);
+        ctx.lineWidth = 3 + Math.min(2, renderPower * 0.16);
         ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(29, 0); ctx.stroke();
         ctx.strokeStyle = "#dffcff";
         ctx.lineWidth = 2.5;
         const styleShape = (p.pickaxeStyle - 1) % 3;
-        const headSize = 11 + Math.min(8, p.pickaxePower) + styleShape * 1.5;
+        const headSize = 11 + Math.min(8, renderPower) + styleShape * 1.5;
         ctx.beginPath();
         ctx.moveTo(24, -headSize);
         ctx.quadraticCurveTo(31, -4, 27, 0);
@@ -2063,7 +2225,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.strokeStyle = pickaxeColor;
           ctx.lineWidth = 3;
           ctx.beginPath();
-          ctx.arc(14, -2, 33 + p.pickaxePower, -1.25, 0.95);
+          ctx.arc(14, -2, 33 + renderPower, -1.25, 0.95);
           ctx.stroke();
         }
         ctx.restore();
@@ -2099,6 +2261,27 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
       ctx.fillStyle = "rgba(255,255,255,.025)";
       for (let y = 0; y < view.height; y += 4) ctx.fillRect(0, y, view.width, 1);
+
+      if (world.powerUpMessageTime > 0 && world.powerUpMessage) {
+        const alpha = Math.min(1, world.powerUpMessageTime * 2);
+        const messageWidth = Math.min(view.width - 32, 460);
+        const messageX = (view.width - messageWidth) / 2;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "rgba(3,10,22,.92)";
+        ctx.strokeStyle = "#ffd84d";
+        ctx.lineWidth = 1.5;
+        roundedRect(ctx, messageX, 22, messageWidth, 38, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#ffd84d";
+        ctx.font = "800 11px ui-monospace, SFMono-Regular, Menlo, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(world.powerUpMessage, view.width / 2, 41, messageWidth - 18);
+        ctx.textAlign = "start";
+        ctx.textBaseline = "alphabetic";
+        ctx.globalAlpha = 1;
+      }
     };
 
     let lastRenderedFrame = 0;
