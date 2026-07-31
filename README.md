@@ -66,6 +66,12 @@ Platforms, enemies, debris, gameplay particles, and rain receive GPU-instanced e
 
 Unsupported or software-only WebGPU adapters automatically use the existing WebGL2 and Canvas renderer. Mobile devices remain limited to 60 FPS to reduce heat and battery load.
 
+### iPhone Pro and hardware ray tracing
+
+The iPhone 15 Pro introduced a 6-core Apple GPU with hardware-accelerated ray tracing. The iPhone 17 Pro uses the A19 Pro with a 6-core GPU, hardware-accelerated ray tracing, and improved sustained gaming performance. Skybreak Protocol already benefits from these GPUs through Safari's WebGPU-to-Metal path: Ultra uses full-scene post-processing, GPU instancing, worker-assisted calculations, and adaptive resolution on supported iPhones. [Apple: iPhone 15 Pro](https://www.apple.com/newsroom/2023/09/apple-unveils-iphone-15-pro-and-iphone-15-pro-max/) · [Apple: iPhone 17 Pro specifications](https://www.apple.com/iphone-17-pro/specs/)
+
+Hardware ray-tracing cores cannot currently be addressed directly by this web app because ray tracing is not part of the browser WebGPU feature set. Ultra therefore uses screen-space neon reflections rather than hardware ray tracing. On an iPhone 17 Pro, Ultra remains capped at 60 FPS and dynamically lowers effect resolution when needed to limit heat and battery consumption. [Current WebGPU feature list](https://gpuweb.github.io/types/types/GPUFeatureName.html)
+
 ## Visual effects
 
 - WebGPU Ultra shader for multilayer neon fog, denser rain, energy grids, light beams, and atmospheric bloom
