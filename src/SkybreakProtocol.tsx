@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { checkForUpdate, type AvailableUpdate } from "./updateCheck";
-import { applyPowerUp, buildChestSpawns, type PowerUpKind } from "./powerUps";
+import { applyPowerUp, buildChestSpawns, ROAMING_CHEST_RULES, type PowerUpKind, type RoamingChestDifficulty } from "./powerUps";
 
 type GameStatus = "ready" | "playing" | "paused" | "upgrade" | "gameover" | "won";
 type InputKey = "left" | "right" | "jump" | "attack";
@@ -97,6 +97,11 @@ type World = {
   tiles: Tile[];
   enemies: Enemy[];
   chests: Chest[];
+  roamingChest: Chest | null;
+  roamingChestTimer: number;
+  roamingChestMoves: number;
+  roamingChestSector: number;
+  collectedRoamingChestSectors: boolean[];
   particles: Particle[];
   cameraX: number;
   cameraY: number;
@@ -188,7 +193,54 @@ function makeWorld(): World {
     shake: 0,
     powerUpMessage: "",
     powerUpMessageTime: 0,
+    roamingChest: null,
+    roamingChestTimer: 0,
+    roamingChestMoves: 0,
+    roamingChestSector: 1,
+    collectedRoamingChestSectors: Array(LEVEL_COUNT).fill(false),
   };
+}
+
+function sectorForY(y: number): number {
+  return Math.min(LEVEL_COUNT, Math.max(1, Math.floor(-y / LEVEL_HEIGHT) + 1));
+}
+
+function sectorProgress(sector: number, playerY: number): number {
+  const bottom = sector === 1 ? 475 : -(sector - 1) * LEVEL_HEIGHT;
+  const top = -sector * LEVEL_HEIGHT;
+  return Math.max(0, Math.min(1, (bottom - playerY) / (bottom - top)));
+}
+
+const CHEST_POWER_UPS: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
+
+function placeRoamingChest(world: World, difficulty: RoamingChestDifficulty): boolean {
+  const sector = world.sector;
+  const bottom = sector === 1 ? 475 : -(sector - 1) * LEVEL_HEIGHT;
+  const top = -sector * LEVEL_HEIGHT;
+  const previous = world.roamingChest;
+  const available = world.tiles.filter((tile) => tile.alive
+    && tile.y <= bottom
+    && tile.y >= top
+    && tile.x >= TILE
+    && tile.x <= VIEW_W - TILE * 2
+    && (!previous || Math.abs(tile.x + 13 - previous.x) > TILE || Math.abs(tile.y - 30 - previous.y) > 60));
+  if (!available.length) {
+    world.roamingChest = null;
+    return false;
+  }
+  const rules = ROAMING_CHEST_RULES[difficulty];
+  const forceBelow = world.roamingChestMoves > 0 && world.roamingChestMoves % rules.forceBelowEvery === 0;
+  const below = available.filter((tile) => tile.y > world.player.y + 65);
+  const pool = forceBelow && below.length ? below : available;
+  const chosen = pool[(sector * 11 + world.roamingChestMoves * 7) % pool.length];
+  world.roamingChest = {
+    x: chosen.x + 13,
+    y: chosen.y - 30,
+    opened: false,
+    powerUp: CHEST_POWER_UPS[(sector - 1) % CHEST_POWER_UPS.length],
+  };
+  world.roamingChestTimer = rules.visibleSeconds;
+  return forceBelow && below.length > 0;
 }
 
 function createAudio() {
@@ -1144,7 +1196,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         0.22,
       );
     }
-    for (const chest of world.chests) {
+    const ultraChests = world.chests.filter((chest) =>
+      difficultiesRef.current[sectorForY(chest.y) - 1] === "easy");
+    if (world.roamingChest) ultraChests.push(world.roamingChest);
+    for (const chest of ultraChests) {
       if (chest.opened || chest.y < world.cameraY - 50 || chest.y > world.cameraY + view.height + 50) continue;
       add(
         (chest.x - world.cameraX + 19) / view.width,
@@ -1463,7 +1518,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
     const update = (world: World, dt: number) => {
       if (world.status !== "playing") return;
-      const difficulty = DIFFICULTY_SETTINGS[difficultiesRef.current[Math.max(0, world.sector - 1)] || "medium"];
+      const difficultyLevel = difficultiesRef.current[Math.max(0, world.sector - 1)] || "medium";
+      const difficulty = DIFFICULTY_SETTINGS[difficultyLevel];
       const levelPressure = 1 + (world.sector - 1) * 0.075;
       world.fxTime += dt;
       world.shake = Math.max(0, world.shake - dt * 38);
@@ -1474,6 +1530,38 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       p.attack = Math.max(0, p.attack - dt);
       p.overdrive = Math.max(0, p.overdrive - dt);
       world.powerUpMessageTime = Math.max(0, world.powerUpMessageTime - dt);
+
+      if (world.roamingChestSector !== world.sector) {
+        world.roamingChest = null;
+        world.roamingChestTimer = 0;
+        world.roamingChestMoves = 0;
+        world.roamingChestSector = world.sector;
+      }
+      if (difficultyLevel === "easy") {
+        world.roamingChest = null;
+        world.roamingChestTimer = 0;
+      } else {
+        const roamingDifficulty = difficultyLevel as RoamingChestDifficulty;
+        const rules = ROAMING_CHEST_RULES[roamingDifficulty];
+        const unlocked = sectorProgress(world.sector, p.y) >= rules.unlockProgress;
+        const alreadyCollected = world.collectedRoamingChestSectors[world.sector - 1];
+        if (!unlocked || alreadyCollected) {
+          world.roamingChest = null;
+          world.roamingChestTimer = 0;
+        } else if (!world.roamingChest) {
+          placeRoamingChest(world, roamingDifficulty);
+        } else {
+          world.roamingChestTimer -= dt;
+          if (world.roamingChestTimer <= 0) {
+            world.roamingChestMoves += 1;
+            const movedBelow = placeRoamingChest(world, roamingDifficulty);
+            if (movedBelow) {
+              world.powerUpMessage = isDe ? "TRUHE UNTER DIR NEU GEORTET" : "CHEST RELOCATED BELOW";
+              world.powerUpMessageTime = 1.5;
+            }
+          }
+        }
+      }
 
       p.vx = input.left ? -MOVE_SPEED : input.right ? MOVE_SPEED : p.vx * Math.pow(0.002, dt);
       if (p.vx) p.facing = Math.sign(p.vx);
@@ -1519,7 +1607,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         }
       }
 
-      for (const chest of world.chests) {
+      const collectableChests = difficultyLevel === "easy"
+        ? world.chests
+        : world.roamingChest ? [world.roamingChest] : [];
+      for (const chest of collectableChests) {
         if (chest.opened) continue;
         const intersects = p.x + PLAYER_W > chest.x
           && p.x < chest.x + 38
@@ -1527,6 +1618,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           && p.y < chest.y + 30;
         if (!intersects) continue;
         chest.opened = true;
+        if (chest === world.roamingChest) {
+          world.collectedRoamingChestSectors[world.sector - 1] = true;
+          world.roamingChest = null;
+          world.roamingChestTimer = 0;
+        }
         const reward = applyPowerUp(chest.powerUp, {
           lives: world.lives,
           shield: p.shield,
@@ -1584,56 +1680,6 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             syncHud(world);
           }
         }
-      }
-
-      for (const chest of world.chests) {
-        if (chest.y < world.cameraY - 70 || chest.y > world.cameraY + view.height + 60) continue;
-        ctx.save();
-        const bob = chest.opened ? 0 : Math.sin(world.fxTime * 3.2 + chest.x * 0.02) * 1.5;
-        ctx.translate(chest.x, chest.y + bob);
-        ctx.globalAlpha = chest.opened ? 0.38 : 1;
-        ctx.shadowBlur = chest.opened ? 0 : 18;
-        ctx.shadowColor = "#ffd84d";
-        const wood = ctx.createLinearGradient(0, 0, 0, 30);
-        wood.addColorStop(0, "#8b5427");
-        wood.addColorStop(0.45, "#4b2818");
-        wood.addColorStop(1, "#24110c");
-        ctx.fillStyle = wood;
-        ctx.strokeStyle = "#d59a42";
-        ctx.lineWidth = 2;
-        roundedRect(ctx, 0, 10, 38, 20, 4);
-        ctx.fill();
-        ctx.stroke();
-        if (chest.opened) {
-          ctx.beginPath();
-          ctx.moveTo(1, 9);
-          ctx.lineTo(5, 0);
-          ctx.lineTo(35, 0);
-          ctx.lineTo(38, 9);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-        } else {
-          roundedRect(ctx, 0, 3, 38, 13, 5);
-          ctx.fill();
-          ctx.stroke();
-        }
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "rgba(255,214,117,.72)";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(8, 5); ctx.lineTo(8, 29);
-        ctx.moveTo(30, 5); ctx.lineTo(30, 29);
-        ctx.stroke();
-        if (!chest.opened) {
-          const lockColor = chest.powerUp === "shield" ? "#72ffef" : chest.powerUp === "life" ? "#ff5b95" : chest.powerUp === "score" ? "#ffd84d" : "#c65cff";
-          ctx.fillStyle = lockColor;
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = lockColor;
-          roundedRect(ctx, 15, 12, 8, 9, 2);
-          ctx.fill();
-        }
-        ctx.restore();
       }
 
       for (const enemy of world.enemies) {
@@ -2014,6 +2060,73 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.lineTo(tile.x + 29, tile.y + 23);
           ctx.stroke();
         }
+      }
+
+      const visibleChests = world.chests.filter((chest) =>
+        difficultiesRef.current[sectorForY(chest.y) - 1] === "easy");
+      if (world.roamingChest) visibleChests.push(world.roamingChest);
+      for (const chest of visibleChests) {
+        if (chest.y < world.cameraY - 70 || chest.y > world.cameraY + view.height + 60) continue;
+        ctx.save();
+        const bob = chest.opened ? 0 : Math.sin(world.fxTime * 3.2 + chest.x * 0.02) * 1.5;
+        ctx.translate(chest.x, chest.y + bob);
+        ctx.globalAlpha = chest.opened ? 0.38 : 1;
+        ctx.shadowBlur = chest.opened ? 0 : 18;
+        ctx.shadowColor = "#ffd84d";
+        const wood = ctx.createLinearGradient(0, 0, 0, 30);
+        wood.addColorStop(0, "#8b5427");
+        wood.addColorStop(0.45, "#4b2818");
+        wood.addColorStop(1, "#24110c");
+        ctx.fillStyle = wood;
+        ctx.strokeStyle = "#d59a42";
+        ctx.lineWidth = 2;
+        roundedRect(ctx, 0, 10, 38, 20, 4);
+        ctx.fill();
+        ctx.stroke();
+        if (chest.opened) {
+          ctx.beginPath();
+          ctx.moveTo(1, 10);
+          ctx.lineTo(7, 0);
+          ctx.lineTo(37, 0);
+          ctx.lineTo(37, 9);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          roundedRect(ctx, 0, 3, 38, 13, 5);
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "rgba(255,214,117,.72)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(8, 5);
+        ctx.lineTo(8, 29);
+        ctx.moveTo(30, 5);
+        ctx.lineTo(30, 29);
+        ctx.stroke();
+        if (!chest.opened) {
+          const lockColor = chest.powerUp === "shield" ? "#72ffef"
+            : chest.powerUp === "life" ? "#ff5b95"
+              : chest.powerUp === "score" ? "#ffd84d" : "#c65cff";
+          ctx.fillStyle = lockColor;
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = lockColor;
+          roundedRect(ctx, 15, 12, 8, 9, 2);
+          ctx.fill();
+        }
+        if (chest === world.roamingChest && !chest.opened) {
+          const roamingDifficulty = difficultiesRef.current[world.sector - 1] as RoamingChestDifficulty;
+          const total = ROAMING_CHEST_RULES[roamingDifficulty].visibleSeconds;
+          const ratio = Math.max(0, Math.min(1, world.roamingChestTimer / total));
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = "rgba(255,255,255,.2)";
+          ctx.fillRect(0, 33, 38, 2);
+          ctx.fillStyle = "#ff2b8a";
+          ctx.fillRect(0, 33, 38 * ratio, 2);
+        }
+        ctx.restore();
       }
 
       for (const enemy of world.enemies) {

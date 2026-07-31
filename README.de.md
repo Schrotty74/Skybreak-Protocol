@@ -40,7 +40,7 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 - Durch zehn zunehmend schwierigere Cyberpunk-Level aufsteigen
 - Plattformmodule von unten durchbrechen
 - Gegner und nahe Plattformmodule mit dem Eispickel des Roboters angreifen
-- Alle drei bis vier Plattform-Etagen eine Holztruhe mit Schutzschild, Extraleben, Punktebonus oder temporärem Eispickel-Overdrive finden
+- Truhen passend zur Schwierigkeit: auf Leicht dauerhaft alle zwei bis drei Etagen, auf Mittel ab der Hälfte zeitlich begrenzt und auf Schwer erst ab zwei Dritteln mit schnellen Positionswechseln – auch unterhalb des Spielers
 - Beim Eintritt in jedes neue Level Kraft oder Design des Eispickels verbessern
 - Lücken, fallenden Energiesplittern und Patrouillendrohnen ausweichen
 - Punkte sammeln, Leben erhalten und den lokalen Highscore verbessern

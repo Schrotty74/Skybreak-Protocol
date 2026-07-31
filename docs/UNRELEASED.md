@@ -2,7 +2,9 @@
 
 ## Umgesetzt
 
-- Holztruhen erscheinen alle drei bis vier Plattform-Etagen.
+- Auf Leicht erscheinen dauerhafte Holztruhen alle zwei bis drei Plattform-Etagen.
+- Auf Mittel werden Truhen ab der Hälfte des Sektors für acht Sekunden eingeblendet und versetzt.
+- Auf Schwer erscheinen Truhen erst ab zwei Dritteln des Sektors für 4,5 Sekunden und wechseln schneller ihre Position – regelmäßig auch unterhalb des Spielers.
 - Truhen enthalten Schutzschild, Extraleben, Punktebonus oder einen zwölf Sekunden langen Eispickel-Overdrive.
 - Schutzschild, Overdrive, geöffnete Truhen und Power-up-Meldungen werden im Spiel sichtbar dargestellt.
 

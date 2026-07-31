@@ -40,7 +40,7 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
 - Ascend through ten increasingly difficult cyberpunk levels
 - Break platform modules from below
 - Use the robot's ice pick against enemies and nearby platform modules
-- Find a wooden chest every three to four platform floors containing a shield, extra life, score bonus, or temporary ice-pick overdrive
+- Difficulty-aware chests: persistent every two to three floors on Easy, time-limited after halfway on Medium, and only after two thirds on Hard with faster relocations — including below the player
 - Choose an ice-pick power or visual-style upgrade when entering each new level
 - Avoid gaps, falling energy fragments, and patrol drones
 - Collect points, preserve lives, and improve the local high score
