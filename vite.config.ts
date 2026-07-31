@@ -9,8 +9,8 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       input: {
-        main: "index.html",
-        de: "de/index.html",
+        main: "source/index.html",
+        de: "source/de/index.html",
       },
     },
   },
