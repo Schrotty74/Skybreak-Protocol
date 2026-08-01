@@ -2,8 +2,14 @@ import { access, readFile } from "node:fs/promises";
 
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 const version = packageJson.version;
+const requestedChannel = process.argv[2] ?? "release";
 if (!/^\d+\.\d+\.\d+(?:-beta\.\d+)?$/.test(version)) {
   throw new Error(`Unsupported release version: ${version}`);
+}
+
+const actualChannel = version.includes("-beta.") ? "beta" : "final";
+if (requestedChannel !== "release" && requestedChannel !== actualChannel) {
+  throw new Error(`Version ${version} is a ${actualChannel} release, not a ${requestedChannel} release`);
 }
 
 const changelogs = [
@@ -23,4 +29,4 @@ for (const notesPath of changelogs) {
   }
 }
 
-console.log(`German and English release metadata verified: ${version}`);
+console.log(`German and English ${actualChannel} release metadata verified: ${version}`);

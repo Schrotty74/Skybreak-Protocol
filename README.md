@@ -191,11 +191,15 @@ npm install
 npm run dev
 ```
 
+`npm run dev` is always labelled **LOCAL TEST**, uses separate save data, and does not check GitHub releases. `npm run dev:beta` and `npm run dev:final` are available for the other channels and each reject a version intended for the wrong release channel.
+
 Production build:
 
 ```bash
 npm run build
 ```
+
+Use `npm run build:local` for local artifacts with no publishing intent. Separate beta and final test artifacts are built with `npm run build:beta` and `npm run build:final`; details are in the [release workflow](docs/RELEASE_WORKFLOW.md).
 
 Every beta and final build requires its own detailed file under `docs/releases/`. See the [release workflow](docs/RELEASE_WORKFLOW.md).
 

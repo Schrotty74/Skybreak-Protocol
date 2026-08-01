@@ -4,11 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "npm run verify:release && tsc -b && vite build && node scripts/promote-pages.mjs",
-    "build:offline": "npm run verify:release && tsc -b && vite build --base / --outDir dist-offline && node scripts/promote-pages.mjs dist-offline && node scripts/package-offline.mjs",
+    "dev": "vite --mode dev",
+    "dev:beta": "npm run verify:beta && vite --mode beta",
+    "dev:final": "npm run verify:final && vite --mode final",
+    "build": "npm run build:release",
+    "build:local": "tsc -b && vite build --mode dev --base / --outDir dist-local && node scripts/promote-pages.mjs dist-local",
+    "build:beta": "npm run verify:beta && tsc -b && vite build --mode beta --outDir dist-beta && node scripts/promote-pages.mjs dist-beta",
+    "build:final": "npm run verify:final && tsc -b && vite build --mode final --outDir dist-final && node scripts/promote-pages.mjs dist-final",
+    "build:release": "npm run verify:release && tsc -b && vite build --mode release && node scripts/promote-pages.mjs",
+    "build:offline": "npm run verify:release && tsc -b && vite build --mode release --base / --outDir dist-offline && node scripts/promote-pages.mjs dist-offline && node scripts/package-offline.mjs",
     "build:handbooks": "python3 scripts/build-handbooks.py",
-    "verify:release": "node scripts/verify-release.mjs",
+    "verify:release": "node scripts/verify-release.mjs release",
+    "verify:beta": "node scripts/verify-release.mjs beta",
+    "verify:final": "node scripts/verify-release.mjs final",
     "preview": "vite preview"
   },
   "dependencies": {

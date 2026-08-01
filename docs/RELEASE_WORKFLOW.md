@@ -5,6 +5,18 @@ Skybreak Protocol verwendet zwei öffentliche Release-Stufen:
 - **Beta:** Testversion im Format `1.0.0-beta.1`, `1.0.0-beta.2` usw.
 - **Final:** stabile Version im Format `1.0.0`, `1.1.0` usw.
 
+## Lokaler Test, Beta und Final sind getrennt
+
+| Kanal | Befehl | Ausgabe | Browser-Speicher | Update-Prüfung |
+|---|---|---|---|---|
+| Lokaler Test | `npm run dev` oder `npm run build:local` | `dist-local/` | `skybreak-dev:*` | Nein |
+| Beta | `npm run dev:beta` oder `npm run build:beta` | `dist-beta/` | `skybreak-beta:*` | Ja |
+| Final | `npm run dev:final` oder `npm run build:final` | `dist-final/` | `skybreak-final:*` | Ja |
+
+`npm run build:local` ist der erste sichere Test-Build: Er braucht keinen Changelog und verändert weder `dist/` noch Release-Artefakte. Beta- und Final-Builds akzeptieren nur die jeweils passende Versionsform und prüfen weiterhin beide Release-Changelogs. Der bisherige Befehl `npm run build` bleibt ausschließlich für die veröffentlichbare Release-Version reserviert und erzeugt `dist/` für GitHub Pages.
+
+Final übernimmt beim ersten Start einmalig vorhandene, ältere Spielstände in seinen neuen, getrennten Speicherbereich. Lokale Tests und Betas lesen diese Daten nicht.
+
 ## Neue Beta oder Final-Version
 
 1. Version in `package.json` und `package-lock.json` aktualisieren.

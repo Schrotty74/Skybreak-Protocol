@@ -1,5 +1,8 @@
 node_modules/
 dist/
+dist-local/
+dist-beta/
+dist-final/
 dist-offline/
 release/
 *-offline.zip

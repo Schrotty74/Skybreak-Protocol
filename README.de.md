@@ -191,11 +191,15 @@ npm install
 npm run dev
 ```
 
+`npm run dev` ist immer als **LOCAL TEST** gekennzeichnet, verwendet getrennte Spielstände und fragt keine GitHub-Releases ab. Für die anderen Kanäle stehen `npm run dev:beta` und `npm run dev:final` zur Verfügung; beide lehnen eine Version für den falschen Release-Kanal ab.
+
 Produktions-Build:
 
 ```bash
 npm run build
 ```
+
+Für lokale Artefakte ohne Veröffentlichungsabsicht verwende `npm run build:local`. Beta- und Final-Testartefakte entstehen getrennt mit `npm run build:beta` bzw. `npm run build:final`; Details stehen im [Release-Workflow](docs/RELEASE_WORKFLOW.md).
 
 Jede Beta- und Final-Version benötigt eine eigene ausführliche Datei unter `docs/releases/`. Der Ablauf ist im [Release-Workflow](docs/RELEASE_WORKFLOW.md) beschrieben.
 

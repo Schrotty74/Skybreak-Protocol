@@ -5,6 +5,7 @@ import { checkForUpdate, type AvailableUpdate } from "./updateCheck";
 import { applyPowerUp, buildChestSpawns, ROAMING_CHEST_RULES, type PowerUpKind, type RoamingChestDifficulty } from "./powerUps";
 import { detectCheat, type CheatId } from "./cheats";
 import { actionForCode, DEFAULT_KEY_BINDINGS, displayKey, normalizeKeyBindings, rebindKey, type BindableAction, type KeyBindings } from "./keyBindings";
+import { getStoredItem, setStoredItem } from "./storage";
 
 type GameStatus = "ready" | "playing" | "paused" | "upgrade" | "gameover" | "won";
 type InputKey = BindableAction;
@@ -14,6 +15,7 @@ type Difficulty = "easy" | "medium" | "hard";
 
 const LEVEL_COUNT = 10;
 const APP_VERSION = __APP_VERSION__;
+const APP_BUILD_CHANNEL = __APP_BUILD_CHANNEL__;
 const CHANGELOG_BASE_URL = "https://github.com/Schrotty74/Skybreak-Protocol/blob/main/docs/releases";
 const LEVEL_THEMES = [
   { name: "Neon Undercity", top: "#051d35", mid: "#18072f", bottom: "#02040d", accent: "#00f0ff", secondary: "#ff2b8a", warning: "#ffd84d", motif: 0, platform: "cryo-steel" },
@@ -1178,7 +1180,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     setKeyBindings(defaults);
     bindingCaptureRef.current = null;
     setBindingCapture(null);
-    localStorage.setItem("skybreak-key-bindings", JSON.stringify(defaults));
+    setStoredItem("skybreak-key-bindings", JSON.stringify(defaults));
   }, []);
 
   const applyPickaxeUpgrade = useCallback((kind: "power" | "style") => {
@@ -1254,21 +1256,21 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   }, [registerCheatInput]);
 
   useEffect(() => {
-    const saved = Number(localStorage.getItem("neon-ascent-highscore") || 0);
+    const saved = Number(getStoredItem("neon-ascent-highscore") || 0);
     setHighScore(saved);
-    const storedQuality = localStorage.getItem("skybreak-quality") as Quality | null;
+    const storedQuality = getStoredItem("skybreak-quality") as Quality | null;
     const initialQuality = storedQuality && storedQuality in QUALITY_SETTINGS
       ? storedQuality
       : window.matchMedia("(pointer: coarse)").matches ? "medium" : "high";
     qualityRef.current = initialQuality;
     setQuality(initialQuality);
-    const storedResolution = localStorage.getItem("skybreak-render-resolution") as RenderResolution | null;
+    const storedResolution = getStoredItem("skybreak-render-resolution") as RenderResolution | null;
     const initialResolution = storedResolution && storedResolution in RENDER_RESOLUTIONS ? storedResolution : "1080p";
     renderResolutionRef.current = initialResolution;
     setRenderResolution(initialResolution);
     const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
     setMobileDevice(coarsePointer);
-    const savedMobileUltra120 = localStorage.getItem("skybreak-mobile-ultra-120") === "true";
+    const savedMobileUltra120 = getStoredItem("skybreak-mobile-ultra-120") === "true";
     mobileUltra120Ref.current = savedMobileUltra120;
     setMobileUltra120(savedMobileUltra120);
     window.dispatchEvent(new Event("skybreak-quality"));
@@ -1276,7 +1278,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const isStandalone = window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
     setIPhoneSafari(isIPhone && !isStandalone);
     try {
-      const savedDifficulties = JSON.parse(localStorage.getItem("skybreak-level-difficulties") || "[]") as Difficulty[];
+      const savedDifficulties = JSON.parse(getStoredItem("skybreak-level-difficulties") || "[]") as Difficulty[];
       if (savedDifficulties.length === LEVEL_COUNT && savedDifficulties.every((value) => value in DIFFICULTY_SETTINGS)) {
         difficultiesRef.current = savedDifficulties;
         setLevelDifficulties(savedDifficulties);
@@ -1285,13 +1287,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       // Ignore malformed local settings and keep the balanced defaults.
     }
     try {
-      const bindings = normalizeKeyBindings(JSON.parse(localStorage.getItem("skybreak-key-bindings") || "null"));
+      const bindings = normalizeKeyBindings(JSON.parse(getStoredItem("skybreak-key-bindings") || "null"));
       keyBindingsRef.current = bindings;
       setKeyBindings(bindings);
     } catch {
       keyBindingsRef.current = { ...DEFAULT_KEY_BINDINGS };
     }
-    const storedUnlockedLevel = Number(localStorage.getItem("skybreak-unlocked-level") || 1);
+    const storedUnlockedLevel = Number(getStoredItem("skybreak-unlocked-level") || 1);
     const savedUnlockedLevel = Number.isFinite(storedUnlockedLevel)
       ? Math.min(LEVEL_COUNT, Math.max(1, Math.round(storedUnlockedLevel)))
       : 1;
@@ -1302,6 +1304,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   }, []);
 
   useEffect(() => {
+    if (APP_BUILD_CHANNEL === "dev") return;
     let active = true;
     void checkForUpdate(APP_VERSION).then((update) => {
       if (active) setAvailableUpdate(update);
@@ -1330,21 +1333,21 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const chooseQuality = (next: Quality) => {
     qualityRef.current = next;
     setQuality(next);
-    localStorage.setItem("skybreak-quality", next);
+    setStoredItem("skybreak-quality", next);
     window.dispatchEvent(new Event("skybreak-quality"));
   };
 
   const chooseRenderResolution = (next: RenderResolution) => {
     renderResolutionRef.current = next;
     setRenderResolution(next);
-    localStorage.setItem("skybreak-render-resolution", next);
+    setStoredItem("skybreak-render-resolution", next);
     window.dispatchEvent(new Event("skybreak-quality"));
   };
 
   const chooseMobileUltra120 = (enabled: boolean) => {
     mobileUltra120Ref.current = enabled;
     setMobileUltra120(enabled);
-    localStorage.setItem("skybreak-mobile-ultra-120", String(enabled));
+    setStoredItem("skybreak-mobile-ultra-120", String(enabled));
   };
 
   const chooseDifficulty = (next: Difficulty) => {
@@ -1352,7 +1355,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     updated[Math.max(0, sector - 1)] = next;
     difficultiesRef.current = updated;
     setLevelDifficulties(updated);
-    localStorage.setItem("skybreak-level-difficulties", JSON.stringify(updated));
+    setStoredItem("skybreak-level-difficulties", JSON.stringify(updated));
   };
 
   const getUltraSceneInstances = useCallback(() => {
@@ -1611,7 +1614,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         const updated = rebindKey(keyBindingsRef.current, capturedAction, event.code);
         keyBindingsRef.current = updated;
         setKeyBindings(updated);
-        localStorage.setItem("skybreak-key-bindings", JSON.stringify(updated));
+        setStoredItem("skybreak-key-bindings", JSON.stringify(updated));
         return;
       }
       const key = actionForCode(keyBindingsRef.current, event.code);
@@ -1833,8 +1836,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         world.status = "gameover";
         setStatus("gameover");
         if (!world.cheatUsed) {
-          const best = Math.max(world.score, Number(localStorage.getItem("neon-ascent-highscore") || 0));
-          localStorage.setItem("neon-ascent-highscore", String(best));
+          const best = Math.max(world.score, Number(getStoredItem("neon-ascent-highscore") || 0));
+          setStoredItem("neon-ascent-highscore", String(best));
           setHighScore(best);
         }
       } else {
@@ -2120,7 +2123,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           selectedStartLevelRef.current = nextLevel;
           setUnlockedLevel(nextLevel);
           setSelectedStartLevel(nextLevel);
-          localStorage.setItem("skybreak-unlocked-level", String(nextLevel));
+          setStoredItem("skybreak-unlocked-level", String(nextLevel));
         }
         world.status = world.sector < LEVEL_COUNT ? "upgrade" : "won";
         world.transition = 2.4;
@@ -2128,8 +2131,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         p.vx = 0;
         p.vy = 0;
         if (!world.cheatUsed) {
-          const best = Math.max(world.score, Number(localStorage.getItem("neon-ascent-highscore") || 0));
-          localStorage.setItem("neon-ascent-highscore", String(best));
+          const best = Math.max(world.score, Number(getStoredItem("neon-ascent-highscore") || 0));
+          setStoredItem("neon-ascent-highscore", String(best));
           setHighScore(best);
         }
         syncHud(world);
@@ -3247,7 +3250,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
                 <a className="language-link" href={languageHref} lang={isDe ? "en" : "de"}>{isDe ? "ENGLISH" : "DEUTSCH"}</a>
               </>
             )}
-            <p className="eyebrow">{status === "ready" ? `NIGHT CITY // 03:17 // v${APP_VERSION}` : status === "upgrade" ? `PICKAXE CORE // LEVEL ${sector}` : "NEURAL LINK STATUS"}</p>
+            <p className="eyebrow">{status === "ready" ? `NIGHT CITY // 03:17 // ${APP_BUILD_CHANNEL === "dev" ? "LOCAL TEST // " : APP_BUILD_CHANNEL === "beta" ? "BETA // " : "FINAL // "}v${APP_VERSION}` : status === "upgrade" ? `PICKAXE CORE // LEVEL ${sector}` : "NEURAL LINK STATUS"}</p>
             <h1 className={status === "upgrade" ? "upgrade-title" : undefined}>{overlayTitle}</h1>
             <p>{overlayCopy}</p>
             {status === "upgrade" ? (
