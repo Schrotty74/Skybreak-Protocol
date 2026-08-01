@@ -9,22 +9,23 @@ import { actionForCode, DEFAULT_KEY_BINDINGS, displayKey, normalizeKeyBindings, 
 type GameStatus = "ready" | "playing" | "paused" | "upgrade" | "gameover" | "won";
 type InputKey = BindableAction;
 type Quality = "low" | "medium" | "high" | "ultra";
+type RenderResolution = "720p" | "1080p" | "4k";
 type Difficulty = "easy" | "medium" | "hard";
 
 const LEVEL_COUNT = 10;
 const APP_VERSION = __APP_VERSION__;
 const CHANGELOG_BASE_URL = "https://github.com/Schrotty74/Skybreak-Protocol/blob/main/docs/releases";
 const LEVEL_THEMES = [
-  { name: "Neon Undercity", top: "#051d35", mid: "#18072f", bottom: "#02040d", accent: "#00f0ff", secondary: "#ff2b8a", warning: "#ffd84d", motif: 0 },
-  { name: "Chrome Bazaar", top: "#24113f", mid: "#35102d", bottom: "#08040f", accent: "#ff5bd6", secondary: "#39f5c8", warning: "#ffe66d", motif: 1 },
-  { name: "Toxic Transit", top: "#102b22", mid: "#132d12", bottom: "#030b08", accent: "#72ff4d", secondary: "#00eaff", warning: "#f5ff73", motif: 2 },
-  { name: "Crimson Firewall", top: "#351018", mid: "#280617", bottom: "#090208", accent: "#ff365f", secondary: "#ff9b35", warning: "#fff06a", motif: 3 },
-  { name: "Azure Data Sea", top: "#062b45", mid: "#071a45", bottom: "#020612", accent: "#36bfff", secondary: "#7c5cff", warning: "#7fffee", motif: 4 },
-  { name: "Violet Reactor", top: "#29104a", mid: "#19072d", bottom: "#05020c", accent: "#c65cff", secondary: "#ff3dbb", warning: "#70f7ff", motif: 5 },
-  { name: "Solar Megagrid", top: "#4a1d0a", mid: "#35100e", bottom: "#0c0304", accent: "#ff9f32", secondary: "#ff355d", warning: "#fff26b", motif: 6 },
-  { name: "Ghost Network", top: "#0e3034", mid: "#11202e", bottom: "#03070b", accent: "#84fff2", secondary: "#b1a3ff", warning: "#ffffff", motif: 7 },
-  { name: "Quantum Rift", top: "#25104b", mid: "#071f3b", bottom: "#03020e", accent: "#9c6bff", secondary: "#00f6ff", warning: "#ff61d2", motif: 8 },
-  { name: "Skybreak Apex", top: "#3a143f", mid: "#082d45", bottom: "#02040d", accent: "#ffffff", secondary: "#00f0ff", warning: "#ffcf4a", motif: 9 },
+  { name: "Neon Undercity", top: "#051d35", mid: "#18072f", bottom: "#02040d", accent: "#00f0ff", secondary: "#ff2b8a", warning: "#ffd84d", motif: 0, platform: "cryo-steel" },
+  { name: "Chrome Bazaar", top: "#24113f", mid: "#35102d", bottom: "#08040f", accent: "#ff5bd6", secondary: "#39f5c8", warning: "#ffe66d", motif: 1, platform: "chrome-ice" },
+  { name: "Toxic Transit", top: "#102b22", mid: "#132d12", bottom: "#030b08", accent: "#72ff4d", secondary: "#00eaff", warning: "#f5ff73", motif: 2, platform: "corroded-ice" },
+  { name: "Crimson Firewall", top: "#351018", mid: "#280617", bottom: "#090208", accent: "#ff365f", secondary: "#ff9b35", warning: "#fff06a", motif: 3, platform: "molten-glass" },
+  { name: "Azure Data Sea", top: "#062b45", mid: "#071a45", bottom: "#020612", accent: "#36bfff", secondary: "#7c5cff", warning: "#7fffee", motif: 4, platform: "deep-ice" },
+  { name: "Violet Reactor", top: "#29104a", mid: "#19072d", bottom: "#05020c", accent: "#c65cff", secondary: "#ff3dbb", warning: "#70f7ff", motif: 5, platform: "plasma-crystal" },
+  { name: "Solar Megagrid", top: "#4a1d0a", mid: "#35100e", bottom: "#0c0304", accent: "#ff9f32", secondary: "#ff355d", warning: "#fff26b", motif: 6, platform: "solar-array" },
+  { name: "Ghost Network", top: "#0e3034", mid: "#11202e", bottom: "#03070b", accent: "#84fff2", secondary: "#b1a3ff", warning: "#ffffff", motif: 7, platform: "phase-ice" },
+  { name: "Quantum Rift", top: "#25104b", mid: "#071f3b", bottom: "#03020e", accent: "#9c6bff", secondary: "#00f6ff", warning: "#ff61d2", motif: 8, platform: "rift-crystal" },
+  { name: "Skybreak Apex", top: "#3a143f", mid: "#082d45", bottom: "#02040d", accent: "#ffffff", secondary: "#00f0ff", warning: "#ffcf4a", motif: 9, platform: "apex-ice" },
 ] as const;
 
 const MUSIC_TRACKS = [
@@ -65,6 +66,23 @@ const QUALITY_SETTINGS: Record<Quality, {
 
 const VIEW_W = 960;
 const VIEW_H = 540;
+const RENDER_RESOLUTIONS: Record<RenderResolution, { width: number; height: number }> = {
+  "720p": { width: 1280, height: 720 },
+  "1080p": { width: 1920, height: 1080 },
+  "4k": { width: 3840, height: 2160 },
+};
+
+function cappedPixelRatio(rect: DOMRect, preferredRatio: number, resolution: RenderResolution, maxTextureSize = Infinity) {
+  const target = RENDER_RESOLUTIONS[resolution];
+  return Math.min(
+    preferredRatio,
+    target.width / Math.max(1, rect.width),
+    target.height / Math.max(1, rect.height),
+    maxTextureSize / Math.max(1, rect.width),
+    maxTextureSize / Math.max(1, rect.height),
+  );
+}
+
 const TILE = 64;
 const PLAYER_W = 34;
 const PLAYER_H = 50;
@@ -77,7 +95,7 @@ const JUMP_SPEED = 610;
 const WORLD_TOP = FLOOR_BASE_Y - (LEVEL_FLOORS - 1) * FLOOR_SPACING - PLAYER_H + 13;
 
 type Tile = { x: number; y: number; alive: boolean; cracked: boolean };
-type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean };
+type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean; guardian?: boolean; integrity?: number };
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; color: string };
 type Chest = { x: number; y: number; opened: boolean; powerUp: PowerUpKind };
 type Player = {
@@ -94,6 +112,7 @@ type Player = {
   invulnerable: number;
   shield: number;
   overdrive: number;
+  damage: number;
 };
 
 type World = {
@@ -122,6 +141,8 @@ type World = {
   powerUpMessageTime: number;
   immortalSector: number | null;
   cheatUsed: boolean;
+  transition: number;
+  victoryTime: number;
 };
 
 function buildLevel(): Pick<World, "tiles" | "enemies" | "chests"> {
@@ -152,7 +173,9 @@ function buildLevel(): Pick<World, "tiles" | "enemies" | "chests"> {
       chests.push({ x: support.x + 13, y: y - 30, opened: false, powerUp });
     }
     const enemyStep = Math.max(2, 5 - Math.floor(row / 11));
-    if (row > 2 && row % enemyStep === 1) {
+    if (row === LEVEL_FLOORS - 2) {
+      enemies.push({ x: VIEW_W / 2 - 28, y: y - 56, vx: 46, vy: 0, alive: true, grounded: true, guardian: true, integrity: 3 });
+    } else if (row > 2 && row % enemyStep === 1) {
       enemies.push({
         x: ((row * 137) % 720) + 110,
         y: y - 34,
@@ -184,6 +207,7 @@ function makeWorld(): World {
       invulnerable: 0,
       shield: 0,
       overdrive: 0,
+      damage: 0,
     },
     particles: [],
     cameraX: 210,
@@ -201,6 +225,8 @@ function makeWorld(): World {
     powerUpMessageTime: 0,
     immortalSector: null,
     cheatUsed: false,
+    transition: 0,
+    victoryTime: 0,
     roamingChest: null,
     roamingChestTimer: 0,
     roamingChestMoves: 0,
@@ -218,6 +244,10 @@ function placeWorldAtLevel(world: World, level: number) {
 
 function levelProgress(playerY: number): number {
   return Math.max(0, Math.min(1, (FLOOR_BASE_Y - playerY) / (FLOOR_BASE_Y - WORLD_TOP)));
+}
+
+function themeColor(sector: number, key: "accent" | "secondary" | "warning") {
+  return LEVEL_THEMES[Math.max(0, Math.min(LEVEL_THEMES.length - 1, sector - 1))][key];
 }
 
 const CHEST_POWER_UPS: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
@@ -385,6 +415,7 @@ type EffectCleanup = () => void;
 async function startWebGpuEffects(
   canvas: HTMLCanvasElement,
   updateRenderer: (name: string) => void,
+  getResolution: () => RenderResolution,
 ): Promise<EffectCleanup | null> {
   const gpu = (navigator as Navigator & { gpu?: any }).gpu;
   if (!gpu) return null;
@@ -524,11 +555,11 @@ async function startWebGpuEffects(
 
     const rect = canvas.getBoundingClientRect();
     const dprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
-    const baseDpr = Math.min(
-      window.devicePixelRatio || 1,
-      dprLimit,
-      maxTextureSize / Math.max(1, rect.width),
-      Math.min(2160, maxTextureSize) / Math.max(1, rect.height),
+    const baseDpr = cappedPixelRatio(
+      rect,
+      Math.min(window.devicePixelRatio || 1, dprLimit),
+      getResolution(),
+      Math.min(2160, maxTextureSize),
     );
     const width = Math.max(1, Math.round(rect.width * baseDpr * dynamicScale));
     const height = Math.max(1, Math.round(rect.height * baseDpr * dynamicScale));
@@ -571,6 +602,7 @@ async function startWebGpuUltraRenderer(
   updateFrameRate: (fps: number) => void,
   getAllowHighRefresh: () => boolean,
   updateThermalProtection: (active: boolean) => void,
+  getResolution: () => RenderResolution,
 ): Promise<EffectCleanup | null> {
   const gpu = (navigator as Navigator & { gpu?: any }).gpu;
   if (!gpu) return null;
@@ -845,11 +877,11 @@ async function startWebGpuUltraRenderer(
     lastRenderedFrame = time;
     const rect = canvas.getBoundingClientRect();
     const dprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
-    const baseDpr = Math.min(
-      window.devicePixelRatio || 1,
-      dprLimit,
-      maxTextureSize / Math.max(1, rect.width),
-      Math.min(2160, maxTextureSize) / Math.max(1, rect.height),
+    const baseDpr = cappedPixelRatio(
+      rect,
+      Math.min(window.devicePixelRatio || 1, dprLimit),
+      getResolution(),
+      Math.min(2160, maxTextureSize),
     );
     const width = Math.max(1, Math.round(rect.width * baseDpr * renderScale));
     const height = Math.max(1, Math.round(rect.height * baseDpr * renderScale));
@@ -921,6 +953,7 @@ function startWebGlEffects(
   canvas: HTMLCanvasElement,
   updateRenderer: (name: string) => void,
   getQuality: () => Quality,
+  getResolution: () => RenderResolution,
 ): EffectCleanup | null {
   const gl = canvas.getContext("webgl2", {
     alpha: true,
@@ -998,7 +1031,7 @@ function startWebGlEffects(
     }
     lastGlFrame = time;
     const rect = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, settings.glDpr);
+    const dpr = cappedPixelRatio(rect, Math.min(window.devicePixelRatio || 1, settings.glDpr), getResolution());
     const width = Math.max(1, Math.round(rect.width * dpr));
     const height = Math.max(1, Math.round(rect.height * dpr));
     if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
@@ -1041,6 +1074,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const soundEnabledRef = useRef(true);
   const musicEnabledRef = useRef(true);
   const qualityRef = useRef<Quality>("medium");
+  const renderResolutionRef = useRef<RenderResolution>("1080p");
   const ultraFpsRef = useRef(60);
   const mobileUltra120Ref = useRef(false);
   const ultraFallbackRef = useRef(false);
@@ -1066,6 +1100,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [mobileDevice, setMobileDevice] = useState(false);
   const [thermalProtection, setThermalProtection] = useState(false);
   const [quality, setQuality] = useState<Quality>("medium");
+  const [renderResolution, setRenderResolution] = useState<RenderResolution>("1080p");
   const [nativeFullscreen, setNativeFullscreen] = useState(false);
   const [immersiveMode, setImmersiveMode] = useState(false);
   const [iPhoneSafari, setIPhoneSafari] = useState(false);
@@ -1211,6 +1246,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       : window.matchMedia("(pointer: coarse)").matches ? "medium" : "high";
     qualityRef.current = initialQuality;
     setQuality(initialQuality);
+    const storedResolution = localStorage.getItem("skybreak-render-resolution") as RenderResolution | null;
+    const initialResolution = storedResolution && storedResolution in RENDER_RESOLUTIONS ? storedResolution : "1080p";
+    renderResolutionRef.current = initialResolution;
+    setRenderResolution(initialResolution);
     const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
     setMobileDevice(coarsePointer);
     const savedMobileUltra120 = localStorage.getItem("skybreak-mobile-ultra-120") === "true";
@@ -1276,6 +1315,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     qualityRef.current = next;
     setQuality(next);
     localStorage.setItem("skybreak-quality", next);
+    window.dispatchEvent(new Event("skybreak-quality"));
+  };
+
+  const chooseRenderResolution = (next: RenderResolution) => {
+    renderResolutionRef.current = next;
+    setRenderResolution(next);
+    localStorage.setItem("skybreak-render-resolution", next);
     window.dispatchEvent(new Event("skybreak-quality"));
   };
 
@@ -1377,14 +1423,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ultraFpsRef.current = fallbackFps;
         setUltraFps(fallbackFps);
         window.dispatchEvent(new Event("skybreak-quality"));
-        return startWebGlEffects(canvas, setRenderer, () => "medium");
+        return startWebGlEffects(canvas, setRenderer, () => "medium", () => renderResolutionRef.current);
       };
 
       // copyExternalImageToTexture can silently produce a black scene texture
       // in desktop Safari and Chromium on macOS. Use the transparent WebGPU
       // atmosphere there; the 2D game canvas remains the visible base layer.
       const gpuRenderer = desktopMac
-        ? startWebGpuEffects(canvas, setRenderer)
+        ? startWebGpuEffects(canvas, setRenderer, () => renderResolutionRef.current)
         : startWebGpuUltraRenderer(
             canvas,
             sourceCanvas,
@@ -1396,6 +1442,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             },
             () => window.matchMedia("(pointer: fine)").matches || mobileUltra120Ref.current,
             setThermalProtection,
+            () => renderResolutionRef.current,
           );
 
       void gpuRenderer
@@ -1509,7 +1556,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       }
       lastGlFrame = time;
       const rect = canvas.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, settings.glDpr);
+      const dpr = cappedPixelRatio(rect, Math.min(window.devicePixelRatio || 1, settings.glDpr), renderResolutionRef.current);
       const width = Math.max(1, Math.round(rect.width * dpr));
       const height = Math.max(1, Math.round(rect.height * dpr));
       if (canvas.width !== width || canvas.height !== height) {
@@ -1599,11 +1646,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const settings = qualityRef.current === "ultra" && ultraFallbackRef.current
         ? QUALITY_SETTINGS.medium
         : QUALITY_SETTINGS[qualityRef.current];
-      const ratio = Math.min(
-        window.devicePixelRatio || 1,
-        settings.dpr,
-        3840 / Math.max(1, rect.width),
-        2160 / Math.max(1, rect.height),
+      const ratio = cappedPixelRatio(
+        rect,
+        Math.min(window.devicePixelRatio || 1, settings.dpr),
+        renderResolutionRef.current,
       );
       canvas.width = Math.max(1, Math.round(rect.width * ratio));
       canvas.height = Math.max(1, Math.round(rect.height * ratio));
@@ -1632,11 +1678,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
     const hurt = (world: World) => {
       const p = world.player;
+      // On a very shallow desktop fullscreen canvas, `view.height - 130` can
+      // become negative. Keep a respawn position inside the visible play area.
+      const respawnY = world.cameraY + Math.max(PLAYER_H + 28, Math.min(410, view.height - 130));
       if (p.invulnerable > 0) return;
       if (world.immortalSector === world.sector) {
         if (p.y > world.cameraY + view.height + 100) {
           p.x = 463;
-          p.y = world.cameraY + Math.min(410, view.height - 130);
+          p.y = respawnY;
           p.vx = 0;
           p.vy = -280;
         }
@@ -1658,6 +1707,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         return;
       }
       world.lives -= 1;
+      p.damage = Math.min(3, p.damage + 1);
       world.shake = 18;
       audioRef.current?.hit();
       burst(world, p.x + PLAYER_W / 2, p.y + PLAYER_H / 2, "#ff2b8a", 18);
@@ -1671,7 +1721,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         }
       } else {
         p.x = 463;
-        p.y = world.cameraY + Math.min(410, view.height - 130);
+        p.y = respawnY;
         p.vx = 0;
         p.vy = -280;
         p.invulnerable = 2;
@@ -1685,6 +1735,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const difficulty = DIFFICULTY_SETTINGS[difficultyLevel];
       const levelPressure = 1 + (world.sector - 1) * 0.075;
       world.fxTime += dt;
+      world.transition = Math.max(0, world.transition - dt);
       world.shake = Math.max(0, world.shake - dt * 38);
       const p = world.player;
       const input = inputRef.current;
@@ -1764,7 +1815,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           world.shake = 9;
           p.vy *= 0.78;
           world.score += Math.round(100 * difficulty.score);
-          burst(world, tile.x + TILE / 2, tile.y + 12, "#00f0ff", 12);
+          burst(world, tile.x + TILE / 2, tile.y + 12, themeColor(world.sector, "accent"), 12);
           audioRef.current?.smash();
           syncHud(world);
         }
@@ -1812,10 +1863,21 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         const attackX = p.x + (p.facing > 0 ? PLAYER_W - 2 : -28);
         for (const enemy of world.enemies) {
           if (!enemy.alive) continue;
-          if (Math.abs(enemy.x - attackX) < 48 && Math.abs(enemy.y - p.y) < 50) {
-            enemy.alive = false;
-            world.score += Math.round(250 * difficulty.score);
-            burst(world, enemy.x + 18, enemy.y + 16, "#ffd84d", 14);
+          if (Math.abs(enemy.x - attackX) < (enemy.guardian ? 62 : 48) && Math.abs(enemy.y - p.y) < (enemy.guardian ? 64 : 50)) {
+            if (enemy.guardian) {
+              enemy.integrity = Math.max(0, (enemy.integrity ?? 1) - 1);
+              enemy.alive = enemy.integrity > 0;
+              world.powerUpMessage = enemy.alive
+                ? (isDe ? `WÄCHTER-INTEGRITÄT ${enemy.integrity}/3` : `GUARDIAN INTEGRITY ${enemy.integrity}/3`)
+                : (isDe ? "WÄCHTER NEUTRALISIERT" : "GUARDIAN NEUTRALIZED");
+              world.powerUpMessageTime = 1.4;
+              world.shake = Math.max(world.shake, 11);
+              burst(world, enemy.x + 18, enemy.y + 16, themeColor(world.sector, "warning"), 24);
+            } else {
+              enemy.alive = false;
+              world.score += Math.round(250 * difficulty.score);
+              burst(world, enemy.x + 18, enemy.y + 16, "#ffd84d", 14);
+            }
             audioRef.current?.enemy();
             syncHud(world);
           }
@@ -1838,7 +1900,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             tile.alive = false;
             world.shake = Math.max(world.shake, 6 + effectivePower * 0.45);
             world.score += Math.round(75 * difficulty.score);
-            burst(world, tile.x + TILE / 2, tile.y + 12, "#00f0ff", 7 + effectivePower);
+            burst(world, tile.x + TILE / 2, tile.y + 12, themeColor(world.sector, "secondary"), 7 + effectivePower);
             audioRef.current?.smash();
             syncHud(world);
           }
@@ -1920,10 +1982,18 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const maxCameraX = Math.max(0, VIEW_W - view.width);
       const targetCameraX = Math.min(maxCameraX, Math.max(0, p.x + PLAYER_W / 2 - view.width / 2));
       world.cameraX += (targetCameraX - world.cameraX) * Math.min(1, dt * 5.5);
-      const targetCamera = Math.min(0, p.y - view.height * (view.portrait ? 0.66 : 0.61));
+      // Desktop fullscreen can produce a very wide, shallow canvas. In that
+      // case the old origin clamp left the player below the lower edge. Track
+      // the player upward just enough to retain a visible safety band.
+      const bottomSafeMargin = Math.max(26, Math.min(96, view.height * 0.12));
+      const lowestVisiblePlayerTop = Math.max(0, view.height - PLAYER_H - bottomSafeMargin);
+      const targetCamera = p.y > lowestVisiblePlayerTop
+        ? p.y - lowestVisiblePlayerTop
+        : Math.min(0, p.y - view.height * (view.portrait ? 0.66 : 0.61));
       world.cameraY += (targetCamera - world.cameraY) * Math.min(1, dt * 4.5);
       if (p.y > world.cameraY + view.height + 130) hurt(world);
-      if (p.y < WORLD_TOP) {
+      const guardianAlive = world.enemies.some((enemy) => enemy.alive && enemy.guardian);
+      if (p.y < WORLD_TOP && !guardianAlive) {
         world.score += 5000;
         audioRef.current?.win();
         const nextLevel = Math.min(LEVEL_COUNT, world.sector + 1);
@@ -1935,6 +2005,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           localStorage.setItem("skybreak-unlocked-level", String(nextLevel));
         }
         world.status = world.sector < LEVEL_COUNT ? "upgrade" : "won";
+        world.transition = 2.4;
+        world.victoryTime = world.sector === LEVEL_COUNT ? 0.01 : 0;
         p.vx = 0;
         p.vy = 0;
         if (!world.cheatUsed) {
@@ -1943,6 +2015,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           setHighScore(best);
         }
         syncHud(world);
+      } else if (p.y < WORLD_TOP && guardianAlive) {
+        p.y = WORLD_TOP + 48;
+        p.vy = 120;
+        world.powerUpMessage = isDe ? "WÄCHTER ZUERST AUSSCHALTEN" : "DISABLE THE GUARDIAN FIRST";
+        world.powerUpMessageTime = 1.5;
       }
     };
 
@@ -2346,28 +2423,41 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.strokeStyle = theme.secondary;
         ctx.lineWidth = 1;
         ctx.globalAlpha = 0.45;
-        if (theme.motif === 2 || theme.motif === 3) {
+        if (theme.platform === "cryo-steel") {
+          for (let rivet = 0; rivet < 4; rivet++) {
+            ctx.beginPath(); ctx.arc(tile.x + 12 + rivet * 14, tile.y + 12, 2, 0, Math.PI * 2); ctx.stroke();
+          }
+        } else if (theme.platform === "chrome-ice") {
+          ctx.fillStyle = "rgba(255,255,255,.24)";
+          ctx.fillRect(tile.x + 8, tile.y + 5, TILE - 22, 4);
+          ctx.strokeRect(tile.x + 12, tile.y + 13, TILE - 24, 6);
+        } else if (theme.platform === "corroded-ice" || theme.platform === "molten-glass") {
           for (let stripe = 0; stripe < 4; stripe++) {
             ctx.beginPath();
             ctx.moveTo(tile.x + 6 + stripe * 15, tile.y + 20);
             ctx.lineTo(tile.x + 13 + stripe * 15, tile.y + 4);
             ctx.stroke();
           }
-        } else if (theme.motif === 4 || theme.motif === 5 || theme.motif === 8) {
+        } else if (theme.platform === "deep-ice" || theme.platform === "plasma-crystal" || theme.platform === "rift-crystal") {
           ctx.beginPath();
           ctx.arc(tile.x + TILE / 2, tile.y + 12, 5 + theme.motif % 4, 0, Math.PI * 2);
           ctx.stroke();
-        } else if (theme.motif === 6) {
+          if (theme.platform === "deep-ice") {
+            ctx.beginPath(); ctx.moveTo(tile.x + 9, tile.y + 4); ctx.lineTo(tile.x + 22, tile.y + 20); ctx.lineTo(tile.x + 35, tile.y + 4); ctx.lineTo(tile.x + 52, tile.y + 20); ctx.stroke();
+          }
+        } else if (theme.platform === "solar-array") {
           for (let cell = 0; cell < 5; cell++) ctx.strokeRect(tile.x + 7 + cell * 11, tile.y + 5, 8, 13);
-        } else if (theme.motif === 7) {
+        } else if (theme.platform === "phase-ice") {
           ctx.setLineDash([4, 4]);
           ctx.strokeRect(tile.x + 7, tile.y + 5, TILE - 14, 13);
           ctx.setLineDash([]);
-        } else if (theme.motif === 9) {
+        } else if (theme.platform === "apex-ice") {
           ctx.beginPath();
           ctx.moveTo(tile.x + 8, tile.y + 12);
           ctx.lineTo(tile.x + TILE - 8, tile.y + 12);
           ctx.stroke();
+          ctx.fillStyle = "rgba(255,255,255,.28)";
+          ctx.fillRect(tile.x + 18, tile.y + 5, 27, 3);
         }
         ctx.globalAlpha = 1;
         ctx.fillStyle = "rgba(225,249,255,.48)";
@@ -2453,6 +2543,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         if (!enemy.alive || enemy.y < world.cameraY - 80 || enemy.y > world.cameraY + view.height + 50) continue;
         ctx.save();
         ctx.translate(enemy.x + 19, enemy.y + 16);
+        if (enemy.guardian) ctx.scale(1.65, 1.65);
         const tilt = Math.max(-0.18, Math.min(0.18, enemy.vy / 900));
         ctx.rotate(tilt);
         ctx.shadowBlur = 24;
@@ -2492,6 +2583,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.beginPath();
         ctx.arc(0, 0, 25 + Math.sin(world.fxTime * 4) * 2, 0, Math.PI * 2);
         ctx.stroke();
+        if (enemy.guardian) {
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = theme.warning;
+          ctx.font = "700 6px ui-monospace, monospace";
+          ctx.fillText(`GUARDIAN ${enemy.integrity ?? 0}/3`, -20, -29);
+          ctx.fillStyle = "rgba(255,255,255,.16)";
+          ctx.fillRect(-20, -26, 40, 3);
+          ctx.fillStyle = theme.warning;
+          ctx.fillRect(-20, -26, 40 * ((enemy.integrity ?? 0) / 3), 3);
+        }
         ctx.restore();
       }
 
@@ -2611,7 +2712,25 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.fillStyle = "#9dffff";
         ctx.fillRect(-7, -19, 5, 3);
         ctx.fillStyle = "#ff2b8a";
+        ctx.globalAlpha = p.damage > 1 && Math.floor(world.fxTime * 9) % 3 === 0 ? 0.12 : 1;
         ctx.fillRect(4, -19, 5, 3);
+        ctx.globalAlpha = 1;
+        if (p.damage > 0) {
+          ctx.strokeStyle = p.damage > 2 ? "#ff365f" : "#ff9b35";
+          ctx.lineWidth = 1.5;
+          for (let crack = 0; crack < p.damage; crack++) {
+            ctx.beginPath();
+            ctx.moveTo(-10 + crack * 8, -1);
+            ctx.lineTo(-5 + crack * 7, 8);
+            ctx.lineTo(-9 + crack * 8, 17);
+            ctx.stroke();
+          }
+          for (let spark = 0; spark < p.damage * 2; spark++) {
+            const angle = world.fxTime * (4 + spark) + spark * 2.1;
+            ctx.fillStyle = spark % 2 ? "#ff9b35" : "#ff365f";
+            ctx.fillRect(Math.cos(angle) * (18 + spark * 2), Math.sin(angle) * (20 + spark * 2), 2, 5);
+          }
+        }
         ctx.strokeStyle = "#00f0ff";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -2664,6 +2783,28 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.restore();
       }
       ctx.restore();
+
+      if (world.status === "won" && world.sector === LEVEL_COUNT) {
+        const sunrise = ctx.createLinearGradient(0, 0, 0, view.height);
+        sunrise.addColorStop(0, "rgba(255,218,121,.34)");
+        sunrise.addColorStop(0.46, "rgba(255,117,112,.16)");
+        sunrise.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = sunrise;
+        ctx.fillRect(0, 0, view.width, view.height);
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        ctx.translate(view.width / 2, view.height * 0.38);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 24;
+        ctx.shadowColor = "#00f0ff";
+        ctx.beginPath(); ctx.moveTo(0, 160); ctx.lineTo(0, -95); ctx.stroke();
+        for (let ray = 0; ray < 8; ray++) {
+          ctx.rotate(Math.PI / 4);
+          ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(0, -145); ctx.stroke();
+        }
+        ctx.restore();
+      }
 
       // Layered fog and light shafts bind foreground and skyline together.
       ctx.save();
@@ -2895,15 +3036,23 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             <h1 className={status === "upgrade" ? "upgrade-title" : undefined}>{overlayTitle}</h1>
             <p>{overlayCopy}</p>
             {status === "upgrade" ? (
-              <div className="upgrade-grid">
-                <button onClick={() => applyPickaxeUpgrade("power")}>
-                  <strong>{isDe ? "KRAFT" : "POWER"} {pickaxeStats.power + 1}</strong>
-                  <span>{isDe ? "Mehr Plattformmodule pro Schlag zerstören" : "Destroy more platform modules per strike"}</span>
-                </button>
-                <button onClick={() => applyPickaxeUpgrade("style")}>
-                  <strong>{isDe ? "DESIGN" : "STYLE"} {pickaxeStats.style + 1}</strong>
-                  <span>{isDe ? "Neue Farbe, Form und stärkeres Leuchten" : "New color, shape, and stronger glow"}</span>
-                </button>
+              <div className="transition-panel" style={{ "--next-accent": LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].accent, "--next-secondary": LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].secondary } as React.CSSProperties}>
+                <div className="level-transition-card">
+                  <span>{isDe ? "NÄCHSTER SEKTOR" : "NEXT SECTOR"}</span>
+                  <strong>LEVEL {Math.min(LEVEL_COUNT, sector + 1).toString().padStart(2, "0")}</strong>
+                  <b>{LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].name}</b>
+                  <small>{isDe ? `${LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].platform.replaceAll("-", " ")} // WÄCHTERSIGNAL ERFASST` : `${LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].platform.replaceAll("-", " ")} // GUARDIAN SIGNAL DETECTED`}</small>
+                </div>
+                <div className="upgrade-grid">
+                  <button onClick={() => applyPickaxeUpgrade("power")}>
+                    <strong>{isDe ? "KRAFT" : "POWER"} {pickaxeStats.power + 1}</strong>
+                    <span>{isDe ? "Mehr Plattformmodule pro Schlag zerstören" : "Destroy more platform modules per strike"}</span>
+                  </button>
+                  <button onClick={() => applyPickaxeUpgrade("style")}>
+                    <strong>{isDe ? "DESIGN" : "STYLE"} {pickaxeStats.style + 1}</strong>
+                    <span>{isDe ? "Neue Farbe, Form und stärkeres Leuchten" : "New color, shape, and stronger glow"}</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <>
@@ -2923,11 +3072,19 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
               </>
             )}
             {status === "ready" && (
-              <div className="mission-grid">
-                <span><b>01</b> {isDe ? "Ebenen von unten durchbrechen" : "Break levels from below"}</span>
-                <span><b>02</b> {isDe ? "Drohnen ausschalten" : "Disable the drones"}</span>
-                <span><b>03</b> {isDe ? "Sendeturm erreichen" : "Reach the transmission tower"}</span>
-              </div>
+              <>
+                <div className="mission-grid">
+                  <span><b>01</b> {isDe ? "Ebenen von unten durchbrechen" : "Break levels from below"}</span>
+                  <span><b>02</b> {isDe ? "Drohnen ausschalten" : "Disable the drones"}</span>
+                  <span><b>03</b> {isDe ? "Sendeturm erreichen" : "Reach the transmission tower"}</span>
+                </div>
+                <div className="level-map" aria-label={isDe ? "Levelkarte" : "Level map"}>
+                  {LEVEL_THEMES.map((theme, index) => {
+                    const level = index + 1;
+                    return <span key={theme.name} className={`${level === selectedStartLevel ? "selected" : ""}${level > unlockedLevel ? " locked" : ""}`} style={{ "--map-accent": theme.accent } as React.CSSProperties}>{level.toString().padStart(2, "0")}</span>;
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}
@@ -2964,6 +3121,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             <option value="medium">{isDe ? "Mittel" : "Medium"}</option>
             <option value="high">{isDe ? "Hoch" : "High"}</option>
             <option value="ultra">Ultra</option>
+          </select>
+        </label>
+        <label className="quality-picker">
+          <span>{isDe ? "AUFLÖSUNG" : "RESOLUTION"}</span>
+          <select value={renderResolution} onChange={(event) => chooseRenderResolution(event.target.value as RenderResolution)}>
+            <option value="720p">720p</option>
+            <option value="1080p">1080p</option>
+            <option value="4k">4K</option>
           </select>
         </label>
         {quality === "ultra" && mobileDevice && (

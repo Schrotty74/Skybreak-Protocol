@@ -2,20 +2,15 @@
 
 ## Umgesetzt
 
-Noch keine.
+- Jedes Level hat nun eine eigene 15-Etagen-Kulisse mit verstärkten Umgebungseffekten, eindeutig unterschiedlichen Plattformmaterialien und einer Wächterdrohne am oberen Levelende.
+- Nach der Wächterdrohne zeigt ein animierter Übergang Name, Farbwelt und Plattformmaterial des nächsten Levels, bevor das Eispickel-Upgrade gewählt wird.
+- Der Roboter zeigt bei verlorenen Leben Risse, Funken und Sensorflackern.
+- Level 10 endet mit aktivem Sendeturm, Kamerafokus und Sonnenaufgang.
+- Der Startbildschirm enthält jetzt eine farbcodierte Levelkarte mit Freischaltstatus und gewähltem Startlevel.
 
 ## Geplant: Grafik und Präsentation
 
-- [ ] Level-Übergänge mit kurzer Kamerafahrt, Sektorname, Farbwelt und Umgebungsvorschau
-- [ ] Sichtbare Roboterschäden mit Funken, flackernden Sensoren und Schadenszuständen bei wenig Leben
-- [ ] Eigene Schlagspuren, Partikelfarben und Einschlaganimationen für Eispickel-Upgrades
-- [ ] Stärkere Tiefenwirkung durch zusätzliche Skyline-Ebenen, fliegende Fahrzeuge und entfernte Gewitter
-- [ ] Individuelle Plattformmaterialien je Level, etwa Chrom, Energiegitter, Glas und Reaktormetall
-- [ ] Boss-ähnliche Levelenden mit Wächterdrohne oder Verteidigungsanlage
-- [ ] Erweiterte Siegsequenz mit Kamerazoom, aktiviertem Sendeturm und Sonnenaufgang
-- [ ] Grafisches Hauptmenü mit Levelkarte, Vorschau, Schwierigkeitsgrad und Bestwert
-
-Priorität: zuerst Level-Übergänge, Roboterschäden und Siegsequenz.
+Noch keine weiteren Punkte festgelegt.
 
 ## Spätere Phase: native macOS-App
 

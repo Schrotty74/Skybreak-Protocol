@@ -43,10 +43,12 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 ## Spielprinzip
 
 - Durch zehn zunehmend schwierigere Cyberpunk-Level aufsteigen
+- Jedes Level ist ein vollständiger Aufstieg über 15 Etagen mit eigener animierter Umgebung, Plattformmaterial, Wächterdrohne und Soundtrack
 - Plattformmodule von unten durchbrechen
 - Gegner und nahe Plattformmodule mit dem Eispickel des Roboters angreifen
 - Truhen passend zur Schwierigkeit: auf Leicht dauerhaft alle zwei bis drei Etagen, auf Mittel ab der Hälfte zeitlich begrenzt und auf Schwer erst ab zwei Dritteln mit schnellen Positionswechseln – auch unterhalb des Spielers
-- Beim Eintritt in jedes neue Level Kraft oder Design des Eispickels verbessern
+- Wächterdrohne ausschalten, den nächsten Sektor als Vorschau sehen und danach Kraft oder Design des Eispickels verbessern
+- Sichtbare Roboterschäden, Sensorflackern und Funken bei verlorenen Leben erleben
 - Erreichte Level dauerhaft lokal freischalten und nach einem Lauf direkt als neues Startlevel auswählen
 - Lücken, fallenden Energiesplittern und Patrouillendrohnen ausweichen
 - Punkte sammeln, Leben erhalten und den lokalen Highscore verbessern

@@ -43,10 +43,12 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
 ## Gameplay
 
 - Ascend through ten increasingly difficult cyberpunk levels
+- Every level is a complete 15-floor ascent with a distinct animated environment, platform material, guardian drone, and soundtrack
 - Break platform modules from below
 - Use the robot's ice pick against enemies and nearby platform modules
 - Difficulty-aware chests: persistent every two to three floors on Easy, time-limited after halfway on Medium, and only after two thirds on Hard with faster relocations — including below the player
-- Choose an ice-pick power or visual-style upgrade when entering each new level
+- Defeat the level guardian, preview the next sector, then choose an ice-pick power or visual-style upgrade
+- Watch the robot show persistent armor damage, sensor flicker, and sparks when lives are lost
 - Permanently unlock reached levels locally and select any unlocked level as the next starting point after a run
 - Avoid gaps, falling energy fragments, and patrol drones
 - Collect points, preserve lives, and improve the local high score
