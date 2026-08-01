@@ -14,7 +14,6 @@ type Difficulty = "easy" | "medium" | "hard";
 const LEVEL_COUNT = 10;
 const APP_VERSION = __APP_VERSION__;
 const CHANGELOG_BASE_URL = "https://github.com/Schrotty74/Skybreak-Protocol/blob/main/docs/releases";
-const LEVEL_HEIGHT = 390;
 const LEVEL_THEMES = [
   { name: "Neon Undercity", top: "#051d35", mid: "#18072f", bottom: "#02040d", accent: "#00f0ff", secondary: "#ff2b8a", warning: "#ffd84d", motif: 0 },
   { name: "Chrome Bazaar", top: "#24113f", mid: "#35102d", bottom: "#08040f", accent: "#ff5bd6", secondary: "#39f5c8", warning: "#ffe66d", motif: 1 },
@@ -69,10 +68,13 @@ const VIEW_H = 540;
 const TILE = 64;
 const PLAYER_W = 34;
 const PLAYER_H = 50;
+const LEVEL_FLOORS = 15;
+const FLOOR_SPACING = 92;
+const FLOOR_BASE_Y = 475;
 const GRAVITY = 1450;
 const MOVE_SPEED = 255;
 const JUMP_SPEED = 610;
-const WORLD_TOP = -(LEVEL_COUNT - 1) * LEVEL_HEIGHT - 80;
+const WORLD_TOP = FLOOR_BASE_Y - (LEVEL_FLOORS - 1) * FLOOR_SPACING - PLAYER_H + 13;
 
 type Tile = { x: number; y: number; alive: boolean; cracked: boolean };
 type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean };
@@ -126,10 +128,10 @@ function buildLevel(): Pick<World, "tiles" | "enemies" | "chests"> {
   const tiles: Tile[] = [];
   const enemies: Enemy[] = [];
   const chests: Chest[] = [];
-  const chestSpawns = new Map(buildChestSpawns(45).map((spawn) => [spawn.row, spawn.powerUp]));
+  const chestSpawns = new Map(buildChestSpawns(LEVEL_FLOORS).map((spawn) => [spawn.row, spawn.powerUp]));
 
-  for (let row = 0; row < 45; row++) {
-    const y = 475 - row * 92;
+  for (let row = 0; row < LEVEL_FLOORS; row++) {
+    const y = FLOOR_BASE_Y - row * FLOOR_SPACING;
     const gapStart = row === 0 ? -10 : (row * 5 + 2) % 11;
     const rowTiles: Tile[] = [];
     for (let col = 0; col < 15; col++) {
@@ -209,57 +211,23 @@ function makeWorld(): World {
 
 function placeWorldAtLevel(world: World, level: number) {
   const targetLevel = Math.min(LEVEL_COUNT, Math.max(1, Math.round(level)));
-  if (targetLevel === 1) {
-    world.sector = 1;
-    world.highestSector = 1;
-    return;
-  }
-  const threshold = -(targetLevel - 1) * LEVEL_HEIGHT;
-  const candidates = world.tiles.filter((tile) => tile.alive
-    && tile.y <= threshold + PLAYER_H
-    && tile.y >= threshold - 150);
-  const support = candidates.reduce<Tile | null>((best, tile) => {
-    if (!best) return tile;
-    const score = Math.abs(tile.y - (threshold + PLAYER_H)) * 4 + Math.abs(tile.x + TILE / 2 - VIEW_W / 2);
-    const bestScore = Math.abs(best.y - (threshold + PLAYER_H)) * 4 + Math.abs(best.x + TILE / 2 - VIEW_W / 2);
-    return score < bestScore ? tile : best;
-  }, null);
-  if (support) {
-    world.player.x = support.x + (TILE - PLAYER_W) / 2;
-    world.player.y = support.y - PLAYER_H;
-  } else {
-    world.player.x = 463;
-    world.player.y = threshold - 30;
-  }
-  world.player.vx = 0;
-  world.player.vy = 0;
-  world.cameraX = Math.max(0, world.player.x - VIEW_W / 2);
-  world.cameraY = Math.min(0, world.player.y - VIEW_H * 0.66);
   world.sector = targetLevel;
   world.highestSector = targetLevel;
   world.roamingChestSector = targetLevel;
 }
 
-function sectorForY(y: number): number {
-  return Math.min(LEVEL_COUNT, Math.max(1, Math.floor(-y / LEVEL_HEIGHT) + 1));
-}
-
-function sectorProgress(sector: number, playerY: number): number {
-  const bottom = sector === 1 ? 475 : -(sector - 1) * LEVEL_HEIGHT;
-  const top = -sector * LEVEL_HEIGHT;
-  return Math.max(0, Math.min(1, (bottom - playerY) / (bottom - top)));
+function levelProgress(playerY: number): number {
+  return Math.max(0, Math.min(1, (FLOOR_BASE_Y - playerY) / (FLOOR_BASE_Y - WORLD_TOP)));
 }
 
 const CHEST_POWER_UPS: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
 
 function placeRoamingChest(world: World, difficulty: RoamingChestDifficulty): boolean {
   const sector = world.sector;
-  const bottom = sector === 1 ? 475 : -(sector - 1) * LEVEL_HEIGHT;
-  const top = -sector * LEVEL_HEIGHT;
   const previous = world.roamingChest;
   const available = world.tiles.filter((tile) => tile.alive
-    && tile.y <= bottom
-    && tile.y >= top
+    && tile.y <= Math.min(475, world.player.y + 320)
+    && tile.y >= Math.max(WORLD_TOP, world.player.y - 360)
     && tile.x >= TILE
     && tile.x <= VIEW_W - TILE * 2
     && (!previous || Math.abs(tile.x + 13 - previous.x) > TILE || Math.abs(tile.y - 30 - previous.y) > 60));
@@ -1076,6 +1044,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const ultraFpsRef = useRef(60);
   const mobileUltra120Ref = useRef(false);
   const ultraFallbackRef = useRef(false);
+  const pickaxeLoadoutRef = useRef({ power: 1, style: 1 });
   const keyBindingsRef = useRef<KeyBindings>({ ...DEFAULT_KEY_BINDINGS });
   const bindingCaptureRef = useRef<BindableAction | null>(null);
   const unlockedLevelRef = useRef(1);
@@ -1126,11 +1095,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const restart = useCallback(() => {
     const next = makeWorld();
     placeWorldAtLevel(next, selectedStartLevelRef.current);
+    next.player.pickaxePower = pickaxeLoadoutRef.current.power;
+    next.player.pickaxeStyle = pickaxeLoadoutRef.current.style;
     next.status = "playing";
     worldRef.current = next;
     pressedRef.current = { left: false, right: false, jump: false, attack: false };
     inputRef.current = { left: false, right: false, jump: false, attack: false };
-    setPickaxeStats({ power: 1, style: 1 });
+    setPickaxeStats({ ...pickaxeLoadoutRef.current });
     if (musicEnabledRef.current) {
       audioRef.current ??= createAudio();
       audioRef.current.setSoundEnabled(soundEnabledRef.current);
@@ -1164,8 +1135,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     if (world.status !== "upgrade") return;
     if (kind === "power") world.player.pickaxePower = Math.min(10, world.player.pickaxePower + 1);
     else world.player.pickaxeStyle = Math.min(10, world.player.pickaxeStyle + 1);
+    pickaxeLoadoutRef.current = { power: world.player.pickaxePower, style: world.player.pickaxeStyle };
     setPickaxeStats({ power: world.player.pickaxePower, style: world.player.pickaxeStyle });
-    world.status = "playing";
+    world.status = "won";
     world.lastTime = performance.now();
     syncHud(world);
   }, [syncHud]);
@@ -1356,8 +1328,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         0.22,
       );
     }
-    const ultraChests = world.chests.filter((chest) =>
-      difficultiesRef.current[sectorForY(chest.y) - 1] === "easy");
+    const ultraChests = difficultiesRef.current[world.sector - 1] === "easy" ? [...world.chests] : [];
     if (world.roamingChest) ultraChests.push(world.roamingChest);
     for (const chest of ultraChests) {
       if (chest.opened || chest.y < world.cameraY - 50 || chest.y > world.cameraY + view.height + 50) continue;
@@ -1735,7 +1706,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       } else {
         const roamingDifficulty = difficultyLevel as RoamingChestDifficulty;
         const rules = ROAMING_CHEST_RULES[roamingDifficulty];
-        const unlocked = sectorProgress(world.sector, p.y) >= rules.unlockProgress;
+        const unlocked = levelProgress(p.y) >= rules.unlockProgress;
         const alreadyCollected = world.collectedRoamingChestSectors[world.sector - 1];
         if (!unlocked || alreadyCollected) {
           world.roamingChest = null;
@@ -1951,31 +1922,21 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       world.cameraX += (targetCameraX - world.cameraX) * Math.min(1, dt * 5.5);
       const targetCamera = Math.min(0, p.y - view.height * (view.portrait ? 0.66 : 0.61));
       world.cameraY += (targetCamera - world.cameraY) * Math.min(1, dt * 4.5);
-      const newSector = Math.min(LEVEL_COUNT, Math.max(1, Math.floor(-p.y / LEVEL_HEIGHT) + 1));
-      if (newSector !== world.sector) {
-        world.sector = newSector;
-        if (world.immortalSector !== null && world.immortalSector !== newSector) world.immortalSector = null;
-        if (newSector > unlockedLevelRef.current) {
-          unlockedLevelRef.current = newSector;
-          selectedStartLevelRef.current = newSector;
-          setUnlockedLevel(newSector);
-          setSelectedStartLevel(newSector);
-          localStorage.setItem("skybreak-unlocked-level", String(newSector));
-        }
-        if (musicEnabledRef.current) void audioRef.current?.playMusic(newSector);
-        if (newSector > world.highestSector) {
-          world.highestSector = newSector;
-          world.status = "upgrade";
-          p.vx = 0;
-          p.vy = 0;
-        }
-        syncHud(world);
-      }
       if (p.y > world.cameraY + view.height + 130) hurt(world);
       if (p.y < WORLD_TOP) {
-        world.status = "won";
         world.score += 5000;
         audioRef.current?.win();
+        const nextLevel = Math.min(LEVEL_COUNT, world.sector + 1);
+        if (nextLevel > unlockedLevelRef.current) {
+          unlockedLevelRef.current = nextLevel;
+          selectedStartLevelRef.current = nextLevel;
+          setUnlockedLevel(nextLevel);
+          setSelectedStartLevel(nextLevel);
+          localStorage.setItem("skybreak-unlocked-level", String(nextLevel));
+        }
+        world.status = world.sector < LEVEL_COUNT ? "upgrade" : "won";
+        p.vx = 0;
+        p.vy = 0;
         if (!world.cheatUsed) {
           const best = Math.max(world.score, Number(localStorage.getItem("neon-ascent-highscore") || 0));
           localStorage.setItem("neon-ascent-highscore", String(best));
@@ -2422,8 +2383,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         }
       }
 
-      const visibleChests = world.chests.filter((chest) =>
-        difficultiesRef.current[sectorForY(chest.y) - 1] === "easy");
+      const visibleChests = difficultiesRef.current[world.sector - 1] === "easy" ? [...world.chests] : [];
       if (world.roamingChest) visibleChests.push(world.roamingChest);
       for (const chest of visibleChests) {
         if (chest.y < world.cameraY - 70 || chest.y > world.cameraY + view.height + 60) continue;
@@ -2868,16 +2828,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   });
 
   const overlayTitle =
-    status === "ready" ? "SKYBREAK PROTOCOL" : status === "paused" ? (isDe ? "SYSTEM PAUSIERT" : "SYSTEM PAUSED") : status === "upgrade" ? (isDe ? "EISPICKEL-UPGRADE" : "ICE PICK UPGRADE") : status === "won" ? (isDe ? "GIPFEL ERREICHT" : "SUMMIT REACHED") : (isDe ? "LAUF BEENDET" : "RUN TERMINATED");
+    status === "ready" ? "SKYBREAK PROTOCOL" : status === "paused" ? (isDe ? "SYSTEM PAUSIERT" : "SYSTEM PAUSED") : status === "upgrade" ? (isDe ? "LEVEL GESCHAFFT" : "LEVEL COMPLETE") : status === "won" ? (sector === LEVEL_COUNT ? (isDe ? "GIPFEL ERREICHT" : "SUMMIT REACHED") : (isDe ? "LEVEL GESCHAFFT" : "LEVEL COMPLETE")) : (isDe ? "LAUF BEENDET" : "RUN TERMINATED");
   const overlayCopy =
     status === "ready"
       ? (isDe ? "Durchbrich 10 Cyberpunk-Level und erreiche den Sendeturm." : "Break through 10 cyberpunk levels and reach the transmission tower.")
       : status === "paused"
         ? (isDe ? "Die Zeit steht still. Noch." : "Time stands still. For now.")
         : status === "upgrade"
-          ? (isDe ? `Level ${sector} erreicht. Verbessere Kraft oder Design deines Eispickels.` : `Level ${sector} reached. Upgrade the power or design of your ice pick.`)
+          ? (isDe ? `Level ${sector} abgeschlossen. Wähle ein Eispickel-Upgrade für Level ${Math.min(LEVEL_COUNT, sector + 1)}.` : `Level ${sector} complete. Choose an ice-pick upgrade for level ${Math.min(LEVEL_COUNT, sector + 1)}.`)
         : status === "won"
-          ? (isDe ? `Level 10 befreit · ${score.toLocaleString("de-AT")} Punkte` : `Level 10 liberated · ${score.toLocaleString("en-US")} points`)
+          ? (isDe ? `Level ${sector} befreit · ${score.toLocaleString("de-AT")} Punkte` : `Level ${sector} liberated · ${score.toLocaleString("en-US")} points`)
           : (isDe ? `Dein Lauf endet bei ${score.toLocaleString("de-AT")} Punkten.` : `Your run ends at ${score.toLocaleString("en-US")} points.`);
 
   return (
