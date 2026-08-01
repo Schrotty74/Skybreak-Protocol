@@ -2,6 +2,7 @@
 
 Every public beta and final build has its own detailed German and English release document.
 
+- **1.0.0-beta.7:** [Deutsch](docs/releases/1.0.0-beta.7.md) · [English](docs/releases/1.0.0-beta.7.en.md) – mobile live FPS display for real-device performance and heat checks
 - **1.0.0-beta.6:** [Deutsch](docs/releases/1.0.0-beta.6.md) · [English](docs/releases/1.0.0-beta.6.en.md) – stable desktop frame pacing, fixed Ultra start transition, local performance comparison, and GPU object glows
 - **1.0.0-beta.5:** [Deutsch](docs/releases/1.0.0-beta.5.md) · [English](docs/releases/1.0.0-beta.5.en.md) – difficulty carryover, reliable roaming chests, enemy edge turns, and a macOS local-test starter
 - **1.0.0-beta.4:** [Deutsch](docs/releases/1.0.0-beta.4.md) · [English](docs/releases/1.0.0-beta.4.en.md) – 15-floor levels, guardian fights, platform forms, visible Ultra effects, resolution choice, and desktop screenshots

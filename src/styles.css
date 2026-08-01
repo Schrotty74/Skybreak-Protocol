@@ -175,6 +175,10 @@ button {
   white-space: nowrap;
 }
 
+.mobile-performance-hud {
+  display: none;
+}
+
 .icon-button {
   height: 38px;
   padding: 0 13px;
@@ -923,6 +927,21 @@ kbd {
 
   .touch-controls {
     display: flex;
+  }
+
+  .mobile-performance-hud {
+    position: absolute;
+    z-index: 4;
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+    display: block;
+    padding: 5px 7px;
+    border: 1px solid rgba(0, 240, 255, .42);
+    background: rgba(2, 8, 18, .78);
+    color: var(--cyan);
+    font: 800 8px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: .06em;
+    pointer-events: none;
   }
 
   .run-record {

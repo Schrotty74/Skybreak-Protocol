@@ -3411,6 +3411,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           aria-hidden="true"
         />
         <canvas ref={canvasRef} aria-label={isDe ? "Spielansicht: Klettere durch die Cyberpunk-Megacity" : "Game view: climb through the cyberpunk megacity"} />
+        {mobileDevice && status === "playing" && frameTelemetry && (
+          <output className="mobile-performance-hud" aria-label={isDe ? "Aktuelle Bildrate" : "Current frame rate"}>
+            {frameTelemetry.fps} FPS · {frameTelemetry.frameMs} MS
+          </output>
+        )}
         {status !== "playing" && (
           <div className="game-overlay">
             {status === "ready" && (
