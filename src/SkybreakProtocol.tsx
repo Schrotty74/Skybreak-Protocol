@@ -210,7 +210,9 @@ function makeWorld(): World {
       damage: 0,
     },
     particles: [],
-    cameraX: 210,
+    // Keep the ready screen aligned to the left world edge. A non-zero
+    // starting offset is exposed on wide desktop canvases behind the overlay.
+    cameraX: 0,
     cameraY: 0,
     score: 0,
     lives: 3,
