@@ -61,7 +61,7 @@ const QUALITY_SETTINGS: Record<Quality, {
   low: { fps: 30, dpr: 1, glFps: 12, glDpr: 0.7, webgl: false, traffic: 4, layers: 1, rain: 12, fog: 1 },
   medium: { fps: 40, dpr: 1.5, glFps: 30, glDpr: 1, webgl: true, traffic: 10, layers: 2, rain: 38, fog: 2 },
   high: { fps: 60, dpr: 2, glFps: 45, glDpr: 1.5, webgl: true, traffic: 18, layers: 3, rain: 65, fog: 3 },
-  ultra: { fps: 60, dpr: 4, glFps: 60, glDpr: 2.5, webgl: true, traffic: 26, layers: 3, rain: 110, fog: 4 },
+  ultra: { fps: 60, dpr: 4, glFps: 60, glDpr: 2.5, webgl: true, traffic: 38, layers: 5, rain: 170, fog: 7 },
 };
 
 const VIEW_W = 960;
@@ -2029,6 +2029,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const settings = qualityRef.current === "ultra" && ultraFallbackRef.current
         ? QUALITY_SETTINGS.medium
         : QUALITY_SETTINGS[qualityRef.current];
+      const ultraActive = qualityRef.current === "ultra" && !ultraFallbackRef.current;
       const theme = LEVEL_THEMES[Math.max(0, world.sector - 1)] || LEVEL_THEMES[0];
       const sx = canvas.width / view.width;
       const sy = canvas.height / view.height;
@@ -2044,6 +2045,29 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       bg.addColorStop(1, theme.bottom);
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, view.width, view.height);
+
+      // Ultra: clearly visible volumetric neon shafts, independent of the
+      // currently selected level motif.
+      if (ultraActive) {
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        for (let beam = 0; beam < 5; beam++) {
+          const center = ((beam * 241 + world.fxTime * (12 + beam * 3)) % (view.width + 220)) - 110;
+          const beamGlow = ctx.createLinearGradient(center - 150, 0, center + 150, view.height);
+          beamGlow.addColorStop(0, "rgba(0,0,0,0)");
+          beamGlow.addColorStop(0.45, beam % 2 ? "rgba(255,43,138,.105)" : "rgba(0,240,255,.12)");
+          beamGlow.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = beamGlow;
+          ctx.beginPath();
+          ctx.moveTo(center - 22, 0);
+          ctx.lineTo(center + 26, 0);
+          ctx.lineTo(center + 165, view.height);
+          ctx.lineTo(center - 195, view.height);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
 
       // Each level has a distinct animated skyline signature.
       ctx.save();
@@ -2383,6 +2407,34 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ["#574986", "#17143d", "#070518"],
         ["#778da3", "#173449", "#06121d"],
       ][theme.motif];
+      const platformShape = (x: number, y: number, width: number, height: number) => {
+        ctx.beginPath();
+        switch (theme.motif) {
+          case 0: // Cryo steel: chamfered industrial module.
+            ctx.moveTo(x + 8, y); ctx.lineTo(x + width - 8, y); ctx.lineTo(x + width, y + 8); ctx.lineTo(x + width - 6, y + height); ctx.lineTo(x + 6, y + height); ctx.lineTo(x, y + 8); break;
+          case 1: // Chrome bazaar: broad capsule sign.
+            ctx.roundRect(x, y + 2, width, height - 2, height / 2); break;
+          case 2: // Toxic transit: corroded teeth.
+            ctx.moveTo(x, y + 3); ctx.lineTo(x + width, y); ctx.lineTo(x + width - 3, y + height - 5);
+            for (let tooth = 0; tooth < 4; tooth++) ctx.lineTo(x + width - 12 - tooth * 14, y + height - (tooth % 2 ? 2 : 7));
+            ctx.lineTo(x + 3, y + height - 3); break;
+          case 3: // Crimson firewall: slanted data blade.
+            ctx.moveTo(x + 9, y); ctx.lineTo(x + width, y + 4); ctx.lineTo(x + width - 9, y + height); ctx.lineTo(x, y + height - 4); break;
+          case 4: // Azure data sea: frozen wave.
+            ctx.moveTo(x, y + 8); ctx.quadraticCurveTo(x + width * 0.2, y - 3, x + width * 0.4, y + 7); ctx.quadraticCurveTo(x + width * 0.68, y + 17, x + width, y + 2); ctx.lineTo(x + width - 4, y + height); ctx.lineTo(x + 4, y + height); break;
+          case 5: // Violet reactor: faceted crystal.
+            ctx.moveTo(x + 10, y); ctx.lineTo(x + width - 10, y); ctx.lineTo(x + width, y + height / 2); ctx.lineTo(x + width - 12, y + height); ctx.lineTo(x + 12, y + height); ctx.lineTo(x, y + height / 2); break;
+          case 6: // Solar megagrid: stepped photovoltaic panel.
+            ctx.moveTo(x + 4, y); ctx.lineTo(x + width - 4, y); ctx.lineTo(x + width - 4, y + height - 5); ctx.lineTo(x + width - 14, y + height); ctx.lineTo(x + 14, y + height); ctx.lineTo(x + 4, y + height - 5); break;
+          case 7: // Ghost network: asymmetric phase shard.
+            ctx.moveTo(x + 5, y); ctx.lineTo(x + width - 2, y + 4); ctx.lineTo(x + width - 12, y + height); ctx.lineTo(x + 14, y + height - 3); ctx.lineTo(x, y + 12); break;
+          case 8: // Quantum rift: arrowhead prism.
+            ctx.moveTo(x + 12, y); ctx.lineTo(x + width, y + height / 2); ctx.lineTo(x + 12, y + height); ctx.lineTo(x, y + height - 5); ctx.lineTo(x + 15, y + height / 2); ctx.lineTo(x, y + 5); break;
+          default: // Skybreak apex: crown-shaped summit plate.
+            ctx.moveTo(x, y + 7); ctx.lineTo(x + 12, y); ctx.lineTo(x + width * 0.5, y + 5); ctx.lineTo(x + width - 12, y); ctx.lineTo(x + width, y + 7); ctx.lineTo(x + width - 7, y + height); ctx.lineTo(x + 7, y + height); break;
+        }
+        ctx.closePath();
+      };
       for (const tile of world.tiles) {
         if (!tile.alive || tile.y < world.cameraY - 80 || tile.y > world.cameraY + view.height + 50) continue;
         const glow = tile.cracked ? theme.accent : theme.warning;
@@ -2403,7 +2455,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
         ctx.shadowBlur = 19;
         ctx.shadowColor = glow;
-        roundedRect(ctx, tile.x + 2, tile.y, TILE - 4, 24, 5);
+        platformShape(tile.x + 2, tile.y, TILE - 4, 24);
         const plate = ctx.createLinearGradient(tile.x, tile.y, tile.x, tile.y + 24);
         plate.addColorStop(0, platformMaterials[0]);
         plate.addColorStop(0.18, platformMaterials[1]);
@@ -2464,6 +2516,15 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.globalAlpha = 1;
         ctx.fillStyle = "rgba(225,249,255,.48)";
         ctx.fillRect(tile.x + 9, tile.y + 2, TILE - 19, 1);
+        if (ultraActive) {
+          const reflection = ctx.createLinearGradient(tile.x, tile.y + 24, tile.x, tile.y + 48);
+          reflection.addColorStop(0, "rgba(255,255,255,.2)");
+          reflection.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.globalAlpha = 0.55;
+          ctx.fillStyle = reflection;
+          ctx.fillRect(tile.x + 10, tile.y + 25, TILE - 20, 20);
+          ctx.globalAlpha = 1;
+        }
         if (tile.cracked) {
           ctx.strokeStyle = "rgba(177,247,255,.75)";
           ctx.beginPath();
@@ -2785,6 +2846,33 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.restore();
       }
       ctx.restore();
+
+      // Ultra foreground: dense rain and animated neon bloom make the mode
+      // immediately recognisable, including on the ready screen.
+      if (ultraActive) {
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        for (let streak = 0; streak < 150; streak++) {
+          const x = (streak * 47 + world.fxTime * (95 + streak % 7 * 13)) % (view.width + 70) - 35;
+          const y = (streak * 83 + world.fxTime * (410 + streak % 5 * 42)) % (view.height + 120) - 60;
+          ctx.globalAlpha = 0.1 + (streak % 4) * 0.04;
+          ctx.strokeStyle = streak % 5 === 0 ? theme.secondary : theme.accent;
+          ctx.lineWidth = streak % 6 === 0 ? 1.4 : 0.7;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x - 5, y + 18 + (streak % 5) * 5);
+          ctx.stroke();
+        }
+        const bloomX = view.width * (0.25 + Math.sin(world.fxTime * 0.31) * 0.14);
+        const bloom = ctx.createRadialGradient(bloomX, view.height * 0.28, 4, bloomX, view.height * 0.28, 180);
+        bloom.addColorStop(0, "rgba(255,255,255,.19)");
+        bloom.addColorStop(0.22, "rgba(0,240,255,.12)");
+        bloom.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = bloom;
+        ctx.fillRect(bloomX - 180, view.height * 0.28 - 180, 360, 360);
+        ctx.restore();
+      }
 
       if (world.status === "won" && world.sector === LEVEL_COUNT) {
         const sunrise = ctx.createLinearGradient(0, 0, 0, view.height);
