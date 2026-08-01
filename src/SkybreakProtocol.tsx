@@ -60,7 +60,7 @@ const QUALITY_SETTINGS: Record<Quality, {
   rain: number;
   fog: number;
 }> = {
-  low: { fps: 30, dpr: 1, glFps: 12, glDpr: 0.7, webgl: false, traffic: 4, layers: 1, rain: 12, fog: 1 },
+  low: { fps: 30, dpr: 1, glFps: 12, glDpr: 0.7, webgl: false, traffic: 0, layers: 0, rain: 0, fog: 0 },
   medium: { fps: 40, dpr: 1.5, glFps: 30, glDpr: 1, webgl: true, traffic: 10, layers: 2, rain: 38, fog: 2 },
   high: { fps: 60, dpr: 2, glFps: 45, glDpr: 1.5, webgl: true, traffic: 18, layers: 3, rain: 65, fog: 3 },
   ultra: { fps: 60, dpr: 4, glFps: 60, glDpr: 2.5, webgl: true, traffic: 38, layers: 5, rain: 170, fog: 7 },
@@ -440,6 +440,7 @@ type EffectCleanup = () => void;
 async function startWebGpuEffects(
   canvas: HTMLCanvasElement,
   updateRenderer: (name: string) => void,
+  getSceneInstances: () => Float32Array,
   getResolution: () => RenderResolution,
 ): Promise<EffectCleanup | null> {
   const gpu = (navigator as Navigator & { gpu?: any }).gpu;
@@ -538,6 +539,19 @@ async function startWebGpuEffects(
   });
   const context = canvas.getContext("webgpu") as any;
   if (!context) return null;
+  // Size the WebGPU surface before configuring it. Resizing immediately after
+  // configure makes Safari briefly recreate the transparent swap texture.
+  const dynamicScale = 0.65;
+  const initialRect = canvas.getBoundingClientRect();
+  const initialDprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
+  const initialBaseDpr = cappedPixelRatio(
+    initialRect,
+    Math.min(window.devicePixelRatio || 1, initialDprLimit),
+    getResolution(),
+    Math.min(2160, maxTextureSize),
+  );
+  canvas.width = Math.max(1, Math.round(initialRect.width * initialBaseDpr * dynamicScale));
+  canvas.height = Math.max(1, Math.round(initialRect.height * initialBaseDpr * dynamicScale));
   context.configure({ device, format, alphaMode: "premultiplied" });
 
   const usage = (globalThis as any).GPUBufferUsage;
@@ -550,15 +564,85 @@ async function startWebGpuEffects(
     layout: pipeline.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
   });
-
+  const quadBuffer = device.createBuffer({
+    label: "Skybreak instance quad",
+    size: 48,
+    usage: (usage?.VERTEX ?? 0x20) | (usage?.COPY_DST ?? 0x08),
+  });
+  device.queue.writeBuffer(quadBuffer, 0, new Float32Array([
+    -0.5, -0.5, 0.5, -0.5, -0.5, 0.5,
+    -0.5, 0.5, 0.5, -0.5, 0.5, 0.5,
+  ]));
+  const instanceCapacity = 800;
+  const instanceBuffer = device.createBuffer({
+    label: "Skybreak Ultra instances",
+    size: instanceCapacity * 8 * 4,
+    usage: (usage?.VERTEX ?? 0x20) | (usage?.COPY_DST ?? 0x08),
+  });
+  const instanceShader = device.createShaderModule({
+    label: "Skybreak instanced highlights",
+    code: `
+      struct VertexInput {
+        @location(0) corner: vec2f,
+        @location(1) center: vec2f,
+        @location(2) size: vec2f,
+        @location(3) color: vec4f,
+      };
+      struct VertexOutput {
+        @builtin(position) position: vec4f,
+        @location(0) color: vec4f,
+        @location(1) local: vec2f,
+      };
+      @vertex fn vertexMain(input: VertexInput) -> VertexOutput {
+        var output: VertexOutput;
+        let point = input.center + input.corner * input.size;
+        output.position = vec4f(point.x * 2.0 - 1.0, 1.0 - point.y * 2.0, 0.0, 1.0);
+        output.color = input.color;
+        output.local = input.corner;
+        return output;
+      }
+      @fragment fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+        let glow = 1.0 - smoothstep(0.24, 0.72, length(input.local));
+        return vec4f(input.color.rgb, input.color.a * (0.45 + glow * 0.55));
+      }
+    `,
+  });
+  const instancePipeline = device.createRenderPipeline({
+    label: "Skybreak GPU instancing pipeline",
+    layout: "auto",
+    vertex: {
+      module: instanceShader,
+      entryPoint: "vertexMain",
+      buffers: [
+        { arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }] },
+        {
+          arrayStride: 32,
+          stepMode: "instance",
+          attributes: [
+            { shaderLocation: 1, offset: 0, format: "float32x2" },
+            { shaderLocation: 2, offset: 8, format: "float32x2" },
+            { shaderLocation: 3, offset: 16, format: "float32x4" },
+          ],
+        },
+      ],
+    },
+    fragment: {
+      module: instanceShader,
+      entryPoint: "fragmentMain",
+      targets: [{
+        format,
+        blend: {
+          color: { srcFactor: "src-alpha", dstFactor: "one", operation: "add" },
+          alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
+        },
+      }],
+    },
+    primitive: { topology: "triangle-list" },
+  });
   const isMac = /Macintosh|Mac OS X/i.test(navigator.userAgent);
   updateRenderer(isMac ? "WEBGPU · METAL" : "WEBGPU · NATIVE GPU");
   let active = true;
   let animation = 0;
-  let lastFrame = performance.now();
-  let dynamicScale = 1;
-  let sampleFrames = 0;
-  let sampleTime = 0;
 
   void device.lost.then(() => {
     if (active) updateRenderer("WEBGPU LOST");
@@ -566,18 +650,6 @@ async function startWebGpuEffects(
 
   const render = (time: number) => {
     if (!active) return;
-    const delta = Math.min(50, time - lastFrame);
-    lastFrame = time;
-    sampleTime += delta;
-    sampleFrames += 1;
-    if (sampleFrames >= 30) {
-      const average = sampleTime / sampleFrames;
-      if (average > 20.5) dynamicScale = Math.max(0.65, dynamicScale - 0.06);
-      else if (average < 17.2) dynamicScale = Math.min(1, dynamicScale + 0.025);
-      sampleFrames = 0;
-      sampleTime = 0;
-    }
-
     const rect = canvas.getBoundingClientRect();
     const dprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
     const baseDpr = cappedPixelRatio(
@@ -606,8 +678,18 @@ async function startWebGpuEffects(
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.draw(3);
+    const instances = getSceneInstances();
+    const instanceCount = Math.min(Math.floor(instances.length / 8), instanceCapacity);
+    if (instanceCount > 0) {
+      device.queue.writeBuffer(instanceBuffer, 0, instances.subarray(0, instanceCount * 8));
+      pass.setPipeline(instancePipeline);
+      pass.setVertexBuffer(0, quadBuffer);
+      pass.setVertexBuffer(1, instanceBuffer);
+      pass.draw(6, instanceCount);
+    }
     pass.end();
     device.queue.submit([encoder.finish()]);
+    canvas.classList.add("fx-ready");
     animation = requestAnimationFrame(render);
   };
   animation = requestAnimationFrame(render);
@@ -615,6 +697,8 @@ async function startWebGpuEffects(
     active = false;
     cancelAnimationFrame(animation);
     uniformBuffer.destroy();
+    quadBuffer.destroy();
+    instanceBuffer.destroy();
     device.destroy();
   };
 }
@@ -643,6 +727,17 @@ async function startWebGpuUltraRenderer(
   const format = gpu.getPreferredCanvasFormat();
   const context = canvas.getContext("webgpu") as any;
   if (!context) return null;
+  let renderScale = 1;
+  const initialRect = canvas.getBoundingClientRect();
+  const initialDprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
+  const initialBaseDpr = cappedPixelRatio(
+    initialRect,
+    Math.min(window.devicePixelRatio || 1, initialDprLimit),
+    getResolution(),
+    Math.min(2160, maxTextureSize),
+  );
+  canvas.width = Math.max(1, Math.round(initialRect.width * initialBaseDpr * renderScale));
+  canvas.height = Math.max(1, Math.round(initialRect.height * initialBaseDpr * renderScale));
   context.configure({ device, format, alphaMode: "premultiplied" });
 
   const usage = (globalThis as any).GPUBufferUsage;
@@ -748,7 +843,12 @@ async function startWebGpuUltraRenderer(
         scene *= 0.78 + vignette * 0.28;
         scene = toneMap(scene);
         scene = pow(max(scene, vec3f(0.0)), vec3f(0.92));
-        return vec4f(scene, 1.0);
+        // A few macOS WebGPU implementations can briefly expose an empty
+        // external Canvas texture. Keep that frame transparent so the source
+        // canvas remains visible instead of flashing black.
+        let sourceEnergy = max(max(baseR, baseG), baseB);
+        let outputAlpha = select(0.0, 1.0, sourceEnergy > 0.003);
+        return vec4f(scene, outputAlpha);
       }
     `,
   });
@@ -856,11 +956,11 @@ async function startWebGpuUltraRenderer(
   let animation = 0;
   let workerBusy = false;
   let workerInstances = new Float32Array(0);
-  let renderScale = 1;
   let targetFps = 60;
   let postQuality = 2;
   let lastAnimationFrame = performance.now();
   let lastRenderedFrame = 0;
+  let nextFrameDue = 0;
   let lastWorkerPost = 0;
 
   worker.onmessage = (event: MessageEvent<{ buffer: ArrayBuffer; renderScale: number; targetFps: number; postQuality: number }>) => {
@@ -895,11 +995,14 @@ async function startWebGpuUltraRenderer(
     }
 
     const frameInterval = 1000 / targetFps;
-    if (time - lastRenderedFrame < frameInterval - 0.35) {
+    if (!nextFrameDue) nextFrameDue = time;
+    if (time + 0.35 < nextFrameDue) {
       animation = requestAnimationFrame(render);
       return;
     }
     lastRenderedFrame = time;
+    nextFrameDue += frameInterval;
+    if (nextFrameDue < time - frameInterval) nextFrameDue = time + frameInterval;
     const rect = canvas.getBoundingClientRect();
     const dprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
     const baseDpr = cappedPixelRatio(
@@ -958,6 +1061,7 @@ async function startWebGpuUltraRenderer(
     }
     pass.end();
     device.queue.submit([encoder.finish()]);
+    canvas.classList.add("fx-ready");
     animation = requestAnimationFrame(render);
   };
   animation = requestAnimationFrame(render);
@@ -1068,6 +1172,7 @@ function startWebGlEffects(
       gl.uniform2f(resolutionLocation, width, height);
       gl.uniform1f(timeLocation, time * 0.001);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+      canvas.classList.add("fx-ready");
     }
     animation = requestAnimationFrame(render);
   };
@@ -1090,6 +1195,11 @@ type NeonAscentProps = {
 
 export default function NeonAscent({ language = "en", languageHref = "./de/", iconSrc = "./icon-512.png" }: NeonAscentProps) {
   const isDe = language === "de";
+  const benchmarkParameters = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const benchmarkMode = benchmarkParameters?.get("benchmark") === "1";
+  const benchmarkVariant = benchmarkParameters?.get("variant") || "standard";
+  const benchmarkQuality = benchmarkParameters?.get("quality") as Quality | null;
+  const benchmarkResolution = benchmarkParameters?.get("resolution") as RenderResolution | null;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fxCanvasRef = useRef<HTMLCanvasElement>(null);
   const worldRef = useRef<World>(makeWorld());
@@ -1101,6 +1211,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const qualityRef = useRef<Quality>("medium");
   const renderResolutionRef = useRef<RenderResolution>("1080p");
   const mobileHighThermalRef = useRef({ active: false, samples: 0, totalWork: 0 });
+  const desktopUltraPerformanceRef = useRef({ scale: 1, samples: 0, totalFrameMs: 0 });
   const ultraFpsRef = useRef(60);
   const mobileUltra120Ref = useRef(false);
   const ultraFallbackRef = useRef(false);
@@ -1112,6 +1223,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const cheatArmRef = useRef({ taps: 0, lastTap: 0, armedUntil: 0 });
   const cheatSequenceRef = useRef<{ key: InputKey; time: number }[]>([]);
   const renderViewRef = useRef({ width: VIEW_W, height: VIEW_H, portrait: false });
+  const frameTelemetryRef = useRef({ frames: 0, totalFrameMs: 0, totalUpdateMs: 0, totalDrawMs: 0, lastSampleAt: 0 });
+  const benchmarkStartedAtRef = useRef(0);
+  const benchmarkReportedRef = useRef(false);
   const difficultiesRef = useRef<Difficulty[]>(Array(LEVEL_COUNT).fill("medium"));
   const [status, setStatus] = useState<GameStatus>("ready");
   const [score, setScore] = useState(0);
@@ -1122,9 +1236,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [highScore, setHighScore] = useState(0);
   const [renderer, setRenderer] = useState("CANVAS 2D");
   const [ultraFps, setUltraFps] = useState(60);
+  const [frameTelemetry, setFrameTelemetry] = useState<{ fps: number; frameMs: number; updateMs: number; drawMs: number } | null>(null);
   const [mobileUltra120, setMobileUltra120] = useState(false);
   const [mobileDevice, setMobileDevice] = useState(false);
   const [thermalProtection, setThermalProtection] = useState(false);
+  const [desktopUltraScale, setDesktopUltraScale] = useState(1);
   const [quality, setQuality] = useState<Quality>("medium");
   const [renderResolution, setRenderResolution] = useState<RenderResolution>("1080p");
   const [nativeFullscreen, setNativeFullscreen] = useState(false);
@@ -1170,6 +1286,30 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     }
     syncHud(next);
   }, [syncHud]);
+
+  useEffect(() => {
+    if (!benchmarkMode) return;
+    const timer = window.setTimeout(() => {
+      benchmarkStartedAtRef.current = performance.now();
+      restart();
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [benchmarkMode, restart]);
+
+  useEffect(() => {
+    if (!benchmarkMode || !frameTelemetry || benchmarkReportedRef.current) return;
+    if (performance.now() - benchmarkStartedAtRef.current < 12000) return;
+    benchmarkReportedRef.current = true;
+    void fetch("http://127.0.0.1:5174/result", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        browser: navigator.userAgent.includes("Firefox") ? "Firefox" : navigator.userAgent.includes("Safari") && !navigator.userAgent.includes("Chrome") ? "Safari" : "Other",
+        variant: benchmarkVariant,
+        ...frameTelemetry,
+      }),
+    });
+  }, [benchmarkMode, frameTelemetry]);
 
   const chooseStartLevel = useCallback((level: number) => {
     const next = Math.min(unlockedLevelRef.current, Math.max(1, Math.round(level)));
@@ -1266,17 +1406,24 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   useEffect(() => {
     const saved = Number(getStoredItem("neon-ascent-highscore") || 0);
     setHighScore(saved);
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
     const storedQuality = getStoredItem("skybreak-quality") as Quality | null;
-    const initialQuality = storedQuality && storedQuality in QUALITY_SETTINGS
+    const initialQuality = benchmarkQuality && benchmarkQuality in QUALITY_SETTINGS
+      ? benchmarkQuality
+      : storedQuality && storedQuality in QUALITY_SETTINGS
       ? storedQuality
-      : window.matchMedia("(pointer: coarse)").matches ? "medium" : "high";
+      : coarsePointer ? "medium" : "high";
     qualityRef.current = initialQuality;
     setQuality(initialQuality);
+    const initialUltraScale = 1;
+    desktopUltraPerformanceRef.current = { scale: initialUltraScale, samples: 0, totalFrameMs: 0 };
+    setDesktopUltraScale(initialUltraScale);
     const storedResolution = getStoredItem("skybreak-render-resolution") as RenderResolution | null;
-    const initialResolution = storedResolution && storedResolution in RENDER_RESOLUTIONS ? storedResolution : "1080p";
+    const initialResolution = benchmarkResolution && benchmarkResolution in RENDER_RESOLUTIONS
+      ? benchmarkResolution
+      : storedResolution && storedResolution in RENDER_RESOLUTIONS ? storedResolution : "1080p";
     renderResolutionRef.current = initialResolution;
     setRenderResolution(initialResolution);
-    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
     setMobileDevice(coarsePointer);
     const savedMobileUltra120 = getStoredItem("skybreak-mobile-ultra-120") === "true";
     mobileUltra120Ref.current = savedMobileUltra120;
@@ -1339,6 +1486,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   }, [immersiveMode]);
 
   const chooseQuality = (next: Quality) => {
+    const nextUltraScale = 1;
+    desktopUltraPerformanceRef.current = { scale: nextUltraScale, samples: 0, totalFrameMs: 0 };
+    setDesktopUltraScale(nextUltraScale);
     qualityRef.current = next;
     setQuality(next);
     setStoredItem("skybreak-quality", next);
@@ -1437,11 +1587,19 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const canvas = fxCanvasRef.current;
     const sourceCanvas = canvasRef.current;
     if (!canvas || !sourceCanvas) return;
+    canvas.classList.remove("fx-ready");
     if (quality === "ultra") {
       ultraFallbackRef.current = false;
       const desktopMac = /Macintosh|Mac OS X/i.test(navigator.userAgent)
         && window.matchMedia("(pointer: fine)").matches;
       const firefox = /Firefox\//i.test(navigator.userAgent);
+      // Keep Ultra visually identical across desktop browsers: detailed Canvas
+      // sprites plus additive WebGPU object glows.
+      const useGpuSceneInstances = benchmarkVariant === "instances-off"
+        ? false
+        : benchmarkVariant === "instances-on"
+          ? true
+          : true;
       let disposed = false;
       let cleanup: EffectCleanup | null = null;
       const startFallback = () => {
@@ -1453,16 +1611,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         return startWebGlEffects(canvas, setRenderer, () => "medium", () => renderResolutionRef.current);
       };
 
-      // copyExternalImageToTexture can silently produce a black scene texture
-      // in desktop Safari and Chromium on macOS. Use the transparent WebGPU
-      // atmosphere there; the 2D game canvas remains the visible base layer.
-      const gpuRenderer = desktopMac
-        ? startWebGpuEffects(canvas, setRenderer, () => renderResolutionRef.current)
-        : startWebGpuUltraRenderer(
+      const startFullSceneRenderer = () => startWebGpuUltraRenderer(
             canvas,
             sourceCanvas,
             setRenderer,
-            getUltraSceneInstances,
+            useGpuSceneInstances ? getUltraSceneInstances : () => new Float32Array(0),
             (nextFps) => {
               ultraFpsRef.current = nextFps;
               setUltraFps(nextFps);
@@ -1471,6 +1624,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             setThermalProtection,
             () => renderResolutionRef.current,
           );
+      // Benchmark-only isolation: retain the identical Ultra Canvas scene
+      // while omitting the transparent GPU compositor, so its actual cost can
+      // be measured without asking the player to change settings.
+      const gpuRenderer = benchmarkVariant === "effects-off"
+        ? Promise.resolve<EffectCleanup>(() => setRenderer("CANVAS 2D"))
+        : desktopMac
+          ? startWebGpuEffects(canvas, setRenderer, useGpuSceneInstances ? getUltraSceneInstances : () => new Float32Array(0), () => renderResolutionRef.current)
+          : startFullSceneRenderer();
 
       void gpuRenderer
         .then((gpuCleanup) => {
@@ -1478,10 +1639,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             gpuCleanup?.();
             return;
           }
-          cleanup = gpuCleanup ?? startFallback();
+          if (gpuCleanup) {
+            cleanup = gpuCleanup;
+          } else {
+            cleanup = startFallback();
+          }
         })
         .catch(() => {
-          if (!disposed) cleanup = startFallback();
+          if (!disposed) {
+            cleanup = startFallback();
+          }
         });
       return () => {
         disposed = true;
@@ -1490,6 +1657,15 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       };
     }
     ultraFallbackRef.current = false;
+    if (quality === "low") {
+      // Do not allocate a second GPU surface for a profile whose WebGL
+      // effects are disabled. Resetting the transparent canvas also removes
+      // a previously active Medium/High frame after switching down to Low.
+      canvas.width = 1;
+      canvas.height = 1;
+      setRenderer("CANVAS 2D");
+      return;
+    }
     const gl = canvas.getContext("webgl2", {
       alpha: true,
       antialias: false,
@@ -1599,6 +1775,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       gl.uniform2f(resolutionLocation, width, height);
       gl.uniform1f(timeLocation, time * 0.001);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+      canvas.classList.add("fx-ready");
       animation = requestAnimationFrame(render);
     };
     animation = requestAnimationFrame(render);
@@ -1676,6 +1853,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     let mobileFogLayer: HTMLCanvasElement | null = null;
     let mobileFogKey = "";
     let mobileFogUpdatedAt = 0;
+    const platformSurfaceCache = new Map<string, HTMLCanvasElement>();
     const makeLayer = () => document.createElement("canvas");
     const drawStaticBackdrop = (theme: typeof LEVEL_THEMES[number]) => {
       const key = `${theme.name}:${Math.round(view.width)}:${Math.round(view.height)}`;
@@ -1779,7 +1957,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         rect,
         Math.min(window.devicePixelRatio || 1, settings.dpr),
         renderResolutionRef.current,
-      );
+      ) * (qualityRef.current === "ultra" && !ultraFallbackRef.current && window.matchMedia("(pointer: fine)").matches
+        ? desktopUltraPerformanceRef.current.scale
+        : 1);
       canvas.width = Math.max(1, Math.round(rect.width * ratio));
       canvas.height = Math.max(1, Math.round(rect.height * ratio));
       const aspect = Math.max(0.5, rect.width / Math.max(1, rect.height));
@@ -2180,29 +2360,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
       drawStaticBackdrop(theme);
 
-      // Ultra: clearly visible volumetric neon shafts, independent of the
-      // currently selected level motif.
-      if (ultraActive) {
-        ctx.save();
-        ctx.globalCompositeOperation = "screen";
-        for (let beam = 0; beam < 5; beam++) {
-          const center = ((beam * 241 + world.fxTime * (12 + beam * 3)) % (view.width + 220)) - 110;
-          const beamGlow = ctx.createLinearGradient(center - 150, 0, center + 150, view.height);
-          beamGlow.addColorStop(0, "rgba(0,0,0,0)");
-          beamGlow.addColorStop(0.45, beam % 2 ? "rgba(255,43,138,.105)" : "rgba(0,240,255,.12)");
-          beamGlow.addColorStop(1, "rgba(0,0,0,0)");
-          ctx.fillStyle = beamGlow;
-          ctx.beginPath();
-          ctx.moveTo(center - 22, 0);
-          ctx.lineTo(center + 26, 0);
-          ctx.lineTo(center + 165, view.height);
-          ctx.lineTo(center - 195, view.height);
-          ctx.closePath();
-          ctx.fill();
-        }
-        ctx.restore();
-      }
-
+      // Low intentionally keeps the playable scene but omits the expensive
+      // decorative panorama. Desktop Low is a performance mode, not a
+      // 30-FPS-limited version of the full Ultra background.
+      if (settings.layers > 0 && !(benchmarkMode && benchmarkVariant === "background-off")) {
       // Each level has a distinct animated skyline signature.
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
@@ -2396,26 +2557,29 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       }
       ctx.restore();
 
-      // Volumetric searchlights and atmospheric neon bloom.
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.16;
-      const searchlightCount = [0, 1, 3, 9].includes(theme.motif) ? 4 : theme.motif === 5 ? 2 : 0;
-      for (let i = 0; i < searchlightCount; i++) {
-        const origin = ((i * 281 + world.fxTime * (i % 2 ? 13 : -9)) % (view.width + 260)) - 130;
-        const beam = ctx.createLinearGradient(origin, 0, origin + 190, view.height);
-        beam.addColorStop(0, i % 2 ? theme.secondary : theme.accent);
-        beam.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = beam;
-        ctx.beginPath();
-        ctx.moveTo(origin - 15, 0);
-        ctx.lineTo(origin + 38, 0);
-        ctx.lineTo(origin + 260, view.height);
-        ctx.lineTo(origin + 80, view.height);
-        ctx.closePath();
-        ctx.fill();
+      // Ultra draws its moving shafts, bloom, rain, and grid in the WebGPU
+      // overlay. Keep the Canvas 2D version only for lower graphics levels.
+      if (!ultraActive && settings.layers > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = 0.16;
+        const searchlightCount = [0, 1, 3, 9].includes(theme.motif) ? 4 : theme.motif === 5 ? 2 : 0;
+        for (let i = 0; i < searchlightCount; i++) {
+          const origin = ((i * 281 + world.fxTime * (i % 2 ? 13 : -9)) % (view.width + 260)) - 130;
+          const beam = ctx.createLinearGradient(origin, 0, origin + 190, view.height);
+          beam.addColorStop(0, i % 2 ? theme.secondary : theme.accent);
+          beam.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = beam;
+          ctx.beginPath();
+          ctx.moveTo(origin - 15, 0);
+          ctx.lineTo(origin + 38, 0);
+          ctx.lineTo(origin + 260, view.height);
+          ctx.lineTo(origin + 80, view.height);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
       }
-      ctx.restore();
 
       // Distant air traffic gives the skyline depth without bitmap assets.
       ctx.save();
@@ -2487,10 +2651,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.fillText(i === 0 ? "SKY//BREAK" : i === 1 ? "SECTOR 09" : "ASCEND", bx + 9, by + 19);
       }
       ctx.restore();
+      }
 
-      // Mobile High refreshes the rain layer at 30 FPS (12 FPS on the ready
-      // screen) and composites the cached image into the 60-FPS game frame.
-      if (mobileHigh) {
+      // Ultra rain is rendered in WebGPU. Mobile High uses a cached Canvas
+      // layer, while the remaining quality levels retain the Canvas version.
+      if (ultraActive) {
+        // WebGPU overlay owns the atmospheric rain on this path.
+      } else if (mobileHigh) {
         drawMobileRain(world, theme, settings);
       } else {
         ctx.save();
@@ -2510,7 +2677,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.restore();
       }
 
-      if ([0, 3, 6].includes(theme.motif)) {
+      if (!ultraActive && settings.layers > 0 && [0, 3, 6].includes(theme.motif)) {
         ctx.strokeStyle = theme.accent;
         ctx.globalAlpha = 0.08;
         ctx.lineWidth = 1;
@@ -2543,66 +2710,76 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ["#574986", "#17143d", "#070518"],
         ["#778da3", "#173449", "#06121d"],
       ][theme.motif];
-      const platformShape = (x: number, y: number, width: number, height: number) => {
-        ctx.beginPath();
+      const platformShape = (target: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) => {
+        target.beginPath();
         switch (theme.motif) {
           case 0: // Cryo steel: chamfered industrial module.
-            ctx.moveTo(x + 8, y); ctx.lineTo(x + width - 8, y); ctx.lineTo(x + width, y + 8); ctx.lineTo(x + width - 6, y + height); ctx.lineTo(x + 6, y + height); ctx.lineTo(x, y + 8); break;
+            target.moveTo(x + 8, y); target.lineTo(x + width - 8, y); target.lineTo(x + width, y + 8); target.lineTo(x + width - 6, y + height); target.lineTo(x + 6, y + height); target.lineTo(x, y + 8); break;
           case 1: // Chrome bazaar: broad capsule sign.
-            ctx.roundRect(x, y + 2, width, height - 2, height / 2); break;
+            target.roundRect(x, y + 2, width, height - 2, height / 2); break;
           case 2: // Toxic transit: corroded teeth.
-            ctx.moveTo(x, y + 3); ctx.lineTo(x + width, y); ctx.lineTo(x + width - 3, y + height - 5);
-            for (let tooth = 0; tooth < 4; tooth++) ctx.lineTo(x + width - 12 - tooth * 14, y + height - (tooth % 2 ? 2 : 7));
-            ctx.lineTo(x + 3, y + height - 3); break;
+            target.moveTo(x, y + 3); target.lineTo(x + width, y); target.lineTo(x + width - 3, y + height - 5);
+            for (let tooth = 0; tooth < 4; tooth++) target.lineTo(x + width - 12 - tooth * 14, y + height - (tooth % 2 ? 2 : 7));
+            target.lineTo(x + 3, y + height - 3); break;
           case 3: // Crimson firewall: slanted data blade.
-            ctx.moveTo(x + 9, y); ctx.lineTo(x + width, y + 4); ctx.lineTo(x + width - 9, y + height); ctx.lineTo(x, y + height - 4); break;
+            target.moveTo(x + 9, y); target.lineTo(x + width, y + 4); target.lineTo(x + width - 9, y + height); target.lineTo(x, y + height - 4); break;
           case 4: // Azure data sea: frozen wave.
-            ctx.moveTo(x, y + 8); ctx.quadraticCurveTo(x + width * 0.2, y - 3, x + width * 0.4, y + 7); ctx.quadraticCurveTo(x + width * 0.68, y + 17, x + width, y + 2); ctx.lineTo(x + width - 4, y + height); ctx.lineTo(x + 4, y + height); break;
+            target.moveTo(x, y + 8); target.quadraticCurveTo(x + width * 0.2, y - 3, x + width * 0.4, y + 7); target.quadraticCurveTo(x + width * 0.68, y + 17, x + width, y + 2); target.lineTo(x + width - 4, y + height); target.lineTo(x + 4, y + height); break;
           case 5: // Violet reactor: faceted crystal.
-            ctx.moveTo(x + 10, y); ctx.lineTo(x + width - 10, y); ctx.lineTo(x + width, y + height / 2); ctx.lineTo(x + width - 12, y + height); ctx.lineTo(x + 12, y + height); ctx.lineTo(x, y + height / 2); break;
+            target.moveTo(x + 10, y); target.lineTo(x + width - 10, y); target.lineTo(x + width, y + height / 2); target.lineTo(x + width - 12, y + height); target.lineTo(x + 12, y + height); target.lineTo(x, y + height / 2); break;
           case 6: // Solar megagrid: stepped photovoltaic panel.
-            ctx.moveTo(x + 4, y); ctx.lineTo(x + width - 4, y); ctx.lineTo(x + width - 4, y + height - 5); ctx.lineTo(x + width - 14, y + height); ctx.lineTo(x + 14, y + height); ctx.lineTo(x + 4, y + height - 5); break;
+            target.moveTo(x + 4, y); target.lineTo(x + width - 4, y); target.lineTo(x + width - 4, y + height - 5); target.lineTo(x + width - 14, y + height); target.lineTo(x + 14, y + height); target.lineTo(x + 4, y + height - 5); break;
           case 7: // Ghost network: asymmetric phase shard.
-            ctx.moveTo(x + 5, y); ctx.lineTo(x + width - 2, y + 4); ctx.lineTo(x + width - 12, y + height); ctx.lineTo(x + 14, y + height - 3); ctx.lineTo(x, y + 12); break;
+            target.moveTo(x + 5, y); target.lineTo(x + width - 2, y + 4); target.lineTo(x + width - 12, y + height); target.lineTo(x + 14, y + height - 3); target.lineTo(x, y + 12); break;
           case 8: // Quantum rift: arrowhead prism.
-            ctx.moveTo(x + 12, y); ctx.lineTo(x + width, y + height / 2); ctx.lineTo(x + 12, y + height); ctx.lineTo(x, y + height - 5); ctx.lineTo(x + 15, y + height / 2); ctx.lineTo(x, y + 5); break;
+            target.moveTo(x + 12, y); target.lineTo(x + width, y + height / 2); target.lineTo(x + 12, y + height); target.lineTo(x, y + height - 5); target.lineTo(x + 15, y + height / 2); target.lineTo(x, y + 5); break;
           default: // Skybreak apex: crown-shaped summit plate.
-            ctx.moveTo(x, y + 7); ctx.lineTo(x + 12, y); ctx.lineTo(x + width * 0.5, y + 5); ctx.lineTo(x + width - 12, y); ctx.lineTo(x + width, y + 7); ctx.lineTo(x + width - 7, y + height); ctx.lineTo(x + 7, y + height); break;
+            target.moveTo(x, y + 7); target.lineTo(x + 12, y); target.lineTo(x + width * 0.5, y + 5); target.lineTo(x + width - 12, y); target.lineTo(x + width, y + 7); target.lineTo(x + width - 7, y + height); target.lineTo(x + 7, y + height); break;
         }
-        ctx.closePath();
+        target.closePath();
+      };
+      const spriteCacheEnabled = true;
+      const platformScale = Math.max(1, Math.min(4, canvas.width / Math.max(1, view.width)));
+      const getPlatformSurface = (cracked: boolean, glow: string) => {
+        const key = `${theme.motif}:${cracked ? "cracked" : "solid"}:${platformScale}`;
+        const cached = platformSurfaceCache.get(key);
+        if (cached) return cached;
+        const surface = makeLayer();
+        surface.width = Math.ceil(TILE * platformScale);
+        surface.height = Math.ceil(40 * platformScale);
+        const layer = surface.getContext("2d");
+        if (!layer) return surface;
+        layer.scale(platformScale, platformScale);
+        const underside = layer.createLinearGradient(0, 16, 0, 40);
+        underside.addColorStop(0, platformMaterials[1]); underside.addColorStop(1, platformMaterials[2]);
+        layer.fillStyle = underside;
+        layer.beginPath(); layer.moveTo(5, 15); layer.lineTo(TILE - 5, 15); layer.lineTo(TILE - 11, 36); layer.lineTo(11, 36); layer.closePath(); layer.fill();
+        layer.strokeStyle = "rgba(95,132,164,.28)"; layer.stroke();
+        layer.shadowBlur = ultraActive ? 0 : 19; layer.shadowColor = glow;
+        platformShape(layer, 2, 0, TILE - 4, 24);
+        const plate = layer.createLinearGradient(0, 0, 0, 24);
+        plate.addColorStop(0, platformMaterials[0]); plate.addColorStop(0.18, platformMaterials[1]); plate.addColorStop(0.58, platformMaterials[2]); plate.addColorStop(1, "#02040a");
+        layer.fillStyle = plate; layer.fill(); layer.shadowBlur = 0; layer.strokeStyle = glow; layer.lineWidth = 2; layer.stroke();
+        platformSurfaceCache.set(key, surface);
+        return surface;
       };
       for (const tile of world.tiles) {
         if (!tile.alive || tile.y < world.cameraY - 80 || tile.y > world.cameraY + view.height + 50) continue;
         const glow = tile.cracked ? theme.accent : theme.warning;
-        // Deep extrusion, animated power core and polished wet-metal edge.
+        if (spriteCacheEnabled) {
+          ctx.drawImage(getPlatformSurface(tile.cracked, glow), tile.x, tile.y, TILE, 40);
+        } else {
         const underside = ctx.createLinearGradient(tile.x, tile.y + 16, tile.x, tile.y + 40);
-        underside.addColorStop(0, platformMaterials[1]);
-        underside.addColorStop(1, platformMaterials[2]);
+        underside.addColorStop(0, platformMaterials[1]); underside.addColorStop(1, platformMaterials[2]);
         ctx.fillStyle = underside;
-        ctx.beginPath();
-        ctx.moveTo(tile.x + 5, tile.y + 15);
-        ctx.lineTo(tile.x + TILE - 5, tile.y + 15);
-        ctx.lineTo(tile.x + TILE - 11, tile.y + 36);
-        ctx.lineTo(tile.x + 11, tile.y + 36);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = "rgba(95,132,164,.28)";
-        ctx.stroke();
-
-        ctx.shadowBlur = 19;
-        ctx.shadowColor = glow;
-        platformShape(tile.x + 2, tile.y, TILE - 4, 24);
+        ctx.beginPath(); ctx.moveTo(tile.x + 5, tile.y + 15); ctx.lineTo(tile.x + TILE - 5, tile.y + 15); ctx.lineTo(tile.x + TILE - 11, tile.y + 36); ctx.lineTo(tile.x + 11, tile.y + 36); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = "rgba(95,132,164,.28)"; ctx.stroke();
+        ctx.shadowBlur = ultraActive ? 0 : 19; ctx.shadowColor = glow;
+        platformShape(ctx, tile.x + 2, tile.y, TILE - 4, 24);
         const plate = ctx.createLinearGradient(tile.x, tile.y, tile.x, tile.y + 24);
-        plate.addColorStop(0, platformMaterials[0]);
-        plate.addColorStop(0.18, platformMaterials[1]);
-        plate.addColorStop(0.58, platformMaterials[2]);
-        plate.addColorStop(1, "#02040a");
-        ctx.fillStyle = plate;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = glow;
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        plate.addColorStop(0, platformMaterials[0]); plate.addColorStop(0.18, platformMaterials[1]); plate.addColorStop(0.58, platformMaterials[2]); plate.addColorStop(1, "#02040a");
+        ctx.fillStyle = plate; ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = glow; ctx.lineWidth = 2; ctx.stroke();
+        }
         const corePulse = 0.55 + Math.sin(world.fxTime * 5 + tile.x * 0.03) * 0.3;
         ctx.globalAlpha = corePulse;
         ctx.fillStyle = glow;
@@ -2614,61 +2791,27 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.lineWidth = 1;
         ctx.globalAlpha = 0.45;
         if (theme.platform === "cryo-steel") {
-          for (let rivet = 0; rivet < 4; rivet++) {
-            ctx.beginPath(); ctx.arc(tile.x + 12 + rivet * 14, tile.y + 12, 2, 0, Math.PI * 2); ctx.stroke();
-          }
+          for (let rivet = 0; rivet < 4; rivet++) { ctx.beginPath(); ctx.arc(tile.x + 12 + rivet * 14, tile.y + 12, 2, 0, Math.PI * 2); ctx.stroke(); }
         } else if (theme.platform === "chrome-ice") {
-          ctx.fillStyle = "rgba(255,255,255,.24)";
-          ctx.fillRect(tile.x + 8, tile.y + 5, TILE - 22, 4);
-          ctx.strokeRect(tile.x + 12, tile.y + 13, TILE - 24, 6);
+          ctx.fillStyle = "rgba(255,255,255,.24)"; ctx.fillRect(tile.x + 8, tile.y + 5, TILE - 22, 4); ctx.strokeRect(tile.x + 12, tile.y + 13, TILE - 24, 6);
         } else if (theme.platform === "corroded-ice" || theme.platform === "molten-glass") {
-          for (let stripe = 0; stripe < 4; stripe++) {
-            ctx.beginPath();
-            ctx.moveTo(tile.x + 6 + stripe * 15, tile.y + 20);
-            ctx.lineTo(tile.x + 13 + stripe * 15, tile.y + 4);
-            ctx.stroke();
-          }
+          for (let stripe = 0; stripe < 4; stripe++) { ctx.beginPath(); ctx.moveTo(tile.x + 6 + stripe * 15, tile.y + 20); ctx.lineTo(tile.x + 13 + stripe * 15, tile.y + 4); ctx.stroke(); }
         } else if (theme.platform === "deep-ice" || theme.platform === "plasma-crystal" || theme.platform === "rift-crystal") {
-          ctx.beginPath();
-          ctx.arc(tile.x + TILE / 2, tile.y + 12, 5 + theme.motif % 4, 0, Math.PI * 2);
-          ctx.stroke();
-          if (theme.platform === "deep-ice") {
-            ctx.beginPath(); ctx.moveTo(tile.x + 9, tile.y + 4); ctx.lineTo(tile.x + 22, tile.y + 20); ctx.lineTo(tile.x + 35, tile.y + 4); ctx.lineTo(tile.x + 52, tile.y + 20); ctx.stroke();
-          }
+          ctx.beginPath(); ctx.arc(tile.x + TILE / 2, tile.y + 12, 5 + theme.motif % 4, 0, Math.PI * 2); ctx.stroke();
+          if (theme.platform === "deep-ice") { ctx.beginPath(); ctx.moveTo(tile.x + 9, tile.y + 4); ctx.lineTo(tile.x + 22, tile.y + 20); ctx.lineTo(tile.x + 35, tile.y + 4); ctx.lineTo(tile.x + 52, tile.y + 20); ctx.stroke(); }
         } else if (theme.platform === "solar-array") {
           for (let cell = 0; cell < 5; cell++) ctx.strokeRect(tile.x + 7 + cell * 11, tile.y + 5, 8, 13);
         } else if (theme.platform === "phase-ice") {
-          ctx.setLineDash([4, 4]);
-          ctx.strokeRect(tile.x + 7, tile.y + 5, TILE - 14, 13);
-          ctx.setLineDash([]);
+          ctx.setLineDash([4, 4]); ctx.strokeRect(tile.x + 7, tile.y + 5, TILE - 14, 13); ctx.setLineDash([]);
         } else if (theme.platform === "apex-ice") {
-          ctx.beginPath();
-          ctx.moveTo(tile.x + 8, tile.y + 12);
-          ctx.lineTo(tile.x + TILE - 8, tile.y + 12);
-          ctx.stroke();
-          ctx.fillStyle = "rgba(255,255,255,.28)";
-          ctx.fillRect(tile.x + 18, tile.y + 5, 27, 3);
+          ctx.beginPath(); ctx.moveTo(tile.x + 8, tile.y + 12); ctx.lineTo(tile.x + TILE - 8, tile.y + 12); ctx.stroke(); ctx.fillStyle = "rgba(255,255,255,.28)"; ctx.fillRect(tile.x + 18, tile.y + 5, 27, 3);
         }
         ctx.globalAlpha = 1;
         ctx.fillStyle = "rgba(225,249,255,.48)";
         ctx.fillRect(tile.x + 9, tile.y + 2, TILE - 19, 1);
-        if (ultraActive) {
-          const reflection = ctx.createLinearGradient(tile.x, tile.y + 24, tile.x, tile.y + 48);
-          reflection.addColorStop(0, "rgba(255,255,255,.2)");
-          reflection.addColorStop(1, "rgba(0,0,0,0)");
-          ctx.globalAlpha = 0.55;
-          ctx.fillStyle = reflection;
-          ctx.fillRect(tile.x + 10, tile.y + 25, TILE - 20, 20);
-          ctx.globalAlpha = 1;
-        }
         if (tile.cracked) {
           ctx.strokeStyle = "rgba(177,247,255,.75)";
-          ctx.beginPath();
-          ctx.moveTo(tile.x + 31, tile.y + 2);
-          ctx.lineTo(tile.x + 26, tile.y + 10);
-          ctx.lineTo(tile.x + 35, tile.y + 16);
-          ctx.lineTo(tile.x + 29, tile.y + 23);
-          ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(tile.x + 31, tile.y + 2); ctx.lineTo(tile.x + 26, tile.y + 10); ctx.lineTo(tile.x + 35, tile.y + 16); ctx.lineTo(tile.x + 29, tile.y + 23); ctx.stroke();
         }
       }
 
@@ -2680,50 +2823,19 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         const bob = chest.opened ? 0 : Math.sin(world.fxTime * 3.2 + chest.x * 0.02) * 1.5;
         ctx.translate(chest.x, chest.y + bob);
         ctx.globalAlpha = chest.opened ? 0.38 : 1;
-        ctx.shadowBlur = chest.opened ? 0 : 18;
+        ctx.shadowBlur = chest.opened || ultraActive ? 0 : 18;
         ctx.shadowColor = "#ffd84d";
         const wood = ctx.createLinearGradient(0, 0, 0, 30);
-        wood.addColorStop(0, "#8b5427");
-        wood.addColorStop(0.45, "#4b2818");
-        wood.addColorStop(1, "#24110c");
-        ctx.fillStyle = wood;
-        ctx.strokeStyle = "#d59a42";
-        ctx.lineWidth = 2;
-        roundedRect(ctx, 0, 10, 38, 20, 4);
-        ctx.fill();
-        ctx.stroke();
-        if (chest.opened) {
-          ctx.beginPath();
-          ctx.moveTo(1, 10);
-          ctx.lineTo(7, 0);
-          ctx.lineTo(37, 0);
-          ctx.lineTo(37, 9);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-        } else {
-          roundedRect(ctx, 0, 3, 38, 13, 5);
-          ctx.fill();
-          ctx.stroke();
-        }
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "rgba(255,214,117,.72)";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(8, 5);
-        ctx.lineTo(8, 29);
-        ctx.moveTo(30, 5);
-        ctx.lineTo(30, 29);
-        ctx.stroke();
+        wood.addColorStop(0, "#8b5427"); wood.addColorStop(0.45, "#4b2818"); wood.addColorStop(1, "#24110c");
+        ctx.fillStyle = wood; ctx.strokeStyle = "#d59a42"; ctx.lineWidth = 2;
+        roundedRect(ctx, 0, 10, 38, 20, 4); ctx.fill(); ctx.stroke();
+        if (chest.opened) { ctx.beginPath(); ctx.moveTo(1, 10); ctx.lineTo(7, 0); ctx.lineTo(37, 0); ctx.lineTo(37, 9); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+        else { roundedRect(ctx, 0, 3, 38, 13, 5); ctx.fill(); ctx.stroke(); }
+        ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255,214,117,.72)"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(8, 5); ctx.lineTo(8, 29); ctx.moveTo(30, 5); ctx.lineTo(30, 29); ctx.stroke();
         if (!chest.opened) {
-          const lockColor = chest.powerUp === "shield" ? "#72ffef"
-            : chest.powerUp === "life" ? "#ff5b95"
-              : chest.powerUp === "score" ? "#ffd84d" : "#c65cff";
-          ctx.fillStyle = lockColor;
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = lockColor;
-          roundedRect(ctx, 15, 12, 8, 9, 2);
-          ctx.fill();
+          const lockColor = chest.powerUp === "shield" ? "#72ffef" : chest.powerUp === "life" ? "#ff5b95" : chest.powerUp === "score" ? "#ffd84d" : "#c65cff";
+          ctx.fillStyle = lockColor; ctx.shadowBlur = ultraActive ? 0 : 12; ctx.shadowColor = lockColor; roundedRect(ctx, 15, 12, 8, 9, 2); ctx.fill();
         }
         if (chest === world.roamingChest && !chest.opened) {
           const roamingDifficulty = difficultiesRef.current[world.sector - 1] as RoamingChestDifficulty;
@@ -2745,7 +2857,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         if (enemy.guardian) ctx.scale(1.65, 1.65);
         const tilt = Math.max(-0.18, Math.min(0.18, enemy.vy / 900));
         ctx.rotate(tilt);
-        ctx.shadowBlur = 24;
+        ctx.shadowBlur = ultraActive ? 0 : 24;
         ctx.shadowColor = "#ff2b8a";
         const shell = ctx.createLinearGradient(-18, -15, 18, 15);
         shell.addColorStop(0, "#6d174c");
@@ -2762,7 +2874,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         roundedRect(ctx, -12, -12, 24, 7, 3);
         ctx.fill();
         ctx.fillStyle = "#ffd84d";
-        ctx.shadowBlur = 11;
+        ctx.shadowBlur = ultraActive ? 0 : 11;
         ctx.shadowColor = "#ffd84d";
         ctx.fillRect(enemy.vx > 0 ? 5 : -11, -10, 7, 3);
         ctx.shadowBlur = 0;
@@ -2798,7 +2910,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       for (const particle of world.particles) {
         ctx.globalAlpha = Math.min(1, particle.life * 2);
         ctx.fillStyle = particle.color;
-        ctx.shadowBlur = 9;
+        ctx.shadowBlur = ultraActive ? 0 : 9;
         ctx.shadowColor = particle.color;
         const size = particle.color === "#ff2b8a" && particle.life > 1 ? 11 : 5;
         ctx.fillRect(particle.x, particle.y, size, size);
@@ -2816,7 +2928,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.fillStyle = "rgba(114,255,239,.12)";
           ctx.strokeStyle = "#72ffef";
           ctx.lineWidth = 2.5;
-          ctx.shadowBlur = 18;
+          ctx.shadowBlur = ultraActive ? 0 : 18;
           ctx.shadowColor = "#72ffef";
           ctx.beginPath();
           ctx.ellipse(0, 3, 29, 40, 0, 0, Math.PI * 2);
@@ -2829,7 +2941,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.globalAlpha = 0.22 + Math.sin(world.fxTime * 9) * 0.08;
           ctx.strokeStyle = "#ffd84d";
           ctx.lineWidth = 2;
-          ctx.shadowBlur = 16;
+          ctx.shadowBlur = ultraActive ? 0 : 16;
           ctx.shadowColor = "#ffd84d";
           ctx.beginPath();
           ctx.arc(0, 2, 34 + Math.sin(world.fxTime * 6) * 3, 0, Math.PI * 2);
@@ -2873,7 +2985,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         roundedRect(ctx, 5, 30, 12, 5, 2);
         ctx.fill(); ctx.stroke();
 
-        ctx.shadowBlur = 22;
+        ctx.shadowBlur = ultraActive ? 0 : 22;
         ctx.shadowColor = "#00f0ff";
         ctx.fillStyle = metal;
         ctx.strokeStyle = "#00f0ff";
@@ -2889,7 +3001,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.fill(); ctx.stroke();
         ctx.shadowBlur = 0;
         ctx.fillStyle = "#ff2b8a";
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = ultraActive ? 0 : 8;
         ctx.shadowColor = "#ff2b8a";
         ctx.beginPath(); ctx.arc(0, 4, 3.5, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
@@ -2953,7 +3065,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.save();
         ctx.translate(handX, handY);
         ctx.rotate(pickAngle);
-        ctx.shadowBlur = 9 + p.pickaxeStyle;
+        ctx.shadowBlur = ultraActive ? 0 : 9 + p.pickaxeStyle;
         ctx.shadowColor = pickaxeColor;
         ctx.strokeStyle = pickaxeColor;
         ctx.lineWidth = 3 + Math.min(2, renderPower * 0.16);
@@ -3075,28 +3187,64 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     };
 
     let lastRenderedFrame = 0;
+    let nextFrameDue = 0;
     const loop = (time: number) => {
       const world = worldRef.current;
       const mobileHigh = qualityRef.current === "high" && window.matchMedia("(pointer: coarse)").matches;
+      const desktopLow = qualityRef.current === "low" && window.matchMedia("(pointer: fine)").matches;
       const targetFps = qualityRef.current === "ultra"
         ? ultraFpsRef.current
+        : desktopLow
+          ? 60
         : mobileHigh && world.status === "ready"
           ? 20
           : QUALITY_SETTINGS[qualityRef.current].fps;
       const frameInterval = 1000 / targetFps;
-      if (time - lastRenderedFrame < frameInterval) {
+      if (!nextFrameDue) nextFrameDue = time;
+      if (time + 0.35 < nextFrameDue) {
         frame = requestAnimationFrame(loop);
         return;
       }
+      const renderedFrameMs = lastRenderedFrame ? time - lastRenderedFrame : 0;
       lastRenderedFrame = time;
+      // Advance a timeline instead of waiting a full interval after each
+      // rendered callback. This avoids half-rate rendering on Safari's
+      // 80/96 Hz refresh schedules.
+      nextFrameDue += frameInterval;
+      if (nextFrameDue < time - frameInterval) nextFrameDue = time + frameInterval;
       const dt = world.lastTime ? Math.min(0.033, (time - world.lastTime) / 1000) : 0;
       world.lastTime = time;
-      const workStart = performance.now();
+      const updateStartedAt = performance.now();
       update(world, dt);
+      const updateMs = performance.now() - updateStartedAt;
+      const drawStartedAt = performance.now();
       draw(world);
+      const drawMs = performance.now() - drawStartedAt;
+      const telemetry = frameTelemetryRef.current;
+      if (!telemetry.lastSampleAt) telemetry.lastSampleAt = time;
+      if (renderedFrameMs > 0) {
+        telemetry.frames += 1;
+        telemetry.totalFrameMs += renderedFrameMs;
+        telemetry.totalUpdateMs += updateMs;
+        telemetry.totalDrawMs += drawMs;
+      }
+      const sampleDuration = time - telemetry.lastSampleAt;
+      if (telemetry.frames > 0 && sampleDuration >= 1000) {
+        setFrameTelemetry({
+          fps: Math.round((telemetry.frames * 1000) / sampleDuration),
+          frameMs: Math.round((telemetry.totalFrameMs / telemetry.frames) * 10) / 10,
+          updateMs: Math.round((telemetry.totalUpdateMs / telemetry.frames) * 10) / 10,
+          drawMs: Math.round((telemetry.totalDrawMs / telemetry.frames) * 10) / 10,
+        });
+        telemetry.frames = 0;
+        telemetry.totalFrameMs = 0;
+        telemetry.totalUpdateMs = 0;
+        telemetry.totalDrawMs = 0;
+        telemetry.lastSampleAt = time;
+      }
       if (mobileHigh && world.status === "playing") {
         const thermal = mobileHighThermalRef.current;
-        thermal.totalWork += performance.now() - workStart;
+        thermal.totalWork += updateMs + drawMs;
         thermal.samples += 1;
         if (thermal.samples >= 45) {
           const averageWork = thermal.totalWork / thermal.samples;
@@ -3242,6 +3390,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <button className="icon-button" onClick={toggleMusic} aria-pressed={musicEnabled} aria-label={musicEnabled ? (isDe ? "Musik ausschalten" : "Disable music") : (isDe ? "Musik einschalten" : "Enable music")}>
             {musicEnabled ? "MUSIC ON" : "MUSIC OFF"}
           </button>
+          {frameTelemetry && <span className="performance-hud">LIVE {frameTelemetry.fps} FPS · CPU {frameTelemetry.updateMs}+{frameTelemetry.drawMs} MS</span>}
           <button className="icon-button" onClick={toggleFullscreen} aria-label={iPhoneSafari ? (isDe ? "App-Modus erklären" : "Explain app mode") : fullscreenActive ? (isDe ? "Vollbild beenden" : "Exit fullscreen") : (isDe ? "Vollbildmodus starten" : "Enter fullscreen")}>{iPhoneSafari ? (isDe ? "APP-MODUS" : "APP MODE") : fullscreenActive ? "EXIT" : "FULLSCREEN"}</button>
           <button className="icon-button" onClick={togglePause} aria-label={isDe ? "Spiel pausieren" : "Pause game"}>PAUSE</button>
         </div>
@@ -3397,7 +3546,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <small>{LEVEL_THEMES[sector - 1].name}</small>
         </label>
         <div className="run-record">
-          <span>{renderer} · {quality.toUpperCase()}{quality === "ultra" ? ` · ${ultraFps} FPS` : quality === "high" && mobileDevice ? " · 60 FPS" : ""}{thermalProtection && (quality === "ultra" || (quality === "high" && mobileDevice)) ? ` · ${isDe ? "WÄRMESCHUTZ" : "THERMAL SAFE"}` : ""} · LOCAL RECORD</span>
+          <span>{renderer} · {quality.toUpperCase()}{quality === "ultra" ? ` · ${ultraFps} FPS` : quality === "high" && mobileDevice ? " · 60 FPS" : ""}{thermalProtection && (quality === "ultra" || (quality === "high" && mobileDevice)) ? ` · ${isDe ? "WÄRMESCHUTZ" : "THERMAL SAFE"}` : ""}{desktopUltraScale < 1 ? ` · ${isDe ? "LEISTUNGSSCHUTZ" : "PERFORMANCE SAFE"} ${Math.round(desktopUltraScale * 100)}%` : ""} · LOCAL RECORD</span>
           <strong>{highScore.toString().padStart(6, "0")}</strong>
         </div>
         {!mobileDevice && (

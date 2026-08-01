@@ -162,6 +162,19 @@ button {
   gap: 8px;
 }
 
+.performance-hud {
+  height: 38px;
+  padding: 0 13px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(0, 240, 255, .38);
+  background: rgba(4, 14, 27, .75);
+  color: var(--cyan);
+  font: 800 9px ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .1em;
+  white-space: nowrap;
+}
+
 .icon-button {
   height: 38px;
   padding: 0 13px;
@@ -287,6 +300,12 @@ canvas {
      blend in Firefox and avoids black WebGPU layers in macOS browsers. */
   mix-blend-mode: normal;
   filter: saturate(1.25);
+  opacity: 0;
+  transition: opacity .16s ease-out;
+}
+
+.fx-canvas.fx-ready {
+  opacity: 1;
 }
 
 .fx-canvas.full-scene-fx {
@@ -296,6 +315,10 @@ canvas {
   mix-blend-mode: screen;
   filter: none;
   opacity: .88;
+}
+
+.fx-canvas.full-scene-fx:not(.fx-ready) {
+  opacity: 0;
 }
 
 .game-overlay {
@@ -737,6 +760,12 @@ kbd {
   color: var(--yellow);
   font: 800 15px ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .16em;
+}
+
+.run-record .performance-readout {
+  color: var(--cyan);
+  font: 800 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .08em;
 }
 
 .key-binding-panel {

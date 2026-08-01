@@ -4,8 +4,11 @@ import react from "@vitejs/plugin-react";
 import packageJson from "./package.json" with { type: "json" };
 
 export default defineConfig(({ mode }) => {
+  // `vite preview` always uses the production mode. Treat it as the checked
+  // release build so local production testing uses the same channel as Pages.
+  const effectiveMode = mode === "production" ? "release" : mode;
   const releaseChannel = packageJson.version.indexOf("-beta.") !== -1 ? "beta" : "final";
-  const buildChannel = mode === "release" ? releaseChannel : mode;
+  const buildChannel = effectiveMode === "release" ? releaseChannel : effectiveMode;
   if (["dev", "beta", "final"].indexOf(buildChannel) === -1) {
     throw new Error(`Unsupported build channel: ${mode}`);
   }

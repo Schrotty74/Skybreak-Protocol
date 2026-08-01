@@ -485,6 +485,9 @@ def build(lang):
     data = TEXT[lang]
     OUT.mkdir(parents=True, exist_ok=True)
     target = OUT / data["file"]
+    # ReportLab mutates image-reader state while writing a document. Do not
+    # reuse those readers for the second language manual in the same process.
+    optimized_image.cache_clear()
     c = canvas.Canvas(str(target), pagesize=A4, pageCompression=1)
     c.setTitle(f"Skybreak Protocol - {data['manual']}")
     c.setAuthor("Schrotty74")
