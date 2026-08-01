@@ -25,6 +25,11 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
 
 **Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.0-beta.1). Extract it and open the matching starter for macOS, Windows, or Linux. All ten music tracks are included; only the optional update check requires internet access.
 
+## Manual
+
+- [English PDF manual](docs/manual/Skybreak-Protocol-Manual-EN.pdf) - gameplay, controls, every button, ten levels, power-ups, and cheat codes
+- [Deutsches PDF-Handbuch](docs/manual/Skybreak-Protocol-Handbuch-DE.pdf)
+
 ## Mobile screenshots
 
 <p align="center">
@@ -42,6 +47,7 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
 - Use the robot's ice pick against enemies and nearby platform modules
 - Difficulty-aware chests: persistent every two to three floors on Easy, time-limited after halfway on Medium, and only after two thirds on Hard with faster relocations — including below the player
 - Choose an ice-pick power or visual-style upgrade when entering each new level
+- Permanently unlock reached levels locally and select any unlocked level as the next starting point after a run
 - Avoid gaps, falling energy fragments, and patrol drones
 - Collect points, preserve lives, and improve the local high score
 
@@ -49,11 +55,13 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
 
 | Action | Keyboard | Mobile device |
 |---|---|---|
-| Move | `A` / `D` or `←` / `→` | Left and right touch buttons |
-| Jump | `W`, `↑`, or `Space` | `JUMP` |
-| Ice pick | `X` or `K` | `PICK` |
+| Move | Default `A` / `D`, configurable | Left and right touch buttons |
+| Jump | Default `Space`, configurable | `JUMP` |
+| Ice pick | Default `X`, configurable | `PICK` |
 | Pause | `P` or `Esc` | `PAUSE` |
 | Fullscreen | `FULLSCREEN` button | Native fullscreen or immersive Safari fallback |
+
+On desktop, use **Key bindings** below the game: select an action and then press the desired key. A duplicate assignment swaps the two bindings; **Reset** restores `A`, `D`, `Space`, and `X`.
 
 ## Robot and ice-pick upgrades
 
@@ -143,7 +151,7 @@ Hardware ray-tracing cores cannot currently be addressed directly by this web ap
 - same-origin MP3 soundtrack playback with automatic level crossfades
 - public GitHub release check for newer beta and final builds
 - Pointer Events for mouse, touch, and pen input
-- Local Storage for the high score and graphics level
+- Local Storage for the high score, graphics level, difficulties, unlocked levels, and desktop key bindings
 - automatic GitHub Pages deployment through GitHub Actions
 - CSS immersive fullscreen fallback for iPhone Safari
 

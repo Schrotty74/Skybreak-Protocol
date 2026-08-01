@@ -12,9 +12,10 @@ Skybreak Protocol verwendet zwei öffentliche Release-Stufen:
 3. `CHANGELOG.md` um den neuen Eintrag ergänzen.
 4. Änderungen aus `docs/UNRELEASED.md` in den Versions-Changelog übernehmen und die Datei anschließend zurücksetzen.
 5. Datenschutzberichte anpassen, falls sich Speicherung oder Netzwerkzugriffe geändert haben.
-6. `npm ci`, `npm run build` und `npm run build:offline` ausführen.
-7. Vor der Veröffentlichung Portfolio und GitHub-Profil aktualisieren, wenn sich sichtbare Projektinformationen geändert haben.
-8. Den geprüften Stand auf `main` veröffentlichen.
+6. Bei Änderungen an Spielprinzip, Steuerung, Buttons, Levels, Schwierigkeiten, Power-ups, Cheats, Grafik oder Offline-Modus beide Handbücher in `scripts/build-handbooks.py` aktualisieren und mit `npm run build:handbooks` neu erzeugen. Danach alle PDF-Seiten visuell prüfen.
+7. `npm ci`, `npm run build` und `npm run build:offline` ausführen.
+8. Vor der Veröffentlichung Portfolio und GitHub-Profil aktualisieren, wenn sich sichtbare Projektinformationen geändert haben.
+9. Den geprüften Stand auf `main` veröffentlichen.
 
 Der Build führt `scripts/verify-release.mjs` aus. Eine Beta- oder Final-Version kann nicht gebaut werden, wenn einer der beiden ausführlichen Changelogs fehlt, offensichtlich unvollständig ist oder mehr als eine Versionsüberschrift enthält.
 

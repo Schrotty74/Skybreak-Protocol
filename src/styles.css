@@ -85,6 +85,15 @@ button {
   font-size: 13px;
   clip-path: polygon(12% 0, 100% 0, 100% 72%, 72% 100%, 0 100%, 0 12%);
   box-shadow: inset 0 0 15px rgba(0, 240, 255, .14);
+  padding: 0;
+  background: rgba(4, 14, 27, .75);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.brand-mark:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 3px;
 }
 
 .brand div {
@@ -279,17 +288,11 @@ canvas {
 }
 
 .fx-canvas.full-scene-fx {
-  mix-blend-mode: normal;
+  /* Black stays neutral, so a failed or empty WebGPU scene copy cannot cover
+     the base game in Safari, Chrome, or mobile WebKit. */
+  mix-blend-mode: screen;
   filter: none;
-}
-
-@media (pointer: coarse) {
-  .fx-canvas.full-scene-fx {
-    /* Black is neutral in screen mode, so Safari cannot hide the base game
-       canvas when WebGPU canvas-to-texture copying fails. */
-    mix-blend-mode: screen;
-    opacity: .88;
-  }
+  opacity: .88;
 }
 
 .game-overlay {
@@ -459,6 +462,35 @@ canvas {
   background: #7ff9ff;
 }
 
+.start-level-picker {
+  width: min(420px, 88%);
+  margin-top: clamp(16px, 2vw, 24px);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.start-level-picker span {
+  color: var(--yellow);
+  font: 800 8px ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .18em;
+}
+
+.start-level-picker select {
+  width: 100%;
+  height: 38px;
+  padding: 0 30px 0 12px;
+  border: 1px solid rgba(0, 240, 255, .5);
+  background: #071321;
+  color: var(--cyan);
+  font: 800 9px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.start-level-picker + .primary-button {
+  margin-top: 12px;
+}
+
 .upgrade-grid {
   width: min(680px, 94%);
   margin-top: clamp(18px, 3vw, 34px);
@@ -533,6 +565,11 @@ canvas {
   color: rgba(186, 228, 237, .55);
   font: 700 8px ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: .2em;
+}
+
+.sector-tag.cheat-active {
+  color: var(--yellow);
+  text-shadow: 0 0 12px rgba(255, 216, 77, .75);
 }
 
 .control-panel {
@@ -644,6 +681,57 @@ kbd {
   letter-spacing: .16em;
 }
 
+.key-binding-panel {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid rgba(0, 240, 255, .18);
+  background: rgba(4, 14, 27, .68);
+}
+
+.key-binding-panel > span {
+  align-self: center;
+  margin: 0 6px;
+  color: #668ca3;
+  font: 800 8px ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .16em;
+}
+
+.key-binding-panel button {
+  min-width: 105px;
+  min-height: 42px;
+  padding: 6px 10px;
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgba(0, 240, 255, .3);
+  background: #071321;
+  color: var(--white);
+  cursor: pointer;
+}
+
+.key-binding-panel button small {
+  color: #668ca3;
+  font: 800 7px ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .12em;
+}
+
+.key-binding-panel button strong {
+  color: var(--cyan);
+  font: 800 9px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.key-binding-panel button.listening {
+  border-color: var(--yellow);
+  box-shadow: 0 0 18px rgba(255, 216, 77, .15);
+}
+
+.key-binding-panel button.listening strong,
+.key-binding-panel .reset-keys {
+  color: var(--yellow);
+}
+
 .touch-controls {
   display: none;
   justify-content: space-between;
@@ -712,7 +800,8 @@ kbd {
   .brand-mark,
   .brand div span,
   .header-actions,
-  .desktop-help {
+  .desktop-help,
+  .key-binding-panel {
     display: none;
   }
 

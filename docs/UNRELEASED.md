@@ -7,6 +7,13 @@
 - Auf Schwer erscheinen Truhen erst ab zwei Dritteln des Sektors für 4,5 Sekunden und wechseln schneller ihre Position – regelmäßig auch unterhalb des Spielers.
 - Truhen enthalten Schutzschild, Extraleben, Punktebonus oder einen zwölf Sekunden langen Eispickel-Overdrive.
 - Schutzschild, Overdrive, geöffnete Truhen und Power-up-Meldungen werden im Spiel sichtbar dargestellt.
+- Vier geheime Cheat-Sequenzen für levelgebundene Unsterblichkeit, Doppelschild, 30-Sekunden-Overdrive und Extraleben ergänzt. Cheat-Läufe verändern den lokalen Highscore nicht.
+- Deutsches und englisches PDF-Handbuch mit Spielprinzip, Steuerung, Buttons, Levelbeschreibungen, Einstellungen und Cheat-Codes ergänzt und auf den jeweiligen Startseiten verlinkt.
+- Der Release-Workflow verlangt bei spielrelevanten Änderungen eine Aktualisierung und visuelle Prüfung beider Handbücher.
+- Ultra verwendet den transparenten Screen-Mischmodus jetzt auch am Desktop, damit ein leerer WebGPU-Frame das Spiel in Safari oder Chrome nicht mehr abdunkelt.
+- Der WebGL2-Ultra-Fallback wird auf 40 FPS und die mittlere interne Effektauflösung begrenzt, um starkes Ruckeln besonders in Firefox zu reduzieren.
+- Erreichte Level werden lokal freigeschaltet und können auf dem Start-, Niederlage- oder Sieg-Bildschirm direkt als neues Startlevel gewählt werden.
+- Desktop-Tasten für Links, Rechts, Springen und Hämmern sind frei belegbar; doppelte Belegungen werden getauscht und die Standardbelegung kann wiederhergestellt werden.
 
 ## Geplant: Grafik und Präsentation
 

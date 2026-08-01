@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { checkForUpdate, type AvailableUpdate } from "./updateCheck";
 import { applyPowerUp, buildChestSpawns, ROAMING_CHEST_RULES, type PowerUpKind, type RoamingChestDifficulty } from "./powerUps";
+import { detectCheat, type CheatId } from "./cheats";
+import { actionForCode, DEFAULT_KEY_BINDINGS, displayKey, normalizeKeyBindings, rebindKey, type BindableAction, type KeyBindings } from "./keyBindings";
 
 type GameStatus = "ready" | "playing" | "paused" | "upgrade" | "gameover" | "won";
-type InputKey = "left" | "right" | "jump" | "attack";
+type InputKey = BindableAction;
 type Quality = "low" | "medium" | "high" | "ultra";
 type Difficulty = "easy" | "medium" | "hard";
 
@@ -116,6 +118,8 @@ type World = {
   shake: number;
   powerUpMessage: string;
   powerUpMessageTime: number;
+  immortalSector: number | null;
+  cheatUsed: boolean;
 };
 
 function buildLevel(): Pick<World, "tiles" | "enemies" | "chests"> {
@@ -193,12 +197,47 @@ function makeWorld(): World {
     shake: 0,
     powerUpMessage: "",
     powerUpMessageTime: 0,
+    immortalSector: null,
+    cheatUsed: false,
     roamingChest: null,
     roamingChestTimer: 0,
     roamingChestMoves: 0,
     roamingChestSector: 1,
     collectedRoamingChestSectors: Array(LEVEL_COUNT).fill(false),
   };
+}
+
+function placeWorldAtLevel(world: World, level: number) {
+  const targetLevel = Math.min(LEVEL_COUNT, Math.max(1, Math.round(level)));
+  if (targetLevel === 1) {
+    world.sector = 1;
+    world.highestSector = 1;
+    return;
+  }
+  const threshold = -(targetLevel - 1) * LEVEL_HEIGHT;
+  const candidates = world.tiles.filter((tile) => tile.alive
+    && tile.y <= threshold + PLAYER_H
+    && tile.y >= threshold - 150);
+  const support = candidates.reduce<Tile | null>((best, tile) => {
+    if (!best) return tile;
+    const score = Math.abs(tile.y - (threshold + PLAYER_H)) * 4 + Math.abs(tile.x + TILE / 2 - VIEW_W / 2);
+    const bestScore = Math.abs(best.y - (threshold + PLAYER_H)) * 4 + Math.abs(best.x + TILE / 2 - VIEW_W / 2);
+    return score < bestScore ? tile : best;
+  }, null);
+  if (support) {
+    world.player.x = support.x + (TILE - PLAYER_W) / 2;
+    world.player.y = support.y - PLAYER_H;
+  } else {
+    world.player.x = 463;
+    world.player.y = threshold - 30;
+  }
+  world.player.vx = 0;
+  world.player.vy = 0;
+  world.cameraX = Math.max(0, world.player.x - VIEW_W / 2);
+  world.cameraY = Math.min(0, world.player.y - VIEW_H * 0.66);
+  world.sector = targetLevel;
+  world.highestSector = targetLevel;
+  world.roamingChestSector = targetLevel;
 }
 
 function sectorForY(y: number): number {
@@ -1017,6 +1056,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const qualityRef = useRef<Quality>("medium");
   const ultraFpsRef = useRef(60);
   const mobileUltra120Ref = useRef(false);
+  const ultraFallbackRef = useRef(false);
+  const keyBindingsRef = useRef<KeyBindings>({ ...DEFAULT_KEY_BINDINGS });
+  const bindingCaptureRef = useRef<BindableAction | null>(null);
+  const unlockedLevelRef = useRef(1);
+  const selectedStartLevelRef = useRef(1);
+  const cheatArmRef = useRef({ taps: 0, lastTap: 0, armedUntil: 0 });
+  const cheatSequenceRef = useRef<{ key: InputKey; time: number }[]>([]);
   const renderViewRef = useRef({ width: VIEW_W, height: VIEW_H, portrait: false });
   const difficultiesRef = useRef<Difficulty[]>(Array(LEVEL_COUNT).fill("medium"));
   const [status, setStatus] = useState<GameStatus>("ready");
@@ -1039,6 +1085,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [levelDifficulties, setLevelDifficulties] = useState<Difficulty[]>(Array(LEVEL_COUNT).fill("medium"));
   const [pickaxeStats, setPickaxeStats] = useState({ power: 1, style: 1 });
   const [availableUpdate, setAvailableUpdate] = useState<AvailableUpdate | null>(null);
+  const [keyBindings, setKeyBindings] = useState<KeyBindings>({ ...DEFAULT_KEY_BINDINGS });
+  const [bindingCapture, setBindingCapture] = useState<BindableAction | null>(null);
+  const [unlockedLevel, setUnlockedLevel] = useState(1);
+  const [selectedStartLevel, setSelectedStartLevel] = useState(1);
 
   const syncHud = useCallback((world: World) => {
     setScore(world.score);
@@ -1056,6 +1106,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
   const restart = useCallback(() => {
     const next = makeWorld();
+    placeWorldAtLevel(next, selectedStartLevelRef.current);
     next.status = "playing";
     worldRef.current = next;
     pressedRef.current = { left: false, right: false, jump: false, attack: false };
@@ -1064,10 +1115,30 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     if (musicEnabledRef.current) {
       audioRef.current ??= createAudio();
       audioRef.current.setSoundEnabled(soundEnabledRef.current);
-      void audioRef.current.playMusic(1);
+      void audioRef.current.playMusic(next.sector);
     }
     syncHud(next);
   }, [syncHud]);
+
+  const chooseStartLevel = useCallback((level: number) => {
+    const next = Math.min(unlockedLevelRef.current, Math.max(1, Math.round(level)));
+    selectedStartLevelRef.current = next;
+    setSelectedStartLevel(next);
+  }, []);
+
+  const beginKeyCapture = useCallback((action: BindableAction) => {
+    bindingCaptureRef.current = action;
+    setBindingCapture(action);
+  }, []);
+
+  const resetKeyBindings = useCallback(() => {
+    const defaults = { ...DEFAULT_KEY_BINDINGS };
+    keyBindingsRef.current = defaults;
+    setKeyBindings(defaults);
+    bindingCaptureRef.current = null;
+    setBindingCapture(null);
+    localStorage.setItem("skybreak-key-bindings", JSON.stringify(defaults));
+  }, []);
 
   const applyPickaxeUpgrade = useCallback((kind: "power" | "style") => {
     const world = worldRef.current;
@@ -1080,10 +1151,65 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     syncHud(world);
   }, [syncHud]);
 
+  const applyCheat = useCallback((cheat: CheatId) => {
+    const world = worldRef.current;
+    if (world.status !== "playing") return;
+    world.cheatUsed = true;
+    if (cheat === "immortal") {
+      world.immortalSector = world.sector;
+      world.powerUpMessage = isDe ? `CHEAT // UNSTERBLICH IN LEVEL ${world.sector}` : `CHEAT // IMMORTAL IN LEVEL ${world.sector}`;
+    } else if (cheat === "shield") {
+      world.player.shield = 2;
+      world.powerUpMessage = isDe ? "CHEAT // DOPPELSCHILD AKTIV" : "CHEAT // DOUBLE SHIELD ACTIVE";
+    } else if (cheat === "overdrive") {
+      world.player.overdrive = Math.max(world.player.overdrive, 30);
+      world.powerUpMessage = isDe ? "CHEAT // OVERDRIVE 30 SEKUNDEN" : "CHEAT // OVERDRIVE 30 SECONDS";
+    } else {
+      world.lives = Math.min(9, world.lives + 1);
+      world.powerUpMessage = isDe ? "CHEAT // EXTRALEBEN" : "CHEAT // EXTRA LIFE";
+    }
+    world.powerUpMessageTime = 3;
+    world.shake = 5;
+    cheatArmRef.current.armedUntil = 0;
+    cheatSequenceRef.current = [];
+    audioRef.current?.powerUp();
+    syncHud(world);
+  }, [isDe, syncHud]);
+
+  const registerCheatInput = useCallback((key: InputKey) => {
+    const now = performance.now();
+    const world = worldRef.current;
+    if (world.status !== "playing" || cheatArmRef.current.armedUntil < now) return;
+    const recent = cheatSequenceRef.current.filter((entry) => now - entry.time <= 7000);
+    recent.push({ key, time: now });
+    cheatSequenceRef.current = recent.slice(-6);
+    const cheat = detectCheat(cheatSequenceRef.current.map((entry) => entry.key));
+    if (cheat) applyCheat(cheat);
+  }, [applyCheat]);
+
+  const armCheats = useCallback(() => {
+    const world = worldRef.current;
+    if (world.status !== "playing") return;
+    const now = performance.now();
+    const arm = cheatArmRef.current;
+    arm.taps = now - arm.lastTap <= 3000 ? arm.taps + 1 : 1;
+    arm.lastTap = now;
+    if (arm.taps < 5) return;
+    arm.taps = 0;
+    arm.armedUntil = now + 10000;
+    cheatSequenceRef.current = [];
+    world.powerUpMessage = isDe ? "CHEAT-LINK BEREIT // 10 SEKUNDEN" : "CHEAT LINK READY // 10 SECONDS";
+    world.powerUpMessageTime = 2.5;
+    audioRef.current?.powerUp();
+  }, [isDe]);
+
   const setInput = useCallback((key: InputKey, active: boolean) => {
-    if (active && !inputRef.current[key]) pressedRef.current[key] = true;
+    if (active && !inputRef.current[key]) {
+      pressedRef.current[key] = true;
+      registerCheatInput(key);
+    }
     inputRef.current[key] = active;
-  }, []);
+  }, [registerCheatInput]);
 
   useEffect(() => {
     const saved = Number(localStorage.getItem("neon-ascent-highscore") || 0);
@@ -1112,6 +1238,21 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     } catch {
       // Ignore malformed local settings and keep the balanced defaults.
     }
+    try {
+      const bindings = normalizeKeyBindings(JSON.parse(localStorage.getItem("skybreak-key-bindings") || "null"));
+      keyBindingsRef.current = bindings;
+      setKeyBindings(bindings);
+    } catch {
+      keyBindingsRef.current = { ...DEFAULT_KEY_BINDINGS };
+    }
+    const storedUnlockedLevel = Number(localStorage.getItem("skybreak-unlocked-level") || 1);
+    const savedUnlockedLevel = Number.isFinite(storedUnlockedLevel)
+      ? Math.min(LEVEL_COUNT, Math.max(1, Math.round(storedUnlockedLevel)))
+      : 1;
+    unlockedLevelRef.current = savedUnlockedLevel;
+    selectedStartLevelRef.current = savedUnlockedLevel;
+    setUnlockedLevel(savedUnlockedLevel);
+    setSelectedStartLevel(savedUnlockedLevel);
   }, []);
 
   useEffect(() => {
@@ -1234,8 +1375,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const sourceCanvas = canvasRef.current;
     if (!canvas || !sourceCanvas) return;
     if (quality === "ultra") {
+      ultraFallbackRef.current = false;
       let disposed = false;
       let cleanup: EffectCleanup | null = null;
+      const startFallback = () => {
+        ultraFallbackRef.current = true;
+        ultraFpsRef.current = 40;
+        setUltraFps(40);
+        window.dispatchEvent(new Event("skybreak-quality"));
+        return startWebGlEffects(canvas, setRenderer, () => "medium");
+      };
       void startWebGpuUltraRenderer(
         canvas,
         sourceCanvas,
@@ -1253,16 +1402,18 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             gpuCleanup?.();
             return;
           }
-          cleanup = gpuCleanup ?? startWebGlEffects(canvas, setRenderer, () => qualityRef.current);
+          cleanup = gpuCleanup ?? startFallback();
         })
         .catch(() => {
-          if (!disposed) cleanup = startWebGlEffects(canvas, setRenderer, () => qualityRef.current);
+          if (!disposed) cleanup = startFallback();
         });
       return () => {
         disposed = true;
         cleanup?.();
+        ultraFallbackRef.current = false;
       };
     }
+    ultraFallbackRef.current = false;
     const gl = canvas.getContext("webgl2", {
       alpha: true,
       antialias: false,
@@ -1346,7 +1497,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     let lastGlFrame = 0;
 
     const render = (time: number) => {
-      const settings = QUALITY_SETTINGS[qualityRef.current];
+      const settings = qualityRef.current === "ultra" && ultraFallbackRef.current
+        ? QUALITY_SETTINGS.medium
+        : QUALITY_SETTINGS[qualityRef.current];
       const frameInterval = 1000 / settings.glFps;
       if (time - lastGlFrame < frameInterval) {
         animation = requestAnimationFrame(render);
@@ -1386,18 +1539,19 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       ensureAudio();
-      const map: Record<string, InputKey | undefined> = {
-        ArrowLeft: "left",
-        KeyA: "left",
-        ArrowRight: "right",
-        KeyD: "right",
-        Space: "jump",
-        ArrowUp: "jump",
-        KeyW: "jump",
-        KeyX: "attack",
-        KeyK: "attack",
-      };
-      const key = map[event.code];
+      const capturedAction = bindingCaptureRef.current;
+      if (capturedAction) {
+        event.preventDefault();
+        bindingCaptureRef.current = null;
+        setBindingCapture(null);
+        if (event.code === "Escape") return;
+        const updated = rebindKey(keyBindingsRef.current, capturedAction, event.code);
+        keyBindingsRef.current = updated;
+        setKeyBindings(updated);
+        localStorage.setItem("skybreak-key-bindings", JSON.stringify(updated));
+        return;
+      }
+      const key = actionForCode(keyBindingsRef.current, event.code);
       if (key) {
         event.preventDefault();
         setInput(key, true);
@@ -1414,18 +1568,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       if (event.code === "Enter" && ["ready", "gameover", "won"].includes(worldRef.current.status)) restart();
     };
     const onKeyUp = (event: KeyboardEvent) => {
-      const map: Record<string, InputKey | undefined> = {
-        ArrowLeft: "left",
-        KeyA: "left",
-        ArrowRight: "right",
-        KeyD: "right",
-        Space: "jump",
-        ArrowUp: "jump",
-        KeyW: "jump",
-        KeyX: "attack",
-        KeyK: "attack",
-      };
-      const key = map[event.code];
+      const key = actionForCode(keyBindingsRef.current, event.code);
       if (key) setInput(key, false);
     };
     const clear = () => {
@@ -1451,7 +1594,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const view = renderViewRef.current;
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
-      const settings = QUALITY_SETTINGS[qualityRef.current];
+      const settings = qualityRef.current === "ultra" && ultraFallbackRef.current
+        ? QUALITY_SETTINGS.medium
+        : QUALITY_SETTINGS[qualityRef.current];
       const ratio = Math.min(
         window.devicePixelRatio || 1,
         settings.dpr,
@@ -1486,6 +1631,20 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const hurt = (world: World) => {
       const p = world.player;
       if (p.invulnerable > 0) return;
+      if (world.immortalSector === world.sector) {
+        if (p.y > world.cameraY + view.height + 100) {
+          p.x = 463;
+          p.y = world.cameraY + Math.min(410, view.height - 130);
+          p.vx = 0;
+          p.vy = -280;
+        }
+        p.invulnerable = 0.65;
+        world.powerUpMessage = isDe ? "UNSTERBLICH // TREFFER BLOCKIERT" : "IMMORTAL // HIT BLOCKED";
+        world.powerUpMessageTime = 1.2;
+        burst(world, p.x + PLAYER_W / 2, p.y + PLAYER_H / 2, "#ffd84d", 18);
+        audioRef.current?.shield();
+        return;
+      }
       if (p.shield > 0) {
         p.shield -= 1;
         p.invulnerable = 0.8;
@@ -1503,9 +1662,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       if (world.lives <= 0) {
         world.status = "gameover";
         setStatus("gameover");
-        const best = Math.max(world.score, Number(localStorage.getItem("neon-ascent-highscore") || 0));
-        localStorage.setItem("neon-ascent-highscore", String(best));
-        setHighScore(best);
+        if (!world.cheatUsed) {
+          const best = Math.max(world.score, Number(localStorage.getItem("neon-ascent-highscore") || 0));
+          localStorage.setItem("neon-ascent-highscore", String(best));
+          setHighScore(best);
+        }
       } else {
         p.x = 463;
         p.y = world.cameraY + Math.min(410, view.height - 130);
@@ -1762,6 +1923,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const newSector = Math.min(LEVEL_COUNT, Math.max(1, Math.floor(-p.y / LEVEL_HEIGHT) + 1));
       if (newSector !== world.sector) {
         world.sector = newSector;
+        if (world.immortalSector !== null && world.immortalSector !== newSector) world.immortalSector = null;
+        if (newSector > unlockedLevelRef.current) {
+          unlockedLevelRef.current = newSector;
+          selectedStartLevelRef.current = newSector;
+          setUnlockedLevel(newSector);
+          setSelectedStartLevel(newSector);
+          localStorage.setItem("skybreak-unlocked-level", String(newSector));
+        }
         if (musicEnabledRef.current) void audioRef.current?.playMusic(newSector);
         if (newSector > world.highestSector) {
           world.highestSector = newSector;
@@ -1776,15 +1945,19 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         world.status = "won";
         world.score += 5000;
         audioRef.current?.win();
-        const best = Math.max(world.score, Number(localStorage.getItem("neon-ascent-highscore") || 0));
-        localStorage.setItem("neon-ascent-highscore", String(best));
-        setHighScore(best);
+        if (!world.cheatUsed) {
+          const best = Math.max(world.score, Number(localStorage.getItem("neon-ascent-highscore") || 0));
+          localStorage.setItem("neon-ascent-highscore", String(best));
+          setHighScore(best);
+        }
         syncHud(world);
       }
     };
 
     const draw = (world: World) => {
-      const settings = QUALITY_SETTINGS[qualityRef.current];
+      const settings = qualityRef.current === "ultra" && ultraFallbackRef.current
+        ? QUALITY_SETTINGS.medium
+        : QUALITY_SETTINGS[qualityRef.current];
       const theme = LEVEL_THEMES[Math.max(0, world.sector - 1)] || LEVEL_THEMES[0];
       const sx = canvas.width / view.width;
       const sy = canvas.height / view.height;
@@ -2524,7 +2697,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     <main className={`game-shell${immersiveMode ? " immersive-mode" : ""}`} onPointerDownCapture={ensureAudio}>
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">SP</span>
+          <button className="brand-mark" type="button" onClick={armCheats} aria-label={isDe ? "Skybreak-Protokoll-Symbol" : "Skybreak Protocol symbol"}>SP</button>
           <div>
             <strong>SKYBREAK PROTOCOL</strong>
             <span>VERTICAL ARCADE PROTOCOL</span>
@@ -2581,9 +2754,21 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
                 </button>
               </div>
             ) : (
-              <button className="primary-button" onClick={status === "paused" ? togglePause : restart}>
-                {status === "paused" ? (isDe ? "WEITER" : "RESUME") : status === "ready" ? (isDe ? "AUFSTIEG STARTEN" : "START ASCENT") : (isDe ? "NEUER VERSUCH" : "TRY AGAIN")}
-              </button>
+              <>
+                {status !== "paused" && (
+                  <label className="start-level-picker">
+                    <span>{isDe ? "STARTLEVEL" : "START LEVEL"}</span>
+                    <select value={selectedStartLevel} onChange={(event) => chooseStartLevel(Number(event.target.value))}>
+                      {Array.from({ length: unlockedLevel }, (_, index) => index + 1).map((level) => (
+                        <option key={level} value={level}>LEVEL {level.toString().padStart(2, "0")} // {LEVEL_THEMES[level - 1].name}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <button className="primary-button" onClick={status === "paused" ? togglePause : restart}>
+                  {status === "paused" ? (isDe ? "WEITER" : "RESUME") : status === "ready" ? (isDe ? "AUFSTIEG STARTEN" : "START ASCENT") : (isDe ? "AUSGEWÄHLTES LEVEL STARTEN" : "START SELECTED LEVEL")}
+                </button>
+              </>
             )}
             {status === "ready" && (
               <div className="mission-grid">
@@ -2594,14 +2779,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             )}
           </div>
         )}
-        <div className="sector-tag">LEVEL {sector.toString().padStart(2, "0")} // {LEVEL_THEMES[sector - 1].name} // PICK P{pickaxeStats.power} S{pickaxeStats.style} // v{APP_VERSION}</div>
+        <div className={`sector-tag${worldRef.current.immortalSector === sector ? " cheat-active" : ""}`}>LEVEL {sector.toString().padStart(2, "0")} // {LEVEL_THEMES[sector - 1].name} // PICK P{pickaxeStats.power} S{pickaxeStats.style}{worldRef.current.immortalSector === sector ? " // IMMORTAL" : ""} // v{APP_VERSION}</div>
       </section>
 
       <section className="control-panel">
         <div className="desktop-help">
-          <span><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> {isDe ? "Bewegen" : "Move"}</span>
-          <span><kbd>W</kbd> / <kbd>SPACE</kbd> {isDe ? "Springen" : "Jump"}</span>
-          <span><kbd>X</kbd> {isDe ? "Eispickel" : "Ice pick"}</span>
+          <span><kbd>{displayKey(keyBindings.left)}</kbd><kbd>{displayKey(keyBindings.right)}</kbd> {isDe ? "Bewegen" : "Move"}</span>
+          <span><kbd>{displayKey(keyBindings.jump)}</kbd> {isDe ? "Springen" : "Jump"}</span>
+          <span><kbd>{displayKey(keyBindings.attack)}</kbd> {isDe ? "Eispickel" : "Ice pick"}</span>
           <span><kbd>P</kbd> Pause</span>
         </div>
         <div className="touch-controls" aria-label={isDe ? "Touch-Steuerung" : "Touch controls"}>
@@ -2659,6 +2844,18 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <span>{renderer} · {quality.toUpperCase()}{quality === "ultra" ? ` · ${ultraFps} FPS${thermalProtection ? ` · ${isDe ? "WÄRMESCHUTZ" : "THERMAL SAFE"}` : ""}` : ""} · LOCAL RECORD</span>
           <strong>{highScore.toString().padStart(6, "0")}</strong>
         </div>
+        {!mobileDevice && (
+          <div className="key-binding-panel">
+            <span>{isDe ? "TASTENBELEGUNG" : "KEY BINDINGS"}</span>
+            {(["left", "right", "jump", "attack"] as BindableAction[]).map((action) => (
+              <button key={action} type="button" className={bindingCapture === action ? "listening" : ""} onClick={() => beginKeyCapture(action)}>
+                <small>{action === "left" ? (isDe ? "LINKS" : "LEFT") : action === "right" ? (isDe ? "RECHTS" : "RIGHT") : action === "jump" ? (isDe ? "SPRINGEN" : "JUMP") : (isDe ? "HÄMMERN" : "PICK")}</small>
+                <strong>{bindingCapture === action ? (isDe ? "TASTE DRÜCKEN" : "PRESS KEY") : displayKey(keyBindings[action])}</strong>
+              </button>
+            ))}
+            <button type="button" className="reset-keys" onClick={resetKeyBindings}>{isDe ? "STANDARD" : "RESET"}</button>
+          </div>
+        )}
       </section>
       {showInstallHint && (
         <div className="install-hint" role="dialog" aria-modal="true" aria-labelledby="install-hint-title">

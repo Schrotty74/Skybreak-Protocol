@@ -25,6 +25,11 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 
 **Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.0-beta.1) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle zehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
 
+## Handbuch
+
+- [Deutsches PDF-Handbuch](docs/manual/Skybreak-Protocol-Handbuch-DE.pdf) - Spielprinzip, Steuerung, alle Buttons, zehn Level, Power-ups und Cheat-Codes
+- [English PDF manual](docs/manual/Skybreak-Protocol-Manual-EN.pdf)
+
 ## Handy-Screenshots
 
 <p align="center">
@@ -42,6 +47,7 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 - Gegner und nahe Plattformmodule mit dem Eispickel des Roboters angreifen
 - Truhen passend zur Schwierigkeit: auf Leicht dauerhaft alle zwei bis drei Etagen, auf Mittel ab der Hälfte zeitlich begrenzt und auf Schwer erst ab zwei Dritteln mit schnellen Positionswechseln – auch unterhalb des Spielers
 - Beim Eintritt in jedes neue Level Kraft oder Design des Eispickels verbessern
+- Erreichte Level dauerhaft lokal freischalten und nach einem Lauf direkt als neues Startlevel auswählen
 - Lücken, fallenden Energiesplittern und Patrouillendrohnen ausweichen
 - Punkte sammeln, Leben erhalten und den lokalen Highscore verbessern
 
@@ -49,11 +55,13 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 
 | Aktion | Tastatur | Mobilgerät |
 |---|---|---|
-| Bewegen | `A` / `D` oder `←` / `→` | Linke und rechte Bildschirmtaste |
-| Springen | `W`, `↑` oder `Leertaste` | `JUMP` |
-| Eispickel | `X` oder `K` | `PICK` |
+| Bewegen | Standard `A` / `D`, frei belegbar | Linke und rechte Bildschirmtaste |
+| Springen | Standard `Leertaste`, frei belegbar | `JUMP` |
+| Eispickel | Standard `X`, frei belegbar | `PICK` |
 | Pause | `P` oder `Esc` | `PAUSE` |
 | Vollbild | Schaltfläche `FULLSCREEN` | natives Vollbild oder immersiver Safari-Fallback |
+
+Am Desktop befindet sich unter dem Spiel die **Tastenbelegung**. Eine Aktion anklicken und anschließend die gewünschte Taste drücken. Bereits verwendete Tasten werden automatisch getauscht; **Standard** stellt `A`, `D`, `Leertaste` und `X` wieder her.
 
 ## Roboter und Eispickel-Upgrades
 
@@ -143,7 +151,7 @@ Die Hardware-Raytracing-Kerne können von dieser Web-App derzeit nicht direkt an
 - Soundtrack-Wiedergabe aus eigenen MP3-Dateien mit automatischer Level-Überblendung
 - öffentliche GitHub-Release-Prüfung für neue Beta- und Final-Versionen
 - Pointer Events für Maus, Touch und Stift
-- Local Storage für Highscore und Grafikstufe
+- Local Storage für Highscore, Grafikstufe, Schwierigkeiten, Level-Freischaltung und Desktop-Tastenbelegung
 - automatische GitHub-Pages-Bereitstellung über GitHub Actions
 - CSS-basierter immersiver Vollbild-Fallback für Safari auf dem iPhone
 
