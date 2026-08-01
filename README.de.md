@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-**Aktuelle Version:** `v1.0.0-beta.3` · [Ausführlicher Changelog](docs/releases/1.0.0-beta.3.md) · [Alle Changelogs](CHANGELOG.md)
+**Aktuelle Version:** `v1.0.0-beta.4` · [Ausführlicher Changelog](docs/releases/1.0.0-beta.4.md) · [Alle Changelogs](CHANGELOG.md)
 
 Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Kämpfe dich durch zehn optisch eigenständige Level nach oben, durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus und erreiche den Sendeturm über der Megacity. Jedes Level besitzt eine eigene Cyberpunk-Farbwelt, animierte Kulisse, Effekte und separat wählbare Schwierigkeit.
 
@@ -23,7 +23,7 @@ Die Web-App funktioniert ohne Installation. Auf iPhone oder iPad kann sie in Saf
 
 Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protocol einmal die öffentlichen GitHub-Releases und zeigt einen Hinweis an, wenn eine neuere Beta- oder Final-Version verfügbar ist.
 
-**Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.0-beta.3) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle zehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
+**Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.0-beta.4) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle zehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
 
 ## Handbuch
 
@@ -38,7 +38,17 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
   <a href="docs/screenshots/mobile-gameplay.jpeg?raw=1"><img src="docs/screenshots/mobile-gameplay.jpeg" alt="Skybreak Protocol Spielansicht auf dem Handy" width="260"></a>
 </p>
 
-<p align="center"><em>Eine Vorschau anklicken, um das Bild in voller Größe zu öffnen. Desktop-Screenshots folgen später.</em></p>
+<p align="center"><em>Eine Vorschau anklicken, um das Bild in voller Größe zu öffnen.</em></p>
+
+## Desktop-Screenshots
+
+<p align="center">
+  <a href="docs/screenshots/desktop-gameplay-ultra.jpeg?raw=1"><img src="docs/screenshots/desktop-gameplay-ultra.jpeg" alt="Skybreak Protocol Desktop-Spielansicht im Ultra-Modus" width="430"></a>
+  &nbsp;&nbsp;
+  <a href="docs/screenshots/desktop-start-ultra.jpeg?raw=1"><img src="docs/screenshots/desktop-start-ultra.jpeg" alt="Skybreak Protocol Desktop-Startbildschirm im Ultra-Modus" width="430"></a>
+</p>
+
+<p align="center"><em>Eine Vorschau anklicken, um das Bild in voller Größe zu öffnen.</em></p>
 
 ## Spielprinzip
 

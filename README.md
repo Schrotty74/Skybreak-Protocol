@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-**Current release:** `v1.0.0-beta.3` · [Detailed changelog](docs/releases/1.0.0-beta.3.en.md) · [All changelogs](CHANGELOG.md)
+**Current release:** `v1.0.0-beta.4` · [Detailed changelog](docs/releases/1.0.0-beta.4.en.md) · [All changelogs](CHANGELOG.md)
 
 An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through ten visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Each level has its own cyberpunk palette, animated scenery, effects, and independently selectable difficulty.
 
@@ -23,7 +23,7 @@ The web app runs without installation. On iPhone or iPad, use **Share → Add to
 
 The current version is shown in the game. On startup, Skybreak Protocol checks the public GitHub releases once and displays a notice when a newer beta or final build is available.
 
-**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.0-beta.3). Extract it and open the matching starter for macOS, Windows, or Linux. All ten music tracks are included; only the optional update check requires internet access.
+**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.0-beta.4). Extract it and open the matching starter for macOS, Windows, or Linux. All ten music tracks are included; only the optional update check requires internet access.
 
 ## Manual
 
@@ -38,7 +38,17 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
   <a href="docs/screenshots/mobile-gameplay.jpeg?raw=1"><img src="docs/screenshots/mobile-gameplay.jpeg" alt="Skybreak Protocol mobile gameplay" width="260"></a>
 </p>
 
-<p align="center"><em>Click a preview to open the full-size image. Desktop screenshots will follow.</em></p>
+<p align="center"><em>Click a preview to open the full-size image.</em></p>
+
+## Desktop screenshots
+
+<p align="center">
+  <a href="docs/screenshots/desktop-gameplay-ultra.jpeg?raw=1"><img src="docs/screenshots/desktop-gameplay-ultra.jpeg" alt="Skybreak Protocol desktop gameplay in Ultra mode" width="430"></a>
+  &nbsp;&nbsp;
+  <a href="docs/screenshots/desktop-start-ultra.jpeg?raw=1"><img src="docs/screenshots/desktop-start-ultra.jpeg" alt="Skybreak Protocol desktop start screen in Ultra mode" width="430"></a>
+</p>
+
+<p align="center"><em>Click a preview to open the full-size image.</em></p>
 
 ## Gameplay
 

@@ -1,12 +1,8 @@
-# Unveröffentlichte Änderungen seit Skybreak Protocol 1.0.0-beta.3
+# Unveröffentlichte Änderungen seit Skybreak Protocol 1.0.0-beta.4
 
 ## Umgesetzt
 
-- Jedes Level hat nun eine eigene 15-Etagen-Kulisse mit verstärkten Umgebungseffekten, eindeutig unterschiedlichen Plattformmaterialien und einer Wächterdrohne am oberen Levelende.
-- Nach der Wächterdrohne zeigt ein animierter Übergang Name, Farbwelt und Plattformmaterial des nächsten Levels, bevor das Eispickel-Upgrade gewählt wird.
-- Der Roboter zeigt bei verlorenen Leben Risse, Funken und Sensorflackern.
-- Level 10 endet mit aktivem Sendeturm, Kamerafokus und Sonnenaufgang.
-- Der Startbildschirm enthält jetzt eine farbcodierte Levelkarte mit Freischaltstatus und gewähltem Startlevel.
+- Noch keine weiteren Punkte festgelegt.
 
 ## Geplant: Grafik und Präsentation
 
