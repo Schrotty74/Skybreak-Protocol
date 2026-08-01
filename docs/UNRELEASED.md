@@ -4,6 +4,8 @@
 
 - Der Desktop-Mac-Ultra-Pfad verwendet eine transparente WebGPU-Effekt-Ebene ohne fehleranfällige Kopie des Spiel-Canvas, damit Safari und Chrome das Spiel nicht mehr durch eine schwarze WebGPU-Textur abdunkeln.
 - Der Firefox-Ultra-Fallback verwendet native Alpha-Komposition statt eines teuren CSS-Mischmodus und begrenzt beide Renderpfade auf 30 FPS.
+- Der Musikschalter beendet jetzt auch noch laufende Überblend-Tracks vollständig, damit MUSIC OFF am Desktop zuverlässig stumm bleibt.
+- Alle zehn Level besitzen nun eigenständige animierte Kulissen, Effekte und Plattformmaterialien statt einer dominierenden gemeinsamen Stadtkulisse.
 
 ## Geplant: Grafik und Präsentation
 

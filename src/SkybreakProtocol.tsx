@@ -285,6 +285,7 @@ function placeRoamingChest(world: World, difficulty: RoamingChestDifficulty): bo
 function createAudio() {
   let context: AudioContext | null = null;
   let music: HTMLAudioElement | null = null;
+  const activeMusic = new Set<HTMLAudioElement>();
   let soundEnabled = true;
   let currentSector = 0;
   let fadeFrame = 0;
@@ -313,17 +314,20 @@ function createAudio() {
     const previous = music;
     const request = ++musicRequest;
     const next = new Audio(MUSIC_TRACKS[nextSector - 1]);
+    activeMusic.add(next);
     next.loop = true;
     next.preload = "auto";
     next.volume = 0;
     try {
       await next.play();
     } catch {
+      activeMusic.delete(next);
       return;
     }
     if (request !== musicRequest) {
       next.pause();
       next.src = "";
+      activeMusic.delete(next);
       return;
     }
     music = next;
@@ -338,6 +342,7 @@ function createAudio() {
       else {
         previous?.pause();
         if (previous) previous.src = "";
+        if (previous) activeMusic.delete(previous);
       }
     };
     fadeFrame = requestAnimationFrame(fade);
@@ -345,14 +350,28 @@ function createAudio() {
   const stop = () => {
     musicRequest += 1;
     cancelAnimationFrame(fadeFrame);
-    music?.pause();
-    if (music) music.src = "";
+    for (const track of activeMusic) {
+      track.pause();
+      track.src = "";
+    }
+    activeMusic.clear();
     music = null;
     currentSector = 0;
     void context?.close();
     context = null;
   };
-  const pauseMusic = () => music?.pause();
+  const pauseMusic = () => {
+    musicRequest += 1;
+    cancelAnimationFrame(fadeFrame);
+    for (const track of activeMusic) {
+      track.pause();
+      if (track !== music) {
+        track.src = "";
+        activeMusic.delete(track);
+      }
+    }
+    if (music) music.volume = 0.28;
+  };
   const setSoundEnabled = (enabled: boolean) => {
     soundEnabled = enabled;
     if (!enabled) {
@@ -1994,78 +2013,188 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       ctx.lineWidth = 1.4;
       const pulse = world.fxTime;
       if (theme.motif === 0) {
-        for (let i = 0; i < 9; i++) ctx.fillRect((i * 127 + pulse * 34) % view.width, 45 + i * 57, 48, 2);
+        // Neon Undercity: deep shafts, service pipes and fast maglev traffic.
+        ctx.globalAlpha = 0.24;
+        for (let i = 0; i < 12; i++) {
+          const x = (i * 113 - world.cameraX * 0.08) % (view.width + 80) - 40;
+          ctx.fillRect(x, 0, 5 + (i % 3) * 3, view.height);
+          ctx.fillRect(x - 18, 72 + (i * 47) % (view.height - 90), 62, 3);
+        }
+        for (let i = 0; i < 7; i++) {
+          const x = (i * 171 + pulse * 95) % (view.width + 180) - 90;
+          const y = 52 + (i * 73) % Math.max(100, view.height - 100);
+          ctx.fillStyle = i % 2 ? theme.secondary : theme.accent;
+          ctx.fillRect(x, y, 74, 3);
+          ctx.fillRect(x + 69, y - 2, 9, 7);
+        }
       } else if (theme.motif === 1) {
-        for (let i = 0; i < 8; i++) {
-          const x = (i * 149 - pulse * 21) % (view.width + 80);
-          const y = 60 + (i * 83) % Math.max(120, view.height - 100);
-          ctx.strokeRect(x, y, 32 + (i % 3) * 13, 18 + (i % 2) * 10);
+        // Chrome Bazaar: hanging signs, market canopies and floating lanterns.
+        for (let i = 0; i < 10; i++) {
+          const x = (i * 131 - world.cameraX * 0.12) % (view.width + 100) - 50;
+          const y = 45 + (i * 79) % Math.max(130, view.height - 120);
+          const width = 56 + (i % 3) * 20;
+          ctx.globalAlpha = 0.16 + (Math.sin(pulse * 2.4 + i) + 1) * 0.06;
+          ctx.fillStyle = i % 2 ? theme.secondary : theme.accent;
+          ctx.fillRect(x, y, width, 22);
+          ctx.strokeRect(x - 3, y - 3, width + 6, 28);
+          ctx.beginPath();
+          ctx.arc(x + width / 2, y - 18 - Math.sin(pulse * 1.7 + i) * 5, 5 + (i % 2) * 3, 0, Math.PI * 2);
+          ctx.fill();
         }
       } else if (theme.motif === 2) {
-        ctx.globalAlpha = 0.22;
-        for (let i = 0; i < 13; i++) {
+        // Toxic Transit: tunnel ribs, moving train windows and rising gas.
+        ctx.globalAlpha = 0.2;
+        for (let rib = 0; rib < 8; rib++) {
+          const radius = 90 + rib * 65;
           ctx.beginPath();
-          ctx.arc((i * 91 + pulse * 19) % view.width, view.height - ((i * 67 + pulse * 31) % view.height), 5 + (i % 4) * 4, 0, Math.PI * 2);
+          ctx.arc(view.width / 2, view.height + 35, radius, Math.PI, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = theme.accent;
+        for (let i = 0; i < 11; i++) {
+          const x = (i * 96 - pulse * 115) % (view.width + 120) - 60;
+          ctx.fillRect(x, view.height * 0.62, 55, 18);
+          ctx.fillStyle = i % 2 ? theme.secondary : theme.accent;
+        }
+        for (let i = 0; i < 18; i++) {
+          ctx.beginPath();
+          ctx.arc((i * 83 + pulse * 17) % view.width, view.height - ((i * 61 + pulse * 34) % view.height), 3 + (i % 5) * 3, 0, Math.PI * 2);
           ctx.fill();
         }
       } else if (theme.motif === 3) {
-        for (let i = 0; i < 12; i++) {
-          const x = i * (view.width / 11);
-          const h = 35 + Math.sin(pulse * 3 + i) * 22;
-          ctx.globalAlpha = 0.18;
-          ctx.fillRect(x, view.height - h, 3, h);
+        // Crimson Firewall: pulsing data walls and upward-flying embers.
+        ctx.globalAlpha = 0.22;
+        for (let i = 0; i < 15; i++) {
+          const x = i * (view.width / 14);
+          const opening = 45 + (Math.sin(pulse * 2.8 + i) + 1) * 28;
+          ctx.fillRect(x, 0, 4, view.height - opening);
+          ctx.fillRect(x + 7, opening + 24, 2, view.height - opening - 24);
+        }
+        for (let i = 0; i < 30; i++) {
+          const x = (i * 47 + Math.sin(i) * 35) % view.width;
+          const y = view.height - ((i * 29 + pulse * (75 + i % 5 * 17)) % view.height);
+          ctx.fillStyle = i % 3 ? theme.accent : theme.warning;
+          ctx.fillRect(x, y, 2, 8 + i % 9);
         }
       } else if (theme.motif === 4) {
-        ctx.globalAlpha = 0.22;
-        for (let band = 0; band < 5; band++) {
+        // Azure Data Sea: layered waves, bubbles and luminous data jellyfish.
+        ctx.globalAlpha = 0.25;
+        for (let band = 0; band < 7; band++) {
           ctx.beginPath();
           for (let x = 0; x <= view.width; x += 18) {
-            const y = 80 + band * 82 + Math.sin(x * 0.025 + pulse * 2 + band) * 14;
+            const y = 55 + band * 72 + Math.sin(x * 0.021 + pulse * (1.3 + band * 0.08) + band) * (10 + band * 2);
             if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
           }
           ctx.stroke();
         }
+        for (let i = 0; i < 9; i++) {
+          const x = (i * 127 + Math.sin(pulse + i) * 42) % view.width;
+          const y = view.height - ((i * 71 + pulse * 24) % (view.height + 80));
+          ctx.beginPath(); ctx.arc(x, y, 11 + i % 4 * 4, Math.PI, 0); ctx.stroke();
+          for (let arm = -1; arm <= 1; arm++) {
+            ctx.beginPath(); ctx.moveTo(x + arm * 7, y); ctx.lineTo(x + arm * 10 + Math.sin(pulse * 2 + i) * 4, y + 26); ctx.stroke();
+          }
+        }
       } else if (theme.motif === 5) {
-        ctx.globalAlpha = 0.2;
-        for (let i = 0; i < 6; i++) {
+        // Violet Reactor: rotating containment rings and an unstable core.
+        const cx = view.width * 0.5;
+        const cy = view.height * 0.48;
+        const core = ctx.createRadialGradient(cx, cy, 4, cx, cy, 125);
+        core.addColorStop(0, theme.warning);
+        core.addColorStop(0.2, theme.secondary);
+        core.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = core;
+        ctx.fillRect(cx - 140, cy - 140, 280, 280);
+        for (let i = 0; i < 8; i++) {
           ctx.beginPath();
-          ctx.arc(view.width * 0.5, view.height * 0.48, 45 + i * 38 + Math.sin(pulse * 2) * 5, 0, Math.PI * 2);
+          ctx.ellipse(cx, cy, 42 + i * 34, 20 + i * 18, pulse * (i % 2 ? 0.22 : -0.17) + i, 0, Math.PI * 2);
           ctx.stroke();
+        }
+        for (let i = 0; i < 6; i++) {
+          const angle = pulse * 1.8 + i * Math.PI / 3;
+          ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(angle) * 220, cy + Math.sin(angle) * 135); ctx.stroke();
         }
       } else if (theme.motif === 6) {
-        const sun = ctx.createRadialGradient(view.width * 0.5, view.height * 0.7, 8, view.width * 0.5, view.height * 0.7, 170);
+        // Solar Megagrid: blazing sun, heat shimmer and moving panel arrays.
+        const sun = ctx.createRadialGradient(view.width * 0.72, view.height * 0.28, 8, view.width * 0.72, view.height * 0.28, 210);
         sun.addColorStop(0, theme.warning);
         sun.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.globalAlpha = 0.22;
+        ctx.globalAlpha = 0.3;
         ctx.fillStyle = sun;
         ctx.fillRect(0, 0, view.width, view.height);
+        for (let row = 0; row < 6; row++) {
+          for (let col = 0; col < 9; col++) {
+            const x = col * 128 - ((world.cameraX * 0.08 + row * 47) % 128);
+            const y = view.height * 0.48 + row * 55 + Math.sin(pulse * 1.5 + col) * 3;
+            ctx.fillStyle = (col + row) % 2 ? theme.accent : theme.secondary;
+            ctx.fillRect(x, y, 82, 28);
+            ctx.strokeRect(x, y, 82, 28);
+          }
+        }
       } else if (theme.motif === 7) {
-        ctx.globalAlpha = 0.2;
-        for (let i = 0; i < 16; i++) {
-          const x = (i * 73 + Math.sin(pulse + i) * 35) % view.width;
-          const y = (i * 109 + pulse * 43) % view.height;
-          ctx.fillRect(x, y, 2, 28 + (i % 5) * 9);
+        // Ghost Network: broken packet streams and flickering phantom nodes.
+        ctx.globalAlpha = 0.21;
+        for (let i = 0; i < 28; i++) {
+          const x = (i * 67 + Math.sin(pulse * 1.7 + i) * 45) % view.width;
+          const y = (i * 97 + pulse * (38 + i % 4 * 11)) % view.height;
+          ctx.fillRect(x, y, 2, 18 + (i % 7) * 7);
+          if (i % 3 === 0) ctx.fillRect(x - 22, y + 8, 46, 1);
+        }
+        ctx.globalAlpha = 0.1 + (Math.sin(pulse * 9) + 1) * 0.05;
+        for (let i = 0; i < 5; i++) {
+          const x = 100 + i * 190 + Math.sin(pulse + i) * 30;
+          const y = 100 + (i * 83) % 330;
+          ctx.beginPath(); ctx.arc(x, y, 28, Math.PI, 0); ctx.lineTo(x + 28, y + 52); ctx.lineTo(x - 28, y + 52); ctx.closePath(); ctx.stroke();
         }
       } else if (theme.motif === 8) {
-        ctx.globalAlpha = 0.24;
-        ctx.beginPath();
-        for (let i = 0; i < 11; i++) {
-          const angle = pulse * 0.16 + i * 1.9;
-          const radius = 55 + i * 21;
-          const x = view.width * 0.52 + Math.cos(angle) * radius;
-          const y = view.height * 0.45 + Math.sin(angle) * radius * 0.62;
-          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      } else {
-        ctx.globalAlpha = 0.24;
-        for (let i = 0; i < 18; i++) {
-          const angle = (Math.PI * 2 * i) / 18 + pulse * 0.05;
+        // Quantum Rift: rotating singularity with warped star trails.
+        const cx = view.width * 0.52;
+        const cy = view.height * 0.44;
+        ctx.globalAlpha = 0.25;
+        for (let arm = 0; arm < 7; arm++) {
           ctx.beginPath();
-          ctx.moveTo(view.width / 2, view.height * 0.42);
-          ctx.lineTo(view.width / 2 + Math.cos(angle) * view.width, view.height * 0.42 + Math.sin(angle) * view.height);
+          for (let i = 0; i < 22; i++) {
+            const radius = 12 + i * 15;
+            const angle = pulse * 0.28 + arm * 0.9 + i * 0.19;
+            const x = cx + Math.cos(angle) * radius;
+            const y = cy + Math.sin(angle) * radius * 0.58;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
           ctx.stroke();
         }
+        for (let i = 0; i < 45; i++) {
+          const angle = i * 2.399 + pulse * 0.08;
+          const radius = 65 + (i * 47) % 370;
+          ctx.fillRect(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius * 0.62, 2 + i % 3, 2 + i % 3);
+        }
+      } else {
+        // Skybreak Apex: dawn above the clouds and the transmission beacon.
+        const horizon = view.height * 0.55;
+        const dawn = ctx.createRadialGradient(view.width / 2, horizon, 8, view.width / 2, horizon, 310);
+        dawn.addColorStop(0, theme.warning);
+        dawn.addColorStop(0.35, theme.secondary);
+        dawn.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = dawn;
+        ctx.fillRect(0, 0, view.width, view.height);
+        for (let i = 0; i < 24; i++) {
+          const angle = (Math.PI * 2 * i) / 24 + pulse * 0.025;
+          ctx.beginPath();
+          ctx.moveTo(view.width / 2, horizon);
+          ctx.lineTo(view.width / 2 + Math.cos(angle) * view.width, horizon + Math.sin(angle) * view.height);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 0.24;
+        for (let i = 0; i < 10; i++) {
+          const x = (i * 137 + pulse * (8 + i % 3 * 4)) % (view.width + 220) - 110;
+          const y = horizon + 35 + (i % 3) * 42;
+          ctx.beginPath(); ctx.ellipse(x, y, 90 + i % 4 * 18, 20 + i % 3 * 7, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 0.42;
+        ctx.fillStyle = theme.accent;
+        ctx.fillRect(view.width / 2 - 4, 45, 8, horizon - 45);
+        ctx.fillRect(view.width / 2 - 58, 86, 116, 3);
       }
       ctx.restore();
 
@@ -2073,7 +2202,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
       ctx.globalAlpha = 0.16;
-      for (let i = 0; i < 4; i++) {
+      const searchlightCount = [0, 1, 3, 9].includes(theme.motif) ? 4 : theme.motif === 5 ? 2 : 0;
+      for (let i = 0; i < searchlightCount; i++) {
         const origin = ((i * 281 + world.fxTime * (i % 2 ? 13 : -9)) % (view.width + 260)) - 130;
         const beam = ctx.createLinearGradient(origin, 0, origin + 190, view.height);
         beam.addColorStop(0, i % 2 ? theme.secondary : theme.accent);
@@ -2092,7 +2222,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       // Distant air traffic gives the skyline depth without bitmap assets.
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      for (let i = 0; i < settings.traffic; i++) {
+      const trafficCount = [0, 1, 6, 9].includes(theme.motif) ? settings.traffic : 0;
+      for (let i = 0; i < trafficCount; i++) {
         const speed = 18 + (i % 5) * 8;
         const x = (i * 151 + world.fxTime * speed) % (view.width + 120) - 60;
         const y = 35 + ((i * 89 - world.cameraY * 0.025) % Math.max(100, view.height * 0.62));
@@ -2106,7 +2237,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       ctx.restore();
 
       ctx.save();
-      for (let layer = 0; layer < settings.layers; layer++) {
+      const skylineLayers = [0, 1, 3, 6, 9].includes(theme.motif) ? settings.layers : 0;
+      for (let layer = 0; layer < skylineLayers; layer++) {
         const alpha = 0.18 + layer * 0.13;
         const scale = 0.72 + layer * 0.22;
         ctx.globalAlpha = alpha;
@@ -2141,7 +2273,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       // Animated holographic billboards in the middle distance.
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      for (let i = 0; i < 3; i++) {
+      const billboardCount = [0, 1, 3].includes(theme.motif) ? 3 : 0;
+      for (let i = 0; i < billboardCount; i++) {
         const bx = 80 + ((i * 337 - world.cameraX * 0.14) % Math.max(300, view.width - 120));
         const by = view.height * (0.26 + i * 0.16) + ((-world.cameraY * 0.045) % 70);
         const pulse = 0.4 + Math.sin(world.fxTime * 2.2 + i) * 0.12;
@@ -2160,7 +2293,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       // Neon rain is screen-space so it remains consistent while climbing.
       ctx.save();
       ctx.globalCompositeOperation = "screen";
-      for (let i = 0; i < settings.rain; i++) {
+      const rainCount = [0, 3, 7, 9].includes(theme.motif) ? settings.rain : 0;
+      for (let i = 0; i < rainCount; i++) {
         const x = (i * 79 + (i % 7) * 23 - world.fxTime * 36) % (view.width + 80) - 40;
         const y = (i * 113 + world.fxTime * (280 + (i % 5) * 46)) % (view.height + 100) - 50;
         const length = 8 + (i % 6) * 3;
@@ -2176,32 +2310,46 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       }
       ctx.restore();
 
-      ctx.strokeStyle = theme.accent;
-      ctx.globalAlpha = 0.08;
-      ctx.lineWidth = 1;
-      for (let x = 0; x < view.width; x += 48) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, view.height);
-        ctx.stroke();
-      }
-      for (let y = ((-world.cameraY * 0.2) % 48); y < view.height; y += 48) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(view.width, y);
-        ctx.stroke();
+      if ([0, 3, 6].includes(theme.motif)) {
+        ctx.strokeStyle = theme.accent;
+        ctx.globalAlpha = 0.08;
+        ctx.lineWidth = 1;
+        for (let x = 0; x < view.width; x += 48) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, view.height);
+          ctx.stroke();
+        }
+        for (let y = ((-world.cameraY * 0.2) % 48); y < view.height; y += 48) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(view.width, y);
+          ctx.stroke();
+        }
       }
       ctx.globalAlpha = 1;
 
       ctx.save();
       ctx.translate(-world.cameraX, -world.cameraY);
+      const platformMaterials = [
+        ["#31566f", "#091827", "#020711"],
+        ["#76506f", "#24152d", "#0c0710"],
+        ["#3f6b3f", "#102619", "#031008"],
+        ["#7a3540", "#2d0b12", "#110307"],
+        ["#2d6f8c", "#082d48", "#020b18"],
+        ["#68438d", "#24103d", "#0d0416"],
+        ["#8c5929", "#3a1908", "#150603"],
+        ["#4d7375", "#10282b", "#041011"],
+        ["#574986", "#17143d", "#070518"],
+        ["#778da3", "#173449", "#06121d"],
+      ][theme.motif];
       for (const tile of world.tiles) {
         if (!tile.alive || tile.y < world.cameraY - 80 || tile.y > world.cameraY + view.height + 50) continue;
         const glow = tile.cracked ? theme.accent : theme.warning;
         // Deep extrusion, animated power core and polished wet-metal edge.
         const underside = ctx.createLinearGradient(tile.x, tile.y + 16, tile.x, tile.y + 40);
-        underside.addColorStop(0, "#101c2f");
-        underside.addColorStop(1, "rgba(2,5,14,.92)");
+        underside.addColorStop(0, platformMaterials[1]);
+        underside.addColorStop(1, platformMaterials[2]);
         ctx.fillStyle = underside;
         ctx.beginPath();
         ctx.moveTo(tile.x + 5, tile.y + 15);
@@ -2217,10 +2365,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.shadowColor = glow;
         roundedRect(ctx, tile.x + 2, tile.y, TILE - 4, 24, 5);
         const plate = ctx.createLinearGradient(tile.x, tile.y, tile.x, tile.y + 24);
-        plate.addColorStop(0, "#39506e");
-        plate.addColorStop(0.18, "#182940");
-        plate.addColorStop(0.58, "#0a1425");
-        plate.addColorStop(1, "#030813");
+        plate.addColorStop(0, platformMaterials[0]);
+        plate.addColorStop(0.18, platformMaterials[1]);
+        plate.addColorStop(0.58, platformMaterials[2]);
+        plate.addColorStop(1, "#02040a");
         ctx.fillStyle = plate;
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -2233,6 +2381,33 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.fillRect(tile.x + 8, tile.y + 6, 13, 2);
         ctx.fillRect(tile.x + 41, tile.y + 15, 11, 2);
         ctx.fillRect(tile.x + 25, tile.y + 9, 3, 8);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = theme.secondary;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.45;
+        if (theme.motif === 2 || theme.motif === 3) {
+          for (let stripe = 0; stripe < 4; stripe++) {
+            ctx.beginPath();
+            ctx.moveTo(tile.x + 6 + stripe * 15, tile.y + 20);
+            ctx.lineTo(tile.x + 13 + stripe * 15, tile.y + 4);
+            ctx.stroke();
+          }
+        } else if (theme.motif === 4 || theme.motif === 5 || theme.motif === 8) {
+          ctx.beginPath();
+          ctx.arc(tile.x + TILE / 2, tile.y + 12, 5 + theme.motif % 4, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (theme.motif === 6) {
+          for (let cell = 0; cell < 5; cell++) ctx.strokeRect(tile.x + 7 + cell * 11, tile.y + 5, 8, 13);
+        } else if (theme.motif === 7) {
+          ctx.setLineDash([4, 4]);
+          ctx.strokeRect(tile.x + 7, tile.y + 5, TILE - 14, 13);
+          ctx.setLineDash([]);
+        } else if (theme.motif === 9) {
+          ctx.beginPath();
+          ctx.moveTo(tile.x + 8, tile.y + 12);
+          ctx.lineTo(tile.x + TILE - 8, tile.y + 12);
+          ctx.stroke();
+        }
         ctx.globalAlpha = 1;
         ctx.fillStyle = "rgba(225,249,255,.48)";
         ctx.fillRect(tile.x + 9, tile.y + 2, TILE - 19, 1);
