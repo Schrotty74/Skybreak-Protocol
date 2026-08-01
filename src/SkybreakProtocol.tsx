@@ -64,6 +64,19 @@ const QUALITY_SETTINGS: Record<Quality, {
   ultra: { fps: 60, dpr: 4, glFps: 60, glDpr: 2.5, webgl: true, traffic: 38, layers: 5, rain: 170, fog: 7 },
 };
 
+function activeQualitySettings(quality: Quality, ultraFallback = false, mobileHighThermalProtection = false) {
+  const resolvedQuality = quality === "ultra" && ultraFallback ? "medium" : quality;
+  const settings = QUALITY_SETTINGS[resolvedQuality];
+  // Mobile High keeps gameplay at 60 FPS, but reduces only the separate effect
+  // renderer and the most expensive atmospheric layers.
+  if (resolvedQuality === "high" && typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches) {
+    return mobileHighThermalProtection
+      ? { ...settings, dpr: 1.25, glFps: 20, glDpr: 0.8, traffic: 8, layers: 1, rain: 24, fog: 1 }
+      : { ...settings, dpr: 1.5, glFps: 30, glDpr: 1, traffic: 13, layers: 2, rain: 40, fog: 2 };
+  }
+  return settings;
+}
+
 const VIEW_W = 960;
 const VIEW_H = 540;
 const RENDER_RESOLUTIONS: Record<RenderResolution, { width: number; height: number }> = {
@@ -1025,7 +1038,7 @@ function startWebGlEffects(
   let animation = 0;
   let lastGlFrame = 0;
   const render = (time: number) => {
-    const settings = QUALITY_SETTINGS[getQuality()];
+    const settings = activeQualitySettings(getQuality());
     const frameInterval = 1000 / settings.glFps;
     if (time - lastGlFrame < frameInterval) {
       animation = requestAnimationFrame(render);
@@ -1077,6 +1090,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const musicEnabledRef = useRef(true);
   const qualityRef = useRef<Quality>("medium");
   const renderResolutionRef = useRef<RenderResolution>("1080p");
+  const mobileHighThermalRef = useRef({ active: false, samples: 0, totalWork: 0 });
   const ultraFpsRef = useRef(60);
   const mobileUltra120Ref = useRef(false);
   const ultraFallbackRef = useRef(false);
@@ -1548,9 +1562,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     let lastGlFrame = 0;
 
     const render = (time: number) => {
-      const settings = qualityRef.current === "ultra" && ultraFallbackRef.current
-        ? QUALITY_SETTINGS.medium
-        : QUALITY_SETTINGS[qualityRef.current];
+      const settings = activeQualitySettings(qualityRef.current, ultraFallbackRef.current, mobileHighThermalRef.current.active);
       const frameInterval = 1000 / settings.glFps;
       if (time - lastGlFrame < frameInterval) {
         animation = requestAnimationFrame(render);
@@ -1643,11 +1655,115 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
     let frame = 0;
     const view = renderViewRef.current;
+    let staticBackdrop: HTMLCanvasElement | null = null;
+    let staticBackdropKey = "";
+    let staticOverlay: HTMLCanvasElement | null = null;
+    let staticOverlayKey = "";
+    let mobileRainLayer: HTMLCanvasElement | null = null;
+    let mobileRainKey = "";
+    let mobileRainUpdatedAt = 0;
+    let mobileFogLayer: HTMLCanvasElement | null = null;
+    let mobileFogKey = "";
+    let mobileFogUpdatedAt = 0;
+    const makeLayer = () => document.createElement("canvas");
+    const drawStaticBackdrop = (theme: typeof LEVEL_THEMES[number]) => {
+      const key = `${theme.name}:${Math.round(view.width)}:${Math.round(view.height)}`;
+      if (key !== staticBackdropKey || !staticBackdrop) {
+        staticBackdropKey = key;
+        staticBackdrop = makeLayer();
+        staticBackdrop.width = Math.max(1, Math.ceil(view.width));
+        staticBackdrop.height = Math.max(1, Math.ceil(view.height));
+        const layer = staticBackdrop.getContext("2d");
+        if (layer) {
+          const bg = layer.createLinearGradient(0, 0, 0, view.height);
+          bg.addColorStop(0, theme.top);
+          bg.addColorStop(0.48, theme.mid);
+          bg.addColorStop(1, theme.bottom);
+          layer.fillStyle = bg;
+          layer.fillRect(0, 0, view.width, view.height);
+        }
+      }
+      ctx.drawImage(staticBackdrop, 0, 0, view.width, view.height);
+    };
+    const drawStaticOverlay = () => {
+      const key = `${Math.round(view.width)}:${Math.round(view.height)}`;
+      if (key !== staticOverlayKey || !staticOverlay) {
+        staticOverlayKey = key;
+        staticOverlay = makeLayer();
+        staticOverlay.width = Math.max(1, Math.ceil(view.width));
+        staticOverlay.height = Math.max(1, Math.ceil(view.height));
+        const layer = staticOverlay.getContext("2d");
+        if (layer) {
+          const vignette = layer.createRadialGradient(view.width / 2, view.height / 2, 150, view.width / 2, view.height / 2, Math.max(view.width, view.height) * 0.72);
+          vignette.addColorStop(0.55, "rgba(0,0,0,0)");
+          vignette.addColorStop(1, "rgba(0,0,0,.52)");
+          layer.fillStyle = vignette;
+          layer.fillRect(0, 0, view.width, view.height);
+          layer.fillStyle = "rgba(255,255,255,.025)";
+          for (let y = 0; y < view.height; y += 4) layer.fillRect(0, y, view.width, 1);
+        }
+      }
+      ctx.drawImage(staticOverlay, 0, 0, view.width, view.height);
+    };
+    const mobileEffectInterval = (status: GameStatus) => status === "ready" ? 1000 / 12 : 1000 / 30;
+    const drawMobileRain = (world: World, theme: typeof LEVEL_THEMES[number], settings: ReturnType<typeof activeQualitySettings>) => {
+      const now = performance.now();
+      const key = `${theme.name}:${Math.round(view.width)}:${Math.round(view.height)}:${settings.rain}`;
+      if (key !== mobileRainKey || !mobileRainLayer || now - mobileRainUpdatedAt >= mobileEffectInterval(world.status)) {
+        mobileRainKey = key;
+        mobileRainUpdatedAt = now;
+        mobileRainLayer ??= makeLayer();
+        mobileRainLayer.width = Math.max(1, Math.ceil(view.width));
+        mobileRainLayer.height = Math.max(1, Math.ceil(view.height));
+        const layer = mobileRainLayer.getContext("2d");
+        if (layer) {
+          layer.clearRect(0, 0, view.width, view.height);
+          layer.globalCompositeOperation = "screen";
+          const rainCount = [0, 3, 7, 9].includes(theme.motif) ? settings.rain : 0;
+          for (let i = 0; i < rainCount; i++) {
+            const x = (i * 79 + (i % 7) * 23 - world.fxTime * 36) % (view.width + 80) - 40;
+            const y = (i * 113 + world.fxTime * (280 + (i % 5) * 46)) % (view.height + 100) - 50;
+            const length = 8 + (i % 6) * 3;
+            const rain = layer.createLinearGradient(x, y, x - 3, y + length);
+            rain.addColorStop(0, "rgba(120,240,255,0)");
+            rain.addColorStop(1, i % 11 === 0 ? "rgba(255,77,166,.44)" : "rgba(122,231,255,.3)");
+            layer.strokeStyle = rain;
+            layer.lineWidth = i % 4 === 0 ? 1.2 : 0.65;
+            layer.beginPath(); layer.moveTo(x, y); layer.lineTo(x - 3, y + length); layer.stroke();
+          }
+        }
+      }
+      ctx.drawImage(mobileRainLayer, 0, 0, view.width, view.height);
+    };
+    const drawMobileFog = (world: World, settings: ReturnType<typeof activeQualitySettings>) => {
+      const now = performance.now();
+      const key = `${Math.round(view.width)}:${Math.round(view.height)}:${settings.fog}`;
+      if (key !== mobileFogKey || !mobileFogLayer || now - mobileFogUpdatedAt >= mobileEffectInterval(world.status)) {
+        mobileFogKey = key;
+        mobileFogUpdatedAt = now;
+        mobileFogLayer ??= makeLayer();
+        mobileFogLayer.width = Math.max(1, Math.ceil(view.width));
+        mobileFogLayer.height = Math.max(1, Math.ceil(view.height));
+        const layer = mobileFogLayer.getContext("2d");
+        if (layer) {
+          layer.clearRect(0, 0, view.width, view.height);
+          layer.globalCompositeOperation = "screen";
+          for (let i = 0; i < settings.fog; i++) {
+            const fogY = ((world.fxTime * (9 + i * 3) + i * view.height * 0.29) % (view.height + 180)) - 90;
+            const fog = layer.createLinearGradient(0, fogY - 45, 0, fogY + 45);
+            fog.addColorStop(0, "rgba(0,0,0,0)");
+            fog.addColorStop(0.5, i % 2 ? "rgba(255,43,138,.035)" : "rgba(0,240,255,.045)");
+            fog.addColorStop(1, "rgba(0,0,0,0)");
+            layer.fillStyle = fog;
+            layer.fillRect(0, fogY - 45, view.width, 90);
+          }
+        }
+      }
+      ctx.drawImage(mobileFogLayer, 0, 0, view.width, view.height);
+    };
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
-      const settings = qualityRef.current === "ultra" && ultraFallbackRef.current
-        ? QUALITY_SETTINGS.medium
-        : QUALITY_SETTINGS[qualityRef.current];
+      const settings = activeQualitySettings(qualityRef.current, ultraFallbackRef.current, mobileHighThermalRef.current.active);
       const ratio = cappedPixelRatio(
         rect,
         Math.min(window.devicePixelRatio || 1, settings.dpr),
@@ -2026,10 +2142,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     };
 
     const draw = (world: World) => {
-      const settings = qualityRef.current === "ultra" && ultraFallbackRef.current
-        ? QUALITY_SETTINGS.medium
-        : QUALITY_SETTINGS[qualityRef.current];
+      const settings = activeQualitySettings(qualityRef.current, ultraFallbackRef.current, mobileHighThermalRef.current.active);
       const ultraActive = qualityRef.current === "ultra" && !ultraFallbackRef.current;
+      const mobileHigh = qualityRef.current === "high" && window.matchMedia("(pointer: coarse)").matches;
       const theme = LEVEL_THEMES[Math.max(0, world.sector - 1)] || LEVEL_THEMES[0];
       const sx = canvas.width / view.width;
       const sy = canvas.height / view.height;
@@ -2039,12 +2154,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const shakeY = world.shake ? (Math.random() - 0.5) * world.shake : 0;
       ctx.translate(shakeX, shakeY);
 
-      const bg = ctx.createLinearGradient(0, 0, 0, view.height);
-      bg.addColorStop(0, theme.top);
-      bg.addColorStop(0.48, theme.mid);
-      bg.addColorStop(1, theme.bottom);
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, view.width, view.height);
+      drawStaticBackdrop(theme);
 
       // Ultra: clearly visible volumetric neon shafts, independent of the
       // currently selected level motif.
@@ -2354,25 +2464,27 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       }
       ctx.restore();
 
-      // Neon rain is screen-space so it remains consistent while climbing.
-      ctx.save();
-      ctx.globalCompositeOperation = "screen";
-      const rainCount = [0, 3, 7, 9].includes(theme.motif) ? settings.rain : 0;
-      for (let i = 0; i < rainCount; i++) {
-        const x = (i * 79 + (i % 7) * 23 - world.fxTime * 36) % (view.width + 80) - 40;
-        const y = (i * 113 + world.fxTime * (280 + (i % 5) * 46)) % (view.height + 100) - 50;
-        const length = 8 + (i % 6) * 3;
-        const rain = ctx.createLinearGradient(x, y, x - 3, y + length);
-        rain.addColorStop(0, "rgba(120,240,255,0)");
-        rain.addColorStop(1, i % 11 === 0 ? "rgba(255,77,166,.44)" : "rgba(122,231,255,.3)");
-        ctx.strokeStyle = rain;
-        ctx.lineWidth = i % 4 === 0 ? 1.2 : 0.65;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x - 3, y + length);
-        ctx.stroke();
+      // Mobile High refreshes the rain layer at 30 FPS (12 FPS on the ready
+      // screen) and composites the cached image into the 60-FPS game frame.
+      if (mobileHigh) {
+        drawMobileRain(world, theme, settings);
+      } else {
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        const rainCount = [0, 3, 7, 9].includes(theme.motif) ? settings.rain : 0;
+        for (let i = 0; i < rainCount; i++) {
+          const x = (i * 79 + (i % 7) * 23 - world.fxTime * 36) % (view.width + 80) - 40;
+          const y = (i * 113 + world.fxTime * (280 + (i % 5) * 46)) % (view.height + 100) - 50;
+          const length = 8 + (i % 6) * 3;
+          const rain = ctx.createLinearGradient(x, y, x - 3, y + length);
+          rain.addColorStop(0, "rgba(120,240,255,0)");
+          rain.addColorStop(1, i % 11 === 0 ? "rgba(255,77,166,.44)" : "rgba(122,231,255,.3)");
+          ctx.strokeStyle = rain;
+          ctx.lineWidth = i % 4 === 0 ? 1.2 : 0.65;
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 3, y + length); ctx.stroke();
+        }
+        ctx.restore();
       }
-      ctx.restore();
 
       if ([0, 3, 6].includes(theme.motif)) {
         ctx.strokeStyle = theme.accent;
@@ -2897,34 +3009,24 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       }
 
       // Layered fog and light shafts bind foreground and skyline together.
-      ctx.save();
-      ctx.globalCompositeOperation = "screen";
-      for (let i = 0; i < settings.fog; i++) {
-        const fogY = ((world.fxTime * (9 + i * 3) + i * view.height * 0.29) % (view.height + 180)) - 90;
-        const fog = ctx.createLinearGradient(0, fogY - 45, 0, fogY + 45);
-        fog.addColorStop(0, "rgba(0,0,0,0)");
-        fog.addColorStop(0.5, i % 2 ? "rgba(255,43,138,.035)" : "rgba(0,240,255,.045)");
-        fog.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = fog;
-        ctx.fillRect(0, fogY - 45, view.width, 90);
+      if (mobileHigh) {
+        drawMobileFog(world, settings);
+      } else {
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        for (let i = 0; i < settings.fog; i++) {
+          const fogY = ((world.fxTime * (9 + i * 3) + i * view.height * 0.29) % (view.height + 180)) - 90;
+          const fog = ctx.createLinearGradient(0, fogY - 45, 0, fogY + 45);
+          fog.addColorStop(0, "rgba(0,0,0,0)");
+          fog.addColorStop(0.5, i % 2 ? "rgba(255,43,138,.035)" : "rgba(0,240,255,.045)");
+          fog.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = fog;
+          ctx.fillRect(0, fogY - 45, view.width, 90);
+        }
+        ctx.restore();
       }
-      ctx.restore();
 
-      const vignette = ctx.createRadialGradient(
-        view.width / 2,
-        view.height / 2,
-        150,
-        view.width / 2,
-        view.height / 2,
-        Math.max(view.width, view.height) * 0.72,
-      );
-      vignette.addColorStop(0.55, "rgba(0,0,0,0)");
-      vignette.addColorStop(1, "rgba(0,0,0,.52)");
-      ctx.fillStyle = vignette;
-      ctx.fillRect(0, 0, view.width, view.height);
-
-      ctx.fillStyle = "rgba(255,255,255,.025)";
-      for (let y = 0; y < view.height; y += 4) ctx.fillRect(0, y, view.width, 1);
+      drawStaticOverlay();
 
       if (world.powerUpMessageTime > 0 && world.powerUpMessage) {
         const alpha = Math.min(1, world.powerUpMessageTime * 2);
@@ -2950,17 +3052,40 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
     let lastRenderedFrame = 0;
     const loop = (time: number) => {
-      const frameInterval = 1000 / (qualityRef.current === "ultra" ? ultraFpsRef.current : QUALITY_SETTINGS[qualityRef.current].fps);
+      const world = worldRef.current;
+      const mobileHigh = qualityRef.current === "high" && window.matchMedia("(pointer: coarse)").matches;
+      const targetFps = qualityRef.current === "ultra"
+        ? ultraFpsRef.current
+        : mobileHigh && world.status === "ready"
+          ? 20
+          : QUALITY_SETTINGS[qualityRef.current].fps;
+      const frameInterval = 1000 / targetFps;
       if (time - lastRenderedFrame < frameInterval) {
         frame = requestAnimationFrame(loop);
         return;
       }
       lastRenderedFrame = time;
-      const world = worldRef.current;
       const dt = world.lastTime ? Math.min(0.033, (time - world.lastTime) / 1000) : 0;
       world.lastTime = time;
+      const workStart = performance.now();
       update(world, dt);
       draw(world);
+      if (mobileHigh && world.status === "playing") {
+        const thermal = mobileHighThermalRef.current;
+        thermal.totalWork += performance.now() - workStart;
+        thermal.samples += 1;
+        if (thermal.samples >= 45) {
+          const averageWork = thermal.totalWork / thermal.samples;
+          const nextActive = thermal.active ? averageWork > 7 : averageWork > 12;
+          if (nextActive !== thermal.active) {
+            thermal.active = nextActive;
+            setThermalProtection(nextActive);
+            window.dispatchEvent(new Event("skybreak-quality"));
+          }
+          thermal.samples = 0;
+          thermal.totalWork = 0;
+        }
+      }
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);
@@ -3248,7 +3373,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <small>{LEVEL_THEMES[sector - 1].name}</small>
         </label>
         <div className="run-record">
-          <span>{renderer} · {quality.toUpperCase()}{quality === "ultra" ? ` · ${ultraFps} FPS${thermalProtection ? ` · ${isDe ? "WÄRMESCHUTZ" : "THERMAL SAFE"}` : ""}` : ""} · LOCAL RECORD</span>
+          <span>{renderer} · {quality.toUpperCase()}{quality === "ultra" ? ` · ${ultraFps} FPS` : quality === "high" && mobileDevice ? " · 60 FPS" : ""}{thermalProtection && (quality === "ultra" || (quality === "high" && mobileDevice)) ? ` · ${isDe ? "WÄRMESCHUTZ" : "THERMAL SAFE"}` : ""} · LOCAL RECORD</span>
           <strong>{highScore.toString().padStart(6, "0")}</strong>
         </div>
         {!mobileDevice && (
