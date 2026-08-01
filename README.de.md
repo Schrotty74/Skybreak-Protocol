@@ -33,9 +33,9 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 ## Handy-Screenshots
 
 <p align="center">
-  <a href="docs/screenshots/mobile-start.jpeg?raw=1"><img src="docs/screenshots/mobile-start.jpeg" alt="Skybreak Protocol Startbildschirm auf dem Handy" width="260"></a>
+  <a href="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/mobile-start.jpeg"><img src="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/mobile-start.jpeg" alt="Skybreak Protocol Startbildschirm auf dem Handy" width="260"></a>
   &nbsp;&nbsp;
-  <a href="docs/screenshots/mobile-gameplay.jpeg?raw=1"><img src="docs/screenshots/mobile-gameplay.jpeg" alt="Skybreak Protocol Spielansicht auf dem Handy" width="260"></a>
+  <a href="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/mobile-gameplay.jpeg"><img src="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/mobile-gameplay.jpeg" alt="Skybreak Protocol Spielansicht auf dem Handy" width="260"></a>
 </p>
 
 <p align="center"><em>Eine Vorschau anklicken, um das Bild in voller Größe zu öffnen.</em></p>
@@ -43,9 +43,9 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 ## Desktop-Screenshots
 
 <p align="center">
-  <a href="docs/screenshots/desktop-gameplay-ultra.jpeg?raw=1"><img src="docs/screenshots/desktop-gameplay-ultra.jpeg" alt="Skybreak Protocol Desktop-Spielansicht im Ultra-Modus" width="430"></a>
+  <a href="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/desktop-gameplay-ultra.jpeg"><img src="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/desktop-gameplay-ultra.jpeg" alt="Skybreak Protocol Desktop-Spielansicht im Ultra-Modus" width="430"></a>
   &nbsp;&nbsp;
-  <a href="docs/screenshots/desktop-start-ultra.jpeg?raw=1"><img src="docs/screenshots/desktop-start-ultra.jpeg" alt="Skybreak Protocol Desktop-Startbildschirm im Ultra-Modus" width="430"></a>
+  <a href="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/desktop-start-ultra.jpeg"><img src="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/desktop-start-ultra.jpeg" alt="Skybreak Protocol Desktop-Startbildschirm im Ultra-Modus" width="430"></a>
 </p>
 
 <p align="center"><em>Eine Vorschau anklicken, um das Bild in voller Größe zu öffnen.</em></p>
