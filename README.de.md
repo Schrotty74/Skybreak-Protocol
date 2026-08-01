@@ -110,12 +110,12 @@ Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
 | Stufe | Ziel | Effekte |
 |---|---|---|
 | Niedrig | ältere oder warme Mobilgeräte | 30 FPS, reduzierte Auflösung, WebGL-Effekte aus, wenig Regen und Nebel |
-| Mittel | empfohlene Smartphone-Einstellung | 40 FPS, WebGL-Nebel, reduzierte Partikel und Parallaxe |
+| Mittel | schonende Smartphone-Einstellung | 40 FPS, WebGL-Nebel, reduzierte Partikel und Parallaxe |
 | Hoch | leistungsfähige Geräte | bis 60 FPS, hohe Auflösung und erweiterte Effekte |
 | Ultra | aktuelle Desktop- und Mobil-GPUs | vollständiges WebGPU-Post-Processing, optionales Mobile Ultra bis 120 FPS, F16-Shader, GPU-Instancing sowie adaptive Auflösung und Effekte; WebGL2-Fallback |
 
 > [!WARNING]
-> **Mobile Ultra kann das Smartphone sehr stark belasten. Das Gerät kann dabei deutlich bis sehr warm werden und der Akkuverbrauch steigt. Bei hohen Umgebungstemperaturen oder direkter Sonneneinstrahlung wird von Mobile Ultra abgeraten. Für längeres Spielen wird „Mittel“ empfohlen. Bei starker Erwärmung sofort auf „Niedrig“ wechseln oder das Spiel pausieren.**
+> **Auf einem iPhone 17 Pro erreichte „Ultra + 1080p“ 60 FPS. 4K Ultra ist ein extrem aufwendiger Qualitäts- und Screenshot-Modus und nicht für 60 FPS auf Mobilgeräten vorgesehen. Ultra kann das Gerät dennoch erwärmen; bei hohen Umgebungstemperaturen, direkter Sonne oder starker Erwärmung auf „Mittel“ oder „Niedrig“ wechseln.**
 
 ### Was Ultra verändert
 
@@ -207,7 +207,7 @@ Jede Beta- und Final-Version benötigt eine eigene ausführliche Datei unter `do
 
 ## Hinweise zur Geräteleistung
 
-Ultra kann Smartphones stark belasten und zu höherer Temperatur sowie schnellerem Akkuverbrauch führen. Für iPhones und Android-Geräte ist **Mittel** die empfohlene Einstellung. Bei deutlicher Erwärmung sollte **Niedrig** verwendet werden.
+Auf einem **iPhone 17 Pro** erreichte **Ultra + 1080p** 60 FPS bei vollständigen Ultra-Effekten. **4K Ultra** ist auf Mobilgeräten ein sehr aufwendiger Qualitäts- und Screenshot-Modus, nicht der 60-FPS-Modus. Ultra kann das Gerät dennoch erwärmen; bei deutlicher Erwärmung sollte **Mittel** oder **Niedrig** verwendet werden.
 
 ## Lizenz
 

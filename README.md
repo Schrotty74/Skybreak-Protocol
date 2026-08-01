@@ -110,12 +110,12 @@ The selected level is stored locally on the device.
 | Level | Target | Effects |
 |---|---|---|
 | Low | older or warm mobile devices | 30 FPS, reduced resolution, WebGL effects disabled, little rain and fog |
-| Medium | recommended smartphone setting | 40 FPS, WebGL fog, reduced particles and parallax |
+| Medium | battery-friendly smartphone setting | 40 FPS, WebGL fog, reduced particles and parallax |
 | High | powerful devices | up to 60 FPS, high resolution, and extended effects |
 | Ultra | current desktop and mobile GPUs | full-scene WebGPU post-processing, optional Mobile Ultra up to 120 FPS, F16 shaders, GPU instancing, adaptive resolution and effects; WebGL2 fallback |
 
 > [!WARNING]
-> **Mobile Ultra can place a very heavy load on a smartphone. The device may become noticeably or very warm and battery consumption increases. Mobile Ultra is not recommended in high ambient temperatures or direct sunlight. Medium is recommended for longer sessions. If the phone becomes very warm, switch to Low immediately or pause the game.**
+> **On an iPhone 17 Pro, “Ultra + 1080p” reached 60 FPS. 4K Ultra is an extremely demanding quality and screenshot mode, not a 60 FPS mobile mode. Ultra can still warm the device; in high ambient temperatures, direct sunlight, or when the phone becomes very warm, switch to Medium or Low.**
 
 ### What Ultra changes
 
@@ -207,7 +207,7 @@ Every beta and final build requires its own detailed file under `docs/releases/`
 
 ## Device performance
 
-Ultra can heavily load smartphones, increase temperature, and drain the battery faster. **Medium** is recommended for iPhone and Android devices. Select **Low** if the device becomes noticeably warm.
+On an **iPhone 17 Pro**, **Ultra + 1080p** reached 60 FPS with the full Ultra effects. **4K Ultra** is an extremely demanding quality and screenshot mode on mobile devices, not the 60 FPS mode. Ultra can still warm the device; select **Medium** or **Low** if it becomes noticeably warm.
 
 ## License
 
