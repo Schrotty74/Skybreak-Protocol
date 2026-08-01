@@ -1376,27 +1376,39 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     if (!canvas || !sourceCanvas) return;
     if (quality === "ultra") {
       ultraFallbackRef.current = false;
+      const desktopMac = /Macintosh|Mac OS X/i.test(navigator.userAgent)
+        && window.matchMedia("(pointer: fine)").matches;
+      const firefox = /Firefox\//i.test(navigator.userAgent);
       let disposed = false;
       let cleanup: EffectCleanup | null = null;
       const startFallback = () => {
         ultraFallbackRef.current = true;
-        ultraFpsRef.current = 40;
-        setUltraFps(40);
+        const fallbackFps = firefox ? 30 : 40;
+        ultraFpsRef.current = fallbackFps;
+        setUltraFps(fallbackFps);
         window.dispatchEvent(new Event("skybreak-quality"));
         return startWebGlEffects(canvas, setRenderer, () => "medium");
       };
-      void startWebGpuUltraRenderer(
-        canvas,
-        sourceCanvas,
-        setRenderer,
-        getUltraSceneInstances,
-        (nextFps) => {
-          ultraFpsRef.current = nextFps;
-          setUltraFps(nextFps);
-        },
-        () => window.matchMedia("(pointer: fine)").matches || mobileUltra120Ref.current,
-        setThermalProtection,
-      )
+
+      // copyExternalImageToTexture can silently produce a black scene texture
+      // in desktop Safari and Chromium on macOS. Use the transparent WebGPU
+      // atmosphere there; the 2D game canvas remains the visible base layer.
+      const gpuRenderer = desktopMac
+        ? startWebGpuEffects(canvas, setRenderer)
+        : startWebGpuUltraRenderer(
+            canvas,
+            sourceCanvas,
+            setRenderer,
+            getUltraSceneInstances,
+            (nextFps) => {
+              ultraFpsRef.current = nextFps;
+              setUltraFps(nextFps);
+            },
+            () => window.matchMedia("(pointer: fine)").matches || mobileUltra120Ref.current,
+            setThermalProtection,
+          );
+
+      void gpuRenderer
         .then((gpuCleanup) => {
           if (disposed) {
             gpuCleanup?.();
@@ -2728,7 +2740,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             <button type="button" onClick={() => setAvailableUpdate(null)} aria-label={isDe ? "Update-Hinweis schließen" : "Dismiss update notice"}>×</button>
           </aside>
         )}
-        <canvas key={quality === "ultra" ? "webgpu" : "webgl"} ref={fxCanvasRef} className={`fx-canvas${quality === "ultra" ? " full-scene-fx" : ""}`} aria-hidden="true" />
+        <canvas
+          key={quality === "ultra" ? "webgpu" : "webgl"}
+          ref={fxCanvasRef}
+          className={`fx-canvas${quality === "ultra" && !(/Macintosh|Mac OS X/i.test(navigator.userAgent) && window.matchMedia("(pointer: fine)").matches) ? " full-scene-fx" : ""}`}
+          aria-hidden="true"
+        />
         <canvas ref={canvasRef} aria-label={isDe ? "Spielansicht: Klettere durch die Cyberpunk-Megacity" : "Game view: climb through the cyberpunk megacity"} />
         {status !== "playing" && (
           <div className="game-overlay">
