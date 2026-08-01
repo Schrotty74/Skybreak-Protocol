@@ -6,9 +6,9 @@
 
 # Skybreak Protocol
 
-**Aktuelle Version:** `v1.0.0-beta.4` · [Ausführlicher Changelog](docs/releases/1.0.0-beta.4.md) · [Alle Changelogs](CHANGELOG.md)
+**Aktuelle Version:** `v1.0.0-beta.5` · [Ausführlicher Changelog](docs/releases/1.0.0-beta.5.md) · [Alle Changelogs](CHANGELOG.md)
 
-Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Kämpfe dich durch zehn optisch eigenständige Level nach oben, durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus und erreiche den Sendeturm über der Megacity. Jedes Level besitzt eine eigene Cyberpunk-Farbwelt, animierte Kulisse, Effekte und separat wählbare Schwierigkeit.
+Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Kämpfe dich durch zehn optisch eigenständige Level nach oben, durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus und erreiche den Sendeturm über der Megacity. Jedes Level besitzt eine eigene Cyberpunk-Farbwelt, animierte Kulisse, Effekte und eine Schwierigkeit, die in den nächsten Level übernommen wird.
 
 > Skybreak Protocol verwendet keine Grafiken, Musik, Figuren oder Quelltexte von Nintendo oder Ice Climber. Es handelt sich um eine eigenständige Neuinterpretation des klassischen vertikalen Arcade-Spielprinzips.
 
@@ -23,7 +23,7 @@ Die Web-App funktioniert ohne Installation. Auf iPhone oder iPad kann sie in Saf
 
 Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protocol einmal die öffentlichen GitHub-Releases und zeigt einen Hinweis an, wenn eine neuere Beta- oder Final-Version verfügbar ist.
 
-**Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.0-beta.4) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle zehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
+**Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.0-beta.5) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle zehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
 
 ## Handbuch
 
@@ -56,7 +56,7 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 - Jedes Level ist ein vollständiger Aufstieg über 15 Etagen mit eigener animierter Umgebung, Plattformmaterial, Wächterdrohne und Soundtrack
 - Plattformmodule von unten durchbrechen
 - Gegner und nahe Plattformmodule mit dem Eispickel des Roboters angreifen
-- Truhen passend zur Schwierigkeit: auf Leicht dauerhaft alle zwei bis drei Etagen, auf Mittel ab der Hälfte zeitlich begrenzt und auf Schwer erst ab zwei Dritteln mit schnellen Positionswechseln – auch unterhalb des Spielers
+- Truhen passend zur Schwierigkeit: auf Leicht dauerhaft alle zwei bis drei Etagen, auf Mittel ab der Hälfte zeitlich begrenzt und auf Schwer erst ab zwei Dritteln mit schnellen Positionswechseln; Schwere Truhen bleiben dabei sichtbar und erscheinen bevorzugt auf Spielerhöhe oder darüber, eine erschienene wandernde Truhe bleibt beim Zurückspringen aktiv
 - Wächterdrohne ausschalten, den nächsten Sektor als Vorschau sehen und danach Kraft oder Design des Eispickels verbessern
 - Sichtbare Roboterschäden, Sensorflackern und Funken bei verlorenen Leben erleben
 - Erreichte Level dauerhaft lokal freischalten und nach einem Lauf direkt als neues Startlevel auswählen
@@ -192,6 +192,8 @@ npm run dev
 ```
 
 `npm run dev` ist immer als **LOCAL TEST** gekennzeichnet, verwendet getrennte Spielstände und fragt keine GitHub-Releases ab. Für die anderen Kanäle stehen `npm run dev:beta` und `npm run dev:final` zur Verfügung; beide lehnen eine Version für den falschen Release-Kanal ab.
+
+Auf macOS startet ein Doppelklick auf `Skybreak-Protocol-Lokaltest.command` diesen lokalen Testkanal und öffnet ihn im Browser. Das Terminalfenster bleibt während des Servers geöffnet; mit `Ctrl+C` wird er beendet.
 
 Produktions-Build:
 

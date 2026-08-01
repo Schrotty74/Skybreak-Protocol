@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import packageJson from "./package.json" with { type: "json" };
 
@@ -9,9 +10,24 @@ export default defineConfig(({ mode }) => {
     throw new Error(`Unsupported build channel: ${mode}`);
   }
 
+  const localEntryRedirect: Plugin = {
+    name: "skybreak-local-entry-redirect",
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        const requestUrl = (request as { url?: string }).url;
+        if (requestUrl === "/Skybreak-Protocol/" || requestUrl === "/Skybreak-Protocol") {
+          response.writeHead(302, { Location: "/Skybreak-Protocol/source/" });
+          response.end();
+          return;
+        }
+        next();
+      });
+    },
+  };
+
   return {
     base: "/Skybreak-Protocol/",
-    plugins: [react()],
+    plugins: buildChannel === "dev" ? [react(), localEntryRedirect] : [react()],
     define: {
       __APP_VERSION__: JSON.stringify(packageJson.version),
       __APP_BUILD_CHANNEL__: JSON.stringify(buildChannel),

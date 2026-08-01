@@ -23,10 +23,10 @@ const POWER_UP_ROTATION: PowerUpKind[] = ["shield", "life", "score", "overdrive"
 export const ROAMING_CHEST_RULES: Record<RoamingChestDifficulty, {
   unlockProgress: number;
   visibleSeconds: number;
-  forceBelowEvery: number;
+  forceBelowEvery?: number;
 }> = {
   medium: { unlockProgress: 0.5, visibleSeconds: 8, forceBelowEvery: 3 },
-  hard: { unlockProgress: 2 / 3, visibleSeconds: 4.5, forceBelowEvery: 2 },
+  hard: { unlockProgress: 2 / 3, visibleSeconds: 4.5 },
 };
 
 export function buildChestSpawns(rowCount: number): ChestSpawn[] {

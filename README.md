@@ -6,9 +6,9 @@
 
 # Skybreak Protocol
 
-**Current release:** `v1.0.0-beta.4` · [Detailed changelog](docs/releases/1.0.0-beta.4.en.md) · [All changelogs](CHANGELOG.md)
+**Current release:** `v1.0.0-beta.5` · [Detailed changelog](docs/releases/1.0.0-beta.5.en.md) · [All changelogs](CHANGELOG.md)
 
-An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through ten visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Each level has its own cyberpunk palette, animated scenery, effects, and independently selectable difficulty.
+An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through ten visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Each level has its own cyberpunk palette, animated scenery, effects, and a difficulty that carries into the next level.
 
 > Skybreak Protocol uses no graphics, music, characters, or source code from Nintendo or Ice Climber. It is an independent reinterpretation of the classic vertical arcade concept.
 
@@ -23,7 +23,7 @@ The web app runs without installation. On iPhone or iPad, use **Share → Add to
 
 The current version is shown in the game. On startup, Skybreak Protocol checks the public GitHub releases once and displays a notice when a newer beta or final build is available.
 
-**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.0-beta.4). Extract it and open the matching starter for macOS, Windows, or Linux. All ten music tracks are included; only the optional update check requires internet access.
+**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.0-beta.5). Extract it and open the matching starter for macOS, Windows, or Linux. All ten music tracks are included; only the optional update check requires internet access.
 
 ## Manual
 
@@ -56,7 +56,7 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
 - Every level is a complete 15-floor ascent with a distinct animated environment, platform material, guardian drone, and soundtrack
 - Break platform modules from below
 - Use the robot's ice pick against enemies and nearby platform modules
-- Difficulty-aware chests: persistent every two to three floors on Easy, time-limited after halfway on Medium, and only after two thirds on Hard with faster relocations — including below the player
+- Difficulty-aware chests: persistent every two to three floors on Easy, time-limited after halfway on Medium, and only after two thirds on Hard with faster relocations; Hard relocations stay in view and prefer the player's height or above it, while an unlocked roaming chest stays active during backtracking
 - Defeat the level guardian, preview the next sector, then choose an ice-pick power or visual-style upgrade
 - Watch the robot show persistent armor damage, sensor flicker, and sparks when lives are lost
 - Permanently unlock reached levels locally and select any unlocked level as the next starting point after a run
@@ -192,6 +192,8 @@ npm run dev
 ```
 
 `npm run dev` is always labelled **LOCAL TEST**, uses separate save data, and does not check GitHub releases. `npm run dev:beta` and `npm run dev:final` are available for the other channels and each reject a version intended for the wrong release channel.
+
+On macOS, double-click `Skybreak-Protocol-Lokaltest.command` to start this local test channel and open it in the browser. The Terminal window stays open while the server is running; press `Ctrl+C` there to stop it.
 
 Production build:
 

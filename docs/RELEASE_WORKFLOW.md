@@ -15,6 +15,8 @@ Skybreak Protocol verwendet zwei öffentliche Release-Stufen:
 
 `npm run build:local` ist der erste sichere Test-Build: Er braucht keinen Changelog und verändert weder `dist/` noch Release-Artefakte. Beta- und Final-Builds akzeptieren nur die jeweils passende Versionsform und prüfen weiterhin beide Release-Changelogs. Der bisherige Befehl `npm run build` bleibt ausschließlich für die veröffentlichbare Release-Version reserviert und erzeugt `dist/` für GitHub Pages.
 
+Für den täglichen lokalen Test auf macOS startet `Skybreak-Protocol-Lokaltest.command` den Dev-Kanal direkt per Doppelklick. Es öffnet bei einem bereits laufenden Skybreak-Testserver dessen Seite oder startet ihn auf Port 5173.
+
 Final übernimmt beim ersten Start einmalig vorhandene, ältere Spielstände in seinen neuen, getrennten Speicherbereich. Lokale Tests und Betas lesen diese Daten nicht.
 
 ## Neue Beta oder Final-Version

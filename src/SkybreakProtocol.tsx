@@ -269,23 +269,31 @@ function themeColor(sector: number, key: "accent" | "secondary" | "warning") {
 
 const CHEST_POWER_UPS: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
 
-function placeRoamingChest(world: World, difficulty: RoamingChestDifficulty): boolean {
+function placeRoamingChest(world: World, difficulty: RoamingChestDifficulty, viewportHeight: number): boolean {
   const sector = world.sector;
   const previous = world.roamingChest;
-  const available = world.tiles.filter((tile) => tile.alive
-    && tile.y <= Math.min(475, world.player.y + 320)
-    && tile.y >= Math.max(WORLD_TOP, world.player.y - 360)
+  const validTiles = world.tiles.filter((tile) => tile.alive
     && tile.x >= TILE
     && tile.x <= VIEW_W - TILE * 2
     && (!previous || Math.abs(tile.x + 13 - previous.x) > TILE || Math.abs(tile.y - 30 - previous.y) > 60));
+  const available = difficulty === "hard"
+    ? validTiles.filter((tile) => tile.y >= world.cameraY - 40 && tile.y <= world.cameraY + viewportHeight + 40)
+    : validTiles.filter((tile) => tile.y <= Math.min(475, world.player.y + 320)
+      && tile.y >= Math.max(WORLD_TOP, world.player.y - 360));
   if (!available.length) {
     world.roamingChest = null;
     return false;
   }
   const rules = ROAMING_CHEST_RULES[difficulty];
-  const forceBelow = world.roamingChestMoves > 0 && world.roamingChestMoves % rules.forceBelowEvery === 0;
+  const forceBelow = difficulty === "medium"
+    && Boolean(rules.forceBelowEvery)
+    && world.roamingChestMoves > 0
+    && world.roamingChestMoves % rules.forceBelowEvery! === 0;
   const below = available.filter((tile) => tile.y > world.player.y + 65);
-  const pool = forceBelow && below.length ? below : available;
+  const preferredHardTiles = available.filter((tile) => tile.y <= world.player.y + PLAYER_H + 8);
+  const pool = difficulty === "hard"
+    ? (preferredHardTiles.length ? preferredHardTiles : available)
+    : forceBelow && below.length ? below : available;
   const chosen = pool[(sector * 11 + world.roamingChestMoves * 7) % pool.length];
   world.roamingChest = {
     x: chosen.x + 13,
@@ -1880,16 +1888,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         const rules = ROAMING_CHEST_RULES[roamingDifficulty];
         const unlocked = levelProgress(p.y) >= rules.unlockProgress;
         const alreadyCollected = world.collectedRoamingChestSectors[world.sector - 1];
-        if (!unlocked || alreadyCollected) {
+        if (alreadyCollected) {
           world.roamingChest = null;
           world.roamingChestTimer = 0;
-        } else if (!world.roamingChest) {
-          placeRoamingChest(world, roamingDifficulty);
-        } else {
+        } else if (!world.roamingChest && unlocked) {
+          placeRoamingChest(world, roamingDifficulty, renderViewRef.current.height);
+        } else if (world.roamingChest) {
           world.roamingChestTimer -= dt;
           if (world.roamingChestTimer <= 0) {
             world.roamingChestMoves += 1;
-            const movedBelow = placeRoamingChest(world, roamingDifficulty);
+            const movedBelow = placeRoamingChest(world, roamingDifficulty, renderViewRef.current.height);
             if (movedBelow) {
               world.powerUpMessage = isDe ? "TRUHE UNTER DIR NEU GEORTET" : "CHEST RELOCATED BELOW";
               world.powerUpMessageTime = 1.5;
@@ -2034,7 +2042,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         enemy.vy += GRAVITY * 0.78 * dt;
         enemy.x += enemy.vx * difficulty.enemy * levelPressure * dt;
         enemy.y += enemy.vy * dt;
-        if (enemy.x < 18 || enemy.x > VIEW_W - 54) enemy.vx *= -1;
+        if (enemy.x < 18) {
+          enemy.x = 18;
+          enemy.vx = Math.abs(enemy.vx);
+        } else if (enemy.x > VIEW_W - 54) {
+          enemy.x = VIEW_W - 54;
+          enemy.vx = -Math.abs(enemy.vx);
+        }
         enemy.grounded = false;
         for (const tile of world.tiles) {
           if (!tile.alive) continue;
@@ -2124,6 +2138,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           setUnlockedLevel(nextLevel);
           setSelectedStartLevel(nextLevel);
           setStoredItem("skybreak-unlocked-level", String(nextLevel));
+        }
+        if (world.sector < LEVEL_COUNT) {
+          const updatedDifficulties = [...difficultiesRef.current];
+          updatedDifficulties[world.sector] = difficultyLevel;
+          difficultiesRef.current = updatedDifficulties;
+          setLevelDifficulties(updatedDifficulties);
+          setStoredItem("skybreak-level-difficulties", JSON.stringify(updatedDifficulties));
         }
         world.status = world.sector < LEVEL_COUNT ? "upgrade" : "won";
         world.transition = 2.4;

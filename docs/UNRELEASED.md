@@ -1,8 +1,8 @@
-# Unveröffentlichte Änderungen seit Skybreak Protocol 1.0.0-beta.4
+# Unveröffentlichte Änderungen seit Skybreak Protocol 1.0.0-beta.5
 
 ## Umgesetzt
 
-- Noch keine weiteren Punkte festgelegt.
+Noch keine weiteren Punkte festgelegt.
 
 ## Geplant: Grafik und Präsentation
 
