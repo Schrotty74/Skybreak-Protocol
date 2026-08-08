@@ -1270,6 +1270,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const benchmarkResolution = benchmarkParameters?.get("resolution") as RenderResolution | null;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fxCanvasRef = useRef<HTMLCanvasElement>(null);
+  const bikiniAvatarImageRef = useRef<HTMLImageElement | null>(null);
   const worldRef = useRef<World>(makeWorld());
   const inputRef = useRef<Record<InputKey, boolean>>({ left: false, right: false, jump: false, attack: false });
   const pressedRef = useRef<Record<InputKey, boolean>>({ left: false, right: false, jump: false, attack: false });
@@ -1331,6 +1332,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     setLives(world.lives);
     setSector(world.sector);
     setStatus(world.status);
+  }, []);
+
+  useEffect(() => {
+    const image = new Image();
+    image.src = `${import.meta.env.BASE_URL}images/bikini-avatar-compact.png`;
+    image.onload = () => { bikiniAvatarImageRef.current = image; };
+    return () => { bikiniAvatarImageRef.current = null; };
   }, []);
 
   const ensureAudio = useCallback(() => {
@@ -3348,7 +3356,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         metal.addColorStop(0.32, "#152b40");
         metal.addColorStop(1, "#030914");
 
-        if (p.avatar === "bikini") {
+        const bikiniAvatar = bikiniAvatarImageRef.current;
+        if (p.avatar === "bikini" && bikiniAvatar?.complete && bikiniAvatar.naturalWidth > 0) {
+          ctx.save();
+          ctx.shadowBlur = ultraActive ? 0 : 12;
+          ctx.shadowColor = "#ff2b8a";
+          ctx.drawImage(bikiniAvatar, -22, -47, 44, 93);
+          ctx.restore();
+        } else if (p.avatar === "bikini") {
           // Cosmetic cheat: clearly adult arcade heroine with a stylised bikini outfit.
           ctx.strokeStyle = "#d9a48e";
           ctx.lineCap = "round";
