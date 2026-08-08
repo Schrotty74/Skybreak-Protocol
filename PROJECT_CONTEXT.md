@@ -46,6 +46,7 @@ Die zentralen Daten sind In-Memory-Spielzustand in `SkybreakProtocol.tsx` sowie 
 - Eigener Level-Soundtrack und synthetisierte Arcade-Soundeffekte.
 - Level-Regeln bleiben zustandslos im Spielstand: Bruchzonen, bewegliche und vereiste Plattformen, Strömungen, seitliche Laser, Reaktor-/Geist-Phasen und Rift-Sprünge verändern das jeweilige Level, ohne neue Browserdaten zu speichern. Der Eispickel kann Schalter aktivieren, Projektilenergie auflösen, Schildgegner knacken, Kryo-Frost auslösen und ab Kraftstufe 4 zeitweise Eisbrücken erzeugen.
 - Der rein kosmetische Bikini-Avatar-Cheat wird während einer aktiven Runde durch zwei Musik-Aus/An-Zyklen ausgelöst; zwischen den zwei vollständigen Zyklen dürfen höchstens fünf Sekunden liegen. Jede erfolgreiche Cheat-Aktivierung zeigt eine sichtbare Bestätigung im Spielfeld. Das realistische, transparente Asset liegt unter `public/images/bikini-avatar-compact.png`. Der Avatar verändert weder Punkte noch Spielwerte und gilt nur bis zum Neuladen der Seite.
+- Erreicht der Bikini-Avatar das Levelziel, wird vor der Upgrade-Auswahl beziehungsweise dem Finale eine fünfsekündige, nicht explizite Vollbild-Tanzsequenz über der weiterlaufenden Levelmusik angezeigt.
 - Öffentliche, optionale GitHub-Release-Prüfung für Beta und Final.
 
 ## Feste technische Regeln
