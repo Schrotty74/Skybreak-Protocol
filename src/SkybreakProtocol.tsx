@@ -44,7 +44,7 @@ const MUSIC_TRACKS = [
 ].map((path) => `${import.meta.env.BASE_URL}${path}`);
 
 const DIFFICULTY_SETTINGS: Record<Difficulty, { enemy: number; hazards: number; hazardSpeed: number; score: number }> = {
-  easy: { enemy: 0.78, hazards: 0.72, hazardSpeed: 0.82, score: 0.85 },
+  easy: { enemy: 0.55, hazards: 0.42, hazardSpeed: 0.58, score: 0.75 },
   medium: { enemy: 1, hazards: 1, hazardSpeed: 1, score: 1 },
   hard: { enemy: 1.28, hazards: 1.42, hazardSpeed: 1.3, score: 1.35 },
 };
@@ -166,6 +166,7 @@ type World = {
   celebrationTarget: "upgrade" | "won";
   mechanicCooldown: number;
   bridgeCooldown: number;
+  easyAssistsApplied: boolean;
 };
 
 const LEVEL_GAMEPLAY = [
@@ -293,6 +294,7 @@ function makeWorld(): World {
     celebrationTarget: "upgrade",
     mechanicCooldown: 0,
     bridgeCooldown: 0,
+    easyAssistsApplied: false,
     roamingChest: null,
     roamingChestTimer: 0,
     roamingChestMoves: 0,
@@ -315,6 +317,21 @@ function placeWorldAtLevel(world: World, level: number) {
   world.bridgeCooldown = 0;
   world.celebrationTime = 0;
   world.celebrationTarget = "upgrade";
+  world.easyAssistsApplied = false;
+}
+
+function applyEasyAssists(world: World) {
+  if (world.easyAssistsApplied) return;
+  world.easyAssistsApplied = true;
+  // Easy is an onboarding mode: retain the visual world, but remove the
+  // mechanics that create the largest frustration spikes.
+  world.lives = Math.max(world.lives, 5);
+  world.enemies = world.enemies.filter((enemy, index) => enemy.guardian || index % 2 === 0);
+  world.objectives = world.objectives.slice(0, 1);
+  world.tiles = world.tiles.map((tile) => {
+    if (!["moving", "phase", "ice"].includes(tile.mode)) return tile;
+    return { ...tile, mode: "stable", x: tile.baseX, travel: 0, previousX: tile.baseX };
+  });
 }
 
 function levelProgress(playerY: number): number {
@@ -1357,6 +1374,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const restart = useCallback(() => {
     const next = makeWorld();
     placeWorldAtLevel(next, selectedStartLevelRef.current);
+    if ((difficultiesRef.current[selectedStartLevelRef.current - 1] || "medium") === "easy") applyEasyAssists(next);
     next.player.pickaxePower = pickaxeLoadoutRef.current.power;
     next.player.pickaxeStyle = pickaxeLoadoutRef.current.style;
     next.player.avatar = avatarRef.current;
@@ -1601,6 +1619,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     difficultiesRef.current = updated;
     setLevelDifficulties(updated);
     setStoredItem("skybreak-level-difficulties", JSON.stringify(updated));
+    if (next === "easy" && worldRef.current.status === "playing" && worldRef.current.sector === sector) {
+      applyEasyAssists(worldRef.current);
+      syncHud(worldRef.current);
+    }
   };
 
   const getUltraSceneInstances = useCallback(() => {
@@ -2201,7 +2223,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       if (standingTile?.mode === "moving") p.x += standingTile.x - standingTile.previousX;
       const glide = standingTile?.mode === "ice" ? 0.08 : 0.002;
       p.vx = input.left ? -MOVE_SPEED : input.right ? MOVE_SPEED : p.vx * Math.pow(glide, dt);
-      if (levelRule.drift && !input.left && !input.right) p.vx += levelRule.drift * dt;
+      if (difficultyLevel !== "easy" && levelRule.drift && !input.left && !input.right) p.vx += levelRule.drift * dt;
       if (p.vx) p.facing = Math.sign(p.vx);
       const activelyMoving = input.left || input.right || !p.grounded || Math.abs(p.vx) > 18;
       p.idleTime = activelyMoving || input.attack || input.jump ? 0 : p.idleTime + dt;
@@ -2413,8 +2435,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           const shotCounts = [1, 1, 2, 1, 2, 2, 1, 2, 1, 3];
           const shotSpeeds = [70, 92, 62, 156, 86, 122, 74, 118, 174, 102];
           const shotArcs = [115, 92, -42, 62, -108, 138, -78, 24, 172, -18];
-          enemy.attackTimer = Math.max(1.15, 2.45 - Math.min(0.72, world.sector * 0.05) - bossPhase * 0.24);
-          const shotCount = Math.min(4, shotCounts[bossMode] + (bossPhase === 2 ? 1 : 0));
+          enemy.attackTimer = (difficultyLevel === "easy" ? 1.55 : 1) * Math.max(1.15, 2.45 - Math.min(0.72, world.sector * 0.05) - bossPhase * 0.24);
+          const shotCount = difficultyLevel === "easy" ? 1 : Math.min(4, shotCounts[bossMode] + (bossPhase === 2 ? 1 : 0));
           for (let shot = 0; shot < shotCount; shot += 1) {
             const aimed = bossMode === 1 || bossMode === 5 || bossMode === 8;
             const direction = aimed ? Math.sign(p.x - enemy.x) || 1 : shotCount === 1 ? (bossMode % 2 === 0 ? -1 : 1) : shot - (shotCount - 1) / 2;
@@ -3656,9 +3678,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         const avatar = bikiniAvatarImageRef.current;
         const avatarHeight = Math.min(view.height * .72, 410) * pulse;
         const avatarWidth = avatarHeight * (176 / 371);
-        const danceBeat = elapsed * Math.PI * 2.4;
-        const danceX = view.width / 2 + Math.sin(danceBeat) * Math.min(17, view.width * .032);
-        const danceY = view.height * .53 + Math.abs(Math.sin(danceBeat)) * 7;
+        const danceBeat = elapsed * Math.PI * 2.65;
+        const step = Math.sin(danceBeat);
+        const counterStep = Math.sin(danceBeat + Math.PI);
+        const groove = Math.sin(danceBeat * .5);
+        const danceX = view.width / 2 + step * Math.min(22, view.width * .04);
+        const danceY = view.height * .53 + (1 - Math.cos(danceBeat * 2)) * 5;
         ctx.save();
         ctx.translate(danceX, danceY);
         ctx.shadowBlur = 28;
@@ -3675,15 +3700,15 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             ctx.drawImage(avatar, sourceX, sourceY, sourceW, sourceH, (sourceX - pivotX) * scale, (sourceY - pivotY) * scale, sourceW * scale, sourceH * scale);
             ctx.restore();
           };
-          const step = Math.sin(danceBeat);
-          const sway = Math.sin(danceBeat * .5);
-          // Legs first, then the torso and arms: this keeps the hips and
-          // shoulders visually connected while the limbs move on the beat.
-          drawDancePart(34, 194, 55, 174, 67, 202, step * .22, -step * 4, Math.max(0, -step) * 3);
-          drawDancePart(88, 194, 53, 174, 108, 202, -step * .22, step * 4, Math.max(0, step) * 3);
-          drawDancePart(34, 0, 108, 216, 88, 192, sway * .055);
-          drawDancePart(6, 80, 51, 136, 48, 91, -.22 - step * .62, -step * 2, 0);
-          drawDancePart(119, 80, 51, 136, 128, 91, .22 + step * .62, step * 2, 0);
+          // Legs first, then the torso and arms: alternating step, hip shift,
+          // shoulder turn, and arm swing create one continuous dance loop.
+          drawDancePart(34, 194, 55, 174, 67, 202, step * .31, -step * 8, Math.max(0, -step) * 9);
+          drawDancePart(88, 194, 53, 174, 108, 202, counterStep * .31, step * 8, Math.max(0, step) * 9);
+          // The torso crop intentionally excludes both arms. They are drawn
+          // only by the two animated parts below, avoiding duplicate arms.
+          drawDancePart(52, 0, 72, 216, 88, 192, groove * .11, step * 4, 0);
+          drawDancePart(6, 80, 51, 136, 48, 91, -.55 - step * .9, -step * 4, -Math.max(0, step) * 5);
+          drawDancePart(119, 80, 51, 136, 128, 91, .55 + step * .9, step * 4, -Math.max(0, -step) * 5);
         } else {
           ctx.fillStyle = "#ff7eaa";
           ctx.beginPath(); ctx.arc(0, -avatarHeight * .25, avatarWidth * .23, 0, Math.PI * 2); ctx.fill();

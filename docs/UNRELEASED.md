@@ -11,6 +11,7 @@
 - Ein rein kosmetischer Cheat schaltet während einer aktiven Runde nach zwei Musik-Aus/An-Zyklen innerhalb von fünf Sekunden einen erwachsenen weiblichen Bikini-Avatar frei. Jede Cheat-Aktivierung zeigt eine Bestätigung im Spielfeld. Er speichert nichts und verändert keine Spielwerte.
 - Der Bikini-Avatar verwendet ein transparentes, realistisches Figuren-Asset mit schwarzem Cyberpunk-Bikini und Cyan-/Magenta-Akzenten statt der vereinfachten Canvas-Zeichnung.
 - Wenn der Bikini-Avatar ein Levelziel erreicht, zeigt das Spiel vor der Upgrade-Auswahl beziehungsweise dem Finale eine fünfsekündige, nicht explizite Vollbild-Tanzsequenz. Die laufende Levelmusik bleibt währenddessen aktiv.
+- Die Schwierigkeitsstufe „Leicht“ ist nun ein echter Einstiegsmodus: fünf Leben, etwa halbierte normale Gegner, nur ein Pflichtziel je Level, keine beweglichen/vereisten/Phasen-Plattformen, keine Windstöße sowie deutlich langsamere und seltenere Gefahren. Wächter greifen dort nur einzeln und langsamer an.
 
 ## Geplant: Grafik und Präsentation
 

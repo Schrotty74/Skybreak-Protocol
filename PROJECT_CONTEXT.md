@@ -38,7 +38,7 @@ Die zentralen Daten sind In-Memory-Spielzustand in `SkybreakProtocol.tsx` sowie 
 
 ## Umgesetzter Stand
 
-- Zehn vollständige 15-Etagen-Level mit eigenen Plattformregeln, Energiezellen/Schaltern als Level-Zielen, Umweltgefahren, Gegner-Archetypen, Wächter-Phasen, Schwierigkeitsübernahme, freischaltbaren Startleveln und Eispickel-Upgrades.
+- Zehn vollständige 15-Etagen-Level mit eigenen Plattformregeln, Energiezellen/Schaltern als Level-Zielen, Umweltgefahren, Gegner-Archetypen, Wächter-Phasen, Schwierigkeitsübernahme, freischaltbaren Startleveln und Eispickel-Upgrades. Die Stufe „Leicht“ ist ein klarer Einstiegsmodus: fünf Leben, etwa halbierte normale Gegner, nur ein Ziel, keine beweglichen/vereisten/Phasen-Plattformen oder Windstöße sowie langsame und seltene Gefahren.
 - Desktop-Tastatursteuerung, Touch-Steuerung, Pause, Vollbild/immersiver Safari-Fallback, Cheats und Power-ups.
 - Grafikstufen Niedrig, Mittel, Hoch und Ultra; Canvas-2D-Hauptszene, WebGPU-Ultra-Effekte und WebGL2-Fallback.
 - Mobile Live-FPS-Anzeige während aktiver Runden sowie Desktop-Performance-Anzeige.
