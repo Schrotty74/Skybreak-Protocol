@@ -268,6 +268,22 @@ function themeColor(sector: number, key: "accent" | "secondary" | "warning") {
 }
 
 const CHEST_POWER_UPS: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
+const PICKAXE_STYLES = [
+  { de: "GOLD // KURVE", en: "GOLD // CURVE" },
+  { de: "CYAN // KLINGE", en: "CYAN // BLADE" },
+  { de: "PINK // SPITZE", en: "PINK // SPIKE" },
+  { de: "GRÜN // KURVE", en: "GREEN // CURVE" },
+  { de: "ORANGE // KLINGE", en: "ORANGE // BLADE" },
+  { de: "VIOLETT // SPITZE", en: "VIOLET // SPIKE" },
+  { de: "EIS // KURVE", en: "ICE // CURVE" },
+  { de: "LILA // KLINGE", en: "LILAC // BLADE" },
+  { de: "WEISS // SPITZE", en: "WHITE // SPIKE" },
+  { de: "SONNE // KURVE", en: "SUN // CURVE" },
+] as const;
+
+function pickaxeBreakCount(power: number) {
+  return Math.min(5, 1 + Math.floor((Math.min(10, power) - 1) / 2));
+}
 
 function placeRoamingChest(world: World, difficulty: RoamingChestDifficulty, viewportHeight: number): boolean {
   const sector = world.sector;
@@ -2196,7 +2212,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         if (startedAttack) {
           const effectivePower = Math.min(10, p.pickaxePower + (p.overdrive > 0 ? 3 : 0));
           const reach = 42 + effectivePower * 8;
-          const breakCount = Math.min(5, 1 + Math.floor((effectivePower - 1) / 2));
+          const breakCount = pickaxeBreakCount(effectivePower);
           const breakableTiles = world.tiles
             .filter((tile) => {
               const tileCenter = tile.x + TILE / 2;
@@ -2859,48 +2875,88 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         if (enemy.guardian) ctx.scale(1.65, 1.65);
         const tilt = Math.max(-0.18, Math.min(0.18, enemy.vy / 900));
         ctx.rotate(tilt);
+        const enemyVariant = world.sector - 1;
+        const enemyAccent = theme.accent;
+        const enemySecondary = theme.secondary;
         ctx.shadowBlur = ultraActive ? 0 : 24;
-        ctx.shadowColor = "#ff2b8a";
+        ctx.shadowColor = enemyAccent;
         const shell = ctx.createLinearGradient(-18, -15, 18, 15);
-        shell.addColorStop(0, "#6d174c");
-        shell.addColorStop(0.46, "#260d2d");
+        shell.addColorStop(0, enemySecondary);
+        shell.addColorStop(0.46, "#0b1428");
         shell.addColorStop(1, "#090713");
         ctx.fillStyle = shell;
-        roundedRect(ctx, -19, -16, 38, 31, 9);
+        ctx.beginPath();
+        if (enemyVariant === 0) {
+          roundedRect(ctx, -19, -16, 38, 31, 9);
+        } else if (enemyVariant === 1) {
+          ctx.moveTo(0, -20); ctx.lineTo(22, 0); ctx.lineTo(0, 18); ctx.lineTo(-22, 0); ctx.closePath();
+        } else if (enemyVariant === 2) {
+          for (let point = 0; point < 6; point += 1) {
+            const angle = -Math.PI / 2 + point * Math.PI / 3;
+            const x = Math.cos(angle) * 21;
+            const y = Math.sin(angle) * 18;
+            if (point === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+        } else if (enemyVariant === 3) {
+          ctx.moveTo(0, -22); ctx.lineTo(21, 17); ctx.lineTo(0, 10); ctx.lineTo(-21, 17); ctx.closePath();
+        } else if (enemyVariant === 4) {
+          ctx.ellipse(0, 0, 23, 14, 0, 0, Math.PI * 2);
+        } else if (enemyVariant === 5) {
+          ctx.moveTo(-18, -16); ctx.lineTo(18, -16); ctx.lineTo(23, -7); ctx.lineTo(16, 16); ctx.lineTo(-16, 16); ctx.lineTo(-23, -7); ctx.closePath();
+        } else if (enemyVariant === 6) {
+          ctx.moveTo(-24, -10); ctx.lineTo(-8, -18); ctx.lineTo(8, -18); ctx.lineTo(24, -10); ctx.lineTo(16, 17); ctx.lineTo(-16, 17); ctx.closePath();
+        } else if (enemyVariant === 7) {
+          ctx.arc(0, 2, 20, Math.PI, 0); ctx.lineTo(18, 17); ctx.lineTo(-18, 17); ctx.closePath();
+        } else if (enemyVariant === 8) {
+          ctx.moveTo(0, -23); ctx.lineTo(17, -4); ctx.lineTo(11, 20); ctx.lineTo(-11, 20); ctx.lineTo(-17, -4); ctx.closePath();
+        } else {
+          ctx.moveTo(-23, 16); ctx.lineTo(-18, -9); ctx.lineTo(-8, -2); ctx.lineTo(0, -21); ctx.lineTo(8, -2); ctx.lineTo(18, -9); ctx.lineTo(23, 16); ctx.closePath();
+        }
         ctx.fill();
-        ctx.strokeStyle = "#ff2b8a";
+        ctx.strokeStyle = enemyAccent;
         ctx.lineWidth = 2;
         ctx.stroke();
         ctx.shadowBlur = 0;
         ctx.fillStyle = "rgba(255,255,255,.26)";
-        roundedRect(ctx, -12, -12, 24, 7, 3);
+        if (enemyVariant % 3 === 0) roundedRect(ctx, -12, -12, 24, 7, 3);
+        else if (enemyVariant % 3 === 1) {
+          ctx.beginPath(); ctx.moveTo(-12, -9); ctx.lineTo(12, -9); ctx.lineTo(7, -2); ctx.lineTo(-7, -2); ctx.closePath();
+        } else {
+          ctx.beginPath(); ctx.arc(0, -7, 8, 0, Math.PI * 2);
+        }
         ctx.fill();
-        ctx.fillStyle = "#ffd84d";
+        ctx.fillStyle = theme.warning;
         ctx.shadowBlur = ultraActive ? 0 : 11;
-        ctx.shadowColor = "#ffd84d";
-        ctx.fillRect(enemy.vx > 0 ? 5 : -11, -10, 7, 3);
+        ctx.shadowColor = theme.warning;
+        if (enemyVariant % 2 === 0) ctx.fillRect(enemy.vx > 0 ? 5 : -11, -10, 7, 3);
+        else ctx.fillRect(-3, -9, 6, 4);
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#ff2b8a";
+        ctx.strokeStyle = enemyAccent;
         ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.moveTo(-12, 12);
-        ctx.lineTo(-17, 21);
-        ctx.lineTo(-21, 21);
-        ctx.moveTo(11, 12);
-        ctx.lineTo(17, 21);
-        ctx.lineTo(21, 21);
+        if (enemyVariant % 2 === 0) {
+          ctx.moveTo(-12, 12); ctx.lineTo(-17, 21); ctx.lineTo(-21, 21);
+          ctx.moveTo(11, 12); ctx.lineTo(17, 21); ctx.lineTo(21, 21);
+        } else {
+          ctx.moveTo(-14, 10); ctx.lineTo(-24, 4); ctx.moveTo(14, 10); ctx.lineTo(24, 4);
+        }
         ctx.stroke();
         ctx.globalAlpha = 0.35;
-        ctx.strokeStyle = "#ff78b7";
-        ctx.strokeStyle = "#ff2b8a";
+        ctx.strokeStyle = enemyAccent;
         ctx.beginPath();
-        ctx.arc(0, 0, 25 + Math.sin(world.fxTime * 4) * 2, 0, Math.PI * 2);
+        ctx.arc(0, 0, 24 + (enemyVariant % 4) * 2 + Math.sin(world.fxTime * (4 + enemyVariant % 3)) * 2, 0, Math.PI * 2);
         ctx.stroke();
         if (enemy.guardian) {
           ctx.globalAlpha = 1;
+          ctx.strokeStyle = enemySecondary;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, 30 + (enemyVariant % 3) * 3, world.fxTime * 0.8, world.fxTime * 0.8 + Math.PI * 1.55);
+          ctx.stroke();
           ctx.fillStyle = theme.warning;
           ctx.font = "700 6px ui-monospace, monospace";
-          ctx.fillText(`GUARDIAN ${enemy.integrity ?? 0}/3`, -20, -29);
+          ctx.fillText("GUARDIAN " + (enemy.integrity ?? 0) + "/3", -20, -29);
           ctx.fillStyle = "rgba(255,255,255,.16)";
           ctx.fillRect(-20, -26, 40, 3);
           ctx.fillStyle = theme.warning;
@@ -3376,6 +3432,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ? (isDe ? `Level ${sector} befreit · ${score.toLocaleString("de-AT")} Punkte` : `Level ${sector} liberated · ${score.toLocaleString("en-US")} points`)
           : (isDe ? `Dein Lauf endet bei ${score.toLocaleString("de-AT")} Punkten.` : `Your run ends at ${score.toLocaleString("en-US")} points.`);
 
+  const nextPickaxePower = Math.min(10, pickaxeStats.power + 1);
+  const nextPickaxeStyle = Math.min(10, pickaxeStats.style + 1);
+  const nextStylePreview = PICKAXE_STYLES[nextPickaxeStyle - 1];
+
   return (
     <main className={`game-shell${immersiveMode ? " immersive-mode" : ""}`} onPointerDownCapture={ensureAudio}>
       <header className="topbar">
@@ -3449,12 +3509,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
                 </div>
                 <div className="upgrade-grid">
                   <button onClick={() => applyPickaxeUpgrade("power")}>
-                    <strong>{isDe ? "KRAFT" : "POWER"} {pickaxeStats.power + 1}</strong>
-                    <span>{isDe ? "Mehr Plattformmodule pro Schlag zerstören" : "Destroy more platform modules per strike"}</span>
+                    <strong>{isDe ? "KRAFT" : "POWER"} {nextPickaxePower}</strong>
+                    <span>{isDe
+                      ? `REICHWEITE +8 // ${pickaxeBreakCount(nextPickaxePower)} PLATTFORM${pickaxeBreakCount(nextPickaxePower) === 1 ? "" : "EN"} PRO SCHLAG`
+                      : `RANGE +8 // ${pickaxeBreakCount(nextPickaxePower)} PLATFORM${pickaxeBreakCount(nextPickaxePower) === 1 ? "" : "S"} PER STRIKE`}</span>
                   </button>
                   <button onClick={() => applyPickaxeUpgrade("style")}>
-                    <strong>{isDe ? "DESIGN" : "STYLE"} {pickaxeStats.style + 1}</strong>
-                    <span>{isDe ? "Neue Farbe, Form und stärkeres Leuchten" : "New color, shape, and stronger glow"}</span>
+                    <strong>{isDe ? "DESIGN" : "STYLE"} {nextPickaxeStyle}</strong>
+                    <span>{isDe
+                      ? `${nextStylePreview.de} // NEUE FARBE, FORM UND STÄRKERES LEUCHTEN`
+                      : `${nextStylePreview.en} // NEW COLOR, SHAPE, AND STRONGER GLOW`}</span>
                   </button>
                 </div>
               </div>
