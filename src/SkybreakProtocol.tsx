@@ -4098,3 +4098,46 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             <select value={mobileUltra120 ? "120" : "60"} onChange={(event) => chooseMobileUltra120(event.target.value === "120")}>
               <option value="60">60 FPS</option>
               <option value="120">{isDe ? "Bis 120 FPS" : "Up to 120 FPS"}</option>
+            </select>
+            <small>{isDe ? "120 FPS erhöht Wärme und Akkuverbrauch" : "120 FPS increases heat and battery use"}</small>
+          </label>
+        )}
+        <label className="difficulty-picker">
+          <span>{isDe ? `LEVEL ${sector} SCHWIERIGKEIT` : `LEVEL ${sector} DIFFICULTY`}</span>
+          <select value={levelDifficulties[sector - 1]} onChange={(event) => chooseDifficulty(event.target.value as Difficulty)}>
+            <option value="easy">{isDe ? "Leicht" : "Easy"}</option>
+            <option value="medium">{isDe ? "Mittel" : "Medium"}</option>
+            <option value="hard">{isDe ? "Schwer" : "Hard"}</option>
+          </select>
+          <small>{LEVEL_THEMES[sector - 1].name}</small>
+        </label>
+        <div className="run-record">
+          <span>{renderer} · {quality.toUpperCase()}{quality === "ultra" ? ` · ${ultraFps} FPS` : quality === "high" && mobileDevice ? " · 60 FPS" : ""}{thermalProtection && (quality === "ultra" || (quality === "high" && mobileDevice)) ? ` · ${isDe ? "WÄRMESCHUTZ" : "THERMAL SAFE"}` : ""}{desktopUltraScale < 1 ? ` · ${isDe ? "LEISTUNGSSCHUTZ" : "PERFORMANCE SAFE"} ${Math.round(desktopUltraScale * 100)}%` : ""} · LOCAL RECORD</span>
+          <strong>{highScore.toString().padStart(6, "0")}</strong>
+        </div>
+        {!mobileDevice && (
+          <div className="key-binding-panel">
+            <span>{isDe ? "TASTENBELEGUNG" : "KEY BINDINGS"}</span>
+            {(["left", "right", "jump", "attack"] as BindableAction[]).map((action) => (
+              <button key={action} type="button" className={bindingCapture === action ? "listening" : ""} onClick={() => beginKeyCapture(action)}>
+                <small>{action === "left" ? (isDe ? "LINKS" : "LEFT") : action === "right" ? (isDe ? "RECHTS" : "RIGHT") : action === "jump" ? (isDe ? "SPRINGEN" : "JUMP") : (isDe ? "HÄMMERN" : "PICK")}</small>
+                <strong>{bindingCapture === action ? (isDe ? "TASTE DRÜCKEN" : "PRESS KEY") : displayKey(keyBindings[action])}</strong>
+              </button>
+            ))}
+            <button type="button" className="reset-keys" onClick={resetKeyBindings}>{isDe ? "STANDARD" : "RESET"}</button>
+          </div>
+        )}
+      </section>
+      {showInstallHint && (
+        <div className="install-hint" role="dialog" aria-modal="true" aria-labelledby="install-hint-title">
+          <div className="install-hint-card">
+            <span>IPHONE // APP MODE</span>
+            <h2 id="install-hint-title">{isDe ? "ECHTES VOLLBILD" : "TRUE FULLSCREEN"}</h2>
+            <p>{isDe ? "Tippe in Safari auf Teilen und dann auf „Zum Home-Bildschirm“. Starte Skybreak anschließend über das App-Symbol." : "In Safari, tap Share and then “Add to Home Screen”. Launch Skybreak from its app icon afterwards."}</p>
+            <button onClick={() => setShowInstallHint(false)}>{isDe ? "VERSTANDEN" : "GOT IT"}</button>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
