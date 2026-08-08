@@ -10,6 +10,7 @@
 - Die Level unterscheiden sich nun auch spielerisch: Bruchzonen, bewegliche und vereiste Plattformen, seitliche Strömungen, horizontale Laser, vertikale Energiepulse, zeitweise phasenverschobene Plattformen und Rift-Sprungfelder. Energiezellen und Zugangsschalter müssen vor dem Ziel erreicht werden. Schild-, Schützen- und Schwebegner ergänzen die bisherigen Gegnerrollen. Der Eispickel kann Schalter aktivieren, Projektile auflösen, Schildgegner knacken, Kryo-Frost auslösen und ab Kraftstufe 4 zeitweise Eisbrücken erzeugen. Die Wächter beschleunigen ihre Angriffe in der letzten Integritätsphase.
 - Ein rein kosmetischer Cheat schaltet während einer aktiven Runde nach zwei Musik-Aus/An-Zyklen innerhalb von fünf Sekunden einen erwachsenen weiblichen Bikini-Avatar frei. Jede Cheat-Aktivierung zeigt eine Bestätigung im Spielfeld. Er speichert nichts und verändert keine Spielwerte.
 - Der Bikini-Avatar verwendet ein transparentes, realistisches Figuren-Asset mit schwarzem Cyberpunk-Bikini und Cyan-/Magenta-Akzenten statt der vereinfachten Canvas-Zeichnung.
+- Wenn der Bikini-Avatar ein Levelziel erreicht, zeigt das Spiel vor der Upgrade-Auswahl beziehungsweise dem Finale eine fünfsekündige, nicht explizite Vollbild-Tanzsequenz. Die laufende Levelmusik bleibt währenddessen aktiv.
 
 ## Geplant: Grafik und Präsentation
 

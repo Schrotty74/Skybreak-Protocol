@@ -7,7 +7,7 @@ import { detectCheat, type CheatId } from "./cheats";
 import { actionForCode, DEFAULT_KEY_BINDINGS, displayKey, normalizeKeyBindings, rebindKey, type BindableAction, type KeyBindings } from "./keyBindings";
 import { getStoredItem, setStoredItem } from "./storage";
 
-type GameStatus = "ready" | "playing" | "paused" | "upgrade" | "gameover" | "won";
+type GameStatus = "ready" | "playing" | "paused" | "celebration" | "upgrade" | "gameover" | "won";
 type InputKey = BindableAction;
 type Quality = "low" | "medium" | "high" | "ultra";
 type RenderResolution = "720p" | "1080p" | "4k";
@@ -162,6 +162,8 @@ type World = {
   cheatUsed: boolean;
   transition: number;
   victoryTime: number;
+  celebrationTime: number;
+  celebrationTarget: "upgrade" | "won";
   mechanicCooldown: number;
   bridgeCooldown: number;
 };
@@ -287,6 +289,8 @@ function makeWorld(): World {
     cheatUsed: false,
     transition: 0,
     victoryTime: 0,
+    celebrationTime: 0,
+    celebrationTarget: "upgrade",
     mechanicCooldown: 0,
     bridgeCooldown: 0,
     roamingChest: null,
@@ -309,6 +313,8 @@ function placeWorldAtLevel(world: World, level: number) {
   world.roamingChestSector = targetLevel;
   world.mechanicCooldown = 0;
   world.bridgeCooldown = 0;
+  world.celebrationTime = 0;
+  world.celebrationTarget = "upgrade";
 }
 
 function levelProgress(playerY: number): number {
@@ -2120,6 +2126,17 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     };
 
     const update = (world: World, dt: number) => {
+      if (world.status === "celebration") {
+        world.fxTime += dt;
+        world.celebrationTime = Math.max(0, world.celebrationTime - dt);
+        if (world.celebrationTime === 0) {
+          world.status = world.celebrationTarget;
+          world.victoryTime = world.celebrationTarget === "won" ? 0.01 : 0;
+          audioRef.current?.win();
+          syncHud(world);
+        }
+        return;
+      }
       if (world.status !== "playing") return;
       const difficultyLevel = difficultiesRef.current[Math.max(0, world.sector - 1)] || "medium";
       const difficulty = DIFFICULTY_SETTINGS[difficultyLevel];
@@ -2519,7 +2536,6 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const objectivesRemaining = world.objectives.some((objective) => objective.active);
       if (p.y < WORLD_TOP && !guardianAlive && !objectivesRemaining) {
         world.score += 5000;
-        audioRef.current?.win();
         const nextLevel = Math.min(LEVEL_COUNT, world.sector + 1);
         if (nextLevel > unlockedLevelRef.current) {
           unlockedLevelRef.current = nextLevel;
@@ -2535,11 +2551,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           setLevelDifficulties(updatedDifficulties);
           setStoredItem("skybreak-level-difficulties", JSON.stringify(updatedDifficulties));
         }
-        world.status = world.sector < LEVEL_COUNT ? "upgrade" : "won";
+        const completionTarget = world.sector < LEVEL_COUNT ? "upgrade" : "won";
+        const bikiniCelebration = p.avatar === "bikini";
+        world.status = bikiniCelebration ? "celebration" : completionTarget;
+        world.celebrationTarget = completionTarget;
+        world.celebrationTime = bikiniCelebration ? 5 : 0;
         world.transition = 2.4;
-        world.victoryTime = world.sector === LEVEL_COUNT ? 0.01 : 0;
+        world.victoryTime = !bikiniCelebration && completionTarget === "won" ? 0.01 : 0;
         p.vx = 0;
         p.vy = 0;
+        if (!bikiniCelebration) audioRef.current?.win();
         if (!world.cheatUsed) {
           const best = Math.max(world.score, Number(getStoredItem("neon-ascent-highscore") || 0));
           setStoredItem("neon-ascent-highscore", String(best));
@@ -3611,6 +3632,60 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
       drawStaticOverlay();
 
+      if (world.status === "celebration") {
+        const elapsed = 5 - world.celebrationTime;
+        const beat = (Math.sin(elapsed * Math.PI * 2.4) + 1) / 2;
+        const pulse = 0.84 + beat * 0.16;
+        ctx.save();
+        ctx.setTransform(sx, 0, 0, sy, 0, 0);
+        ctx.fillStyle = "rgba(1, 5, 16, .92)";
+        ctx.fillRect(0, 0, view.width, view.height);
+        const glow = ctx.createRadialGradient(view.width / 2, view.height * .48, 10, view.width / 2, view.height * .48, Math.max(view.width, view.height) * .58);
+        glow.addColorStop(0, "rgba(255, 43, 138, .32)");
+        glow.addColorStop(.35, "rgba(0, 240, 255, .16)");
+        glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, view.width, view.height);
+        ctx.globalCompositeOperation = "screen";
+        for (let bar = 0; bar < 18; bar++) {
+          const x = (bar + .5) * view.width / 18;
+          const height = (34 + ((Math.sin(elapsed * (4 + bar % 4) + bar) + 1) * .5) * 78) * pulse;
+          ctx.fillStyle = bar % 2 ? "rgba(255, 43, 138, .58)" : "rgba(0, 240, 255, .58)";
+          ctx.fillRect(x - 5, view.height - 48 - height, 10, height);
+        }
+        const avatar = bikiniAvatarImageRef.current;
+        const avatarHeight = Math.min(view.height * .72, 410) * pulse;
+        const avatarWidth = avatarHeight * (176 / 371);
+        const danceX = view.width / 2 + Math.sin(elapsed * Math.PI * 2.4) * Math.min(24, view.width * .045);
+        const danceY = view.height * .53 + Math.abs(Math.sin(elapsed * Math.PI * 2.4)) * 11;
+        ctx.save();
+        ctx.translate(danceX, danceY);
+        ctx.rotate(Math.sin(elapsed * Math.PI * 2.4) * .09);
+        ctx.shadowBlur = 28;
+        ctx.shadowColor = "#ff2b8a";
+        if (avatar?.complete && avatar.naturalWidth > 0) {
+          ctx.drawImage(avatar, -avatarWidth / 2, -avatarHeight / 2, avatarWidth, avatarHeight);
+        } else {
+          ctx.fillStyle = "#ff7eaa";
+          ctx.beginPath(); ctx.arc(0, -avatarHeight * .25, avatarWidth * .23, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#31e8e8";
+          roundedRect(ctx, -avatarWidth * .28, -avatarHeight * .05, avatarWidth * .56, avatarHeight * .38, 12); ctx.fill();
+        }
+        ctx.restore();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "#ffd84d";
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = "#ffd84d";
+        ctx.font = `900 ${Math.max(18, Math.min(34, view.width * .055))}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+        ctx.textAlign = "center";
+        ctx.fillText(isDe ? "SKYBREAK DANCE" : "SKYBREAK DANCE", view.width / 2, Math.max(48, view.height * .11));
+        ctx.shadowBlur = 0;
+        ctx.font = "700 13px ui-monospace, SFMono-Regular, Menlo, monospace";
+        ctx.fillStyle = "#e8fbff";
+        ctx.fillText(`${Math.ceil(world.celebrationTime)} ${isDe ? "SEK." : "SEC."}`, view.width / 2, Math.max(70, view.height * .11 + 25));
+        ctx.restore();
+      }
+
       if (world.powerUpMessageTime > 0 && world.powerUpMessage) {
         const alpha = Math.min(1, world.powerUpMessageTime * 2);
         const messageWidth = Math.min(view.width - 32, 460);
@@ -3897,7 +3972,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           aria-hidden="true"
         />
         <canvas ref={canvasRef} aria-label={isDe ? "Spielansicht: Klettere durch die Cyberpunk-Megacity" : "Game view: climb through the cyberpunk megacity"} />
-        {status !== "playing" && (
+        {status !== "playing" && status !== "celebration" && (
           <div className="game-overlay">
             {status === "ready" && (
               <>
@@ -4023,46 +4098,3 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             <select value={mobileUltra120 ? "120" : "60"} onChange={(event) => chooseMobileUltra120(event.target.value === "120")}>
               <option value="60">60 FPS</option>
               <option value="120">{isDe ? "Bis 120 FPS" : "Up to 120 FPS"}</option>
-            </select>
-            <small>{isDe ? "120 FPS erhöht Wärme und Akkuverbrauch" : "120 FPS increases heat and battery use"}</small>
-          </label>
-        )}
-        <label className="difficulty-picker">
-          <span>{isDe ? `LEVEL ${sector} SCHWIERIGKEIT` : `LEVEL ${sector} DIFFICULTY`}</span>
-          <select value={levelDifficulties[sector - 1]} onChange={(event) => chooseDifficulty(event.target.value as Difficulty)}>
-            <option value="easy">{isDe ? "Leicht" : "Easy"}</option>
-            <option value="medium">{isDe ? "Mittel" : "Medium"}</option>
-            <option value="hard">{isDe ? "Schwer" : "Hard"}</option>
-          </select>
-          <small>{LEVEL_THEMES[sector - 1].name}</small>
-        </label>
-        <div className="run-record">
-          <span>{renderer} · {quality.toUpperCase()}{quality === "ultra" ? ` · ${ultraFps} FPS` : quality === "high" && mobileDevice ? " · 60 FPS" : ""}{thermalProtection && (quality === "ultra" || (quality === "high" && mobileDevice)) ? ` · ${isDe ? "WÄRMESCHUTZ" : "THERMAL SAFE"}` : ""}{desktopUltraScale < 1 ? ` · ${isDe ? "LEISTUNGSSCHUTZ" : "PERFORMANCE SAFE"} ${Math.round(desktopUltraScale * 100)}%` : ""} · LOCAL RECORD</span>
-          <strong>{highScore.toString().padStart(6, "0")}</strong>
-        </div>
-        {!mobileDevice && (
-          <div className="key-binding-panel">
-            <span>{isDe ? "TASTENBELEGUNG" : "KEY BINDINGS"}</span>
-            {(["left", "right", "jump", "attack"] as BindableAction[]).map((action) => (
-              <button key={action} type="button" className={bindingCapture === action ? "listening" : ""} onClick={() => beginKeyCapture(action)}>
-                <small>{action === "left" ? (isDe ? "LINKS" : "LEFT") : action === "right" ? (isDe ? "RECHTS" : "RIGHT") : action === "jump" ? (isDe ? "SPRINGEN" : "JUMP") : (isDe ? "HÄMMERN" : "PICK")}</small>
-                <strong>{bindingCapture === action ? (isDe ? "TASTE DRÜCKEN" : "PRESS KEY") : displayKey(keyBindings[action])}</strong>
-              </button>
-            ))}
-            <button type="button" className="reset-keys" onClick={resetKeyBindings}>{isDe ? "STANDARD" : "RESET"}</button>
-          </div>
-        )}
-      </section>
-      {showInstallHint && (
-        <div className="install-hint" role="dialog" aria-modal="true" aria-labelledby="install-hint-title">
-          <div className="install-hint-card">
-            <span>IPHONE // APP MODE</span>
-            <h2 id="install-hint-title">{isDe ? "ECHTES VOLLBILD" : "TRUE FULLSCREEN"}</h2>
-            <p>{isDe ? "Tippe in Safari auf Teilen und dann auf „Zum Home-Bildschirm“. Starte Skybreak anschließend über das App-Symbol." : "In Safari, tap Share and then “Add to Home Screen”. Launch Skybreak from its app icon afterwards."}</p>
-            <button onClick={() => setShowInstallHint(false)}>{isDe ? "VERSTANDEN" : "GOT IT"}</button>
-          </div>
-        </div>
-      )}
-    </main>
-  );
-}

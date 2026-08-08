@@ -1,7 +1,7 @@
 # Nächste Schritte – Skybreak Protocol
 
 **Stand:** 8. August 2026
-**Ausgangsstand:** `1.0.0-beta.9`
+**Ausgangsstand:** `1.0.0-beta.7`
 
 Diese Datei bei jeder größeren Änderung aktualisieren. Sie enthält nur tatsächlich bekannte, noch offene Punkte.
 
@@ -28,6 +28,11 @@ Diese Datei bei jeder größeren Änderung aktualisieren. Sie enthält nur tats�
 
 - Die Anzeige wurde aus dem Spielfeld in den schwarzen Kopfbereich unter „Skybreak Protocol“ verschoben und größer in Gelb gestaltet.
 - Auf einem echten Mobilgerät im aktiven Spiel prüfen, ob sie bei unterschiedlichen Bildschirmbreiten lesbar bleibt und weder Score noch Lives verdeckt.
+
+## Priorität 5 – Bikini-Abschlusssequenz abnehmen
+
+- Mit aktiviertem Bikini-Avatar auf einem Desktop- und Mobilbrowser ein Level beenden.
+- Prüfen: Die Vollbild-Tanzsequenz läuft fünf Sekunden, die aktuelle Levelmusik bleibt hörbar und anschließend erscheint zuverlässig die Upgrade-Auswahl beziehungsweise das Finale.
 
 ## Bereits bekannte Beta-Einschränkungen
 
