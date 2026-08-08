@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-**Current release:** `v1.0.0-beta.7` · [Detailed changelog](docs/releases/1.0.0-beta.7.en.md) · [All changelogs](CHANGELOG.md)
+**Current release:** `v1.0.0-beta.8` · [Detailed changelog](docs/releases/1.0.0-beta.8.en.md) · [All changelogs](CHANGELOG.md)
 
 An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through ten visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Each level has its own cyberpunk palette, animated scenery, effects, and a difficulty that carries into the next level.
 
@@ -53,11 +53,11 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
 ## Gameplay
 
 - Ascend through ten increasingly difficult cyberpunk levels
-- Every level is a complete 15-floor ascent with a distinct animated environment, platform material, guardian drone, and soundtrack
+- Every level is a complete 15-floor ascent with a distinct animated environment, platform material, enemy and guardian design, ice-pick base model, and soundtrack
 - Break platform modules from below
 - Use the robot's ice pick against enemies and nearby platform modules
 - Difficulty-aware chests: persistent every two to three floors on Easy, time-limited after halfway on Medium, and only after two thirds on Hard with faster relocations; Hard relocations stay in view and prefer the player's height or above it, while an unlocked roaming chest stays active during backtracking
-- Defeat the level guardian, preview the next sector, then choose an ice-pick power or visual-style upgrade
+- Defeat the level guardian, preview the next sector, then choose the concrete next ice-pick power or visual-style upgrade
 - Watch the robot show persistent armor damage, sensor flicker, and sparks when lives are lost
 - Permanently unlock reached levels locally and select any unlocked level as the next starting point after a run
 - Avoid gaps, falling energy fragments, and patrol drones
@@ -81,8 +81,8 @@ The playable character is a compact cyberpunk climbing robot with separate mecha
 
 The ice pick attacks drones and breaks cracked platform modules in front of the robot. When entering levels 2 through 10 for the first time, the game pauses briefly and offers one upgrade:
 
-- **Power:** increases reach and progressively destroys more adjacent platform modules with one strike
-- **Style:** changes the ice pick's neon color, head geometry, and glow intensity
+- **Power:** previews reach and breakable platform modules per strike before selection, then increases both progressively
+- **Style:** previews the next design name before selection, then changes the ice pick's core color, head geometry, and glow intensity
 
 Upgrades apply to the current run and are shown as `P` and `S` values in the level display.
 

@@ -2,7 +2,7 @@
 
 [English version](PRIVACY.md)
 
-Stand: 1. August 2026
+Stand: 8. August 2026
 
 ## Ergebnis
 
@@ -20,14 +20,16 @@ Abhängigkeiten (`node_modules`) werden nicht veröffentlicht. Der automatisch e
 
 ## Verarbeitung im Browser
 
-Skybreak Protocol speichert nur sechs technisch nicht personenbezogene Werte im lokalen Speicher des jeweiligen Browsers:
+Skybreak Protocol speichert nur acht technisch nicht personenbezogene Werte im lokalen Speicher des jeweiligen Browsers:
 
 | Schlüssel | Inhalt | Zweck | Übertragung |
 |---|---|---|---|
 | `neon-ascent-highscore` | höchste lokal erreichte Punktzahl | Spielstand | keine |
 | `skybreak-quality` | gewählte Grafikstufe | Geräteeinstellung beibehalten | keine |
+| `skybreak-render-resolution` | gewählte interne Renderauflösung | Geräteeinstellung beibehalten | keine |
 | `skybreak-level-difficulties` | je Level gewählte Schwierigkeit | Spieleinstellung beibehalten | keine |
 | `skybreak-mobile-ultra-120` | optionale Einstellung für hohe mobile Bildrate | Geräteeinstellung beibehalten | keine |
+| `skybreak-show-fps` | Sichtbarkeit der lokalen FPS-Anzeige | Geräteeinstellung beibehalten | keine |
 | `skybreak-unlocked-level` | höchste lokal freigeschaltete Levelnummer | Levelauswahl nach einem Lauf ermöglichen | keine |
 | `skybreak-key-bindings` | selbst gewählte Desktop-Tastenbelegung | Steuerung beibehalten | keine |
 

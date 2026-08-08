@@ -2,7 +2,7 @@
 
 [Deutsche Fassung](DATENSCHUTZ.md)
 
-Date: August 1, 2026
+Date: August 8, 2026
 
 ## Result
 
@@ -20,14 +20,16 @@ Dependencies (`node_modules`) are not published. The automatically generated loc
 
 ## Processing in the browser
 
-Skybreak Protocol stores only six technically non-personal values in the local storage of the current browser:
+Skybreak Protocol stores only eight technically non-personal values in the local storage of the current browser:
 
 | Key | Content | Purpose | Transmission |
 |---|---|---|---|
 | `neon-ascent-highscore` | highest score reached locally | game progress | none |
 | `skybreak-quality` | selected graphics level | retain the device setting | none |
+| `skybreak-render-resolution` | selected internal render resolution | retain the device setting | none |
 | `skybreak-level-difficulties` | difficulty selected for each level | retain the game setting | none |
 | `skybreak-mobile-ultra-120` | optional mobile high-refresh setting | retain the device setting | none |
+| `skybreak-show-fps` | visibility of the local FPS display | retain the device setting | none |
 | `skybreak-unlocked-level` | highest level number unlocked locally | enable level selection after a run | none |
 | `skybreak-key-bindings` | custom desktop key assignments | retain the controls | none |
 

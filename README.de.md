@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-**Aktuelle Version:** `v1.0.0-beta.7` · [Ausführlicher Changelog](docs/releases/1.0.0-beta.7.md) · [Alle Changelogs](CHANGELOG.md)
+**Aktuelle Version:** `v1.0.0-beta.8` · [Ausführlicher Changelog](docs/releases/1.0.0-beta.8.md) · [Alle Changelogs](CHANGELOG.md)
 
 Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Kämpfe dich durch zehn optisch eigenständige Level nach oben, durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus und erreiche den Sendeturm über der Megacity. Jedes Level besitzt eine eigene Cyberpunk-Farbwelt, animierte Kulisse, Effekte und eine Schwierigkeit, die in den nächsten Level übernommen wird.
 
@@ -53,11 +53,11 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 ## Spielprinzip
 
 - Durch zehn zunehmend schwierigere Cyberpunk-Level aufsteigen
-- Jedes Level ist ein vollständiger Aufstieg über 15 Etagen mit eigener animierter Umgebung, Plattformmaterial, Wächterdrohne und Soundtrack
+- Jedes Level ist ein vollständiger Aufstieg über 15 Etagen mit eigener animierter Umgebung, Plattformmaterial, Gegner- und Wächterdesign, Eispickel-Grundmodell und Soundtrack
 - Plattformmodule von unten durchbrechen
 - Gegner und nahe Plattformmodule mit dem Eispickel des Roboters angreifen
 - Truhen passend zur Schwierigkeit: auf Leicht dauerhaft alle zwei bis drei Etagen, auf Mittel ab der Hälfte zeitlich begrenzt und auf Schwer erst ab zwei Dritteln mit schnellen Positionswechseln; Schwere Truhen bleiben dabei sichtbar und erscheinen bevorzugt auf Spielerhöhe oder darüber, eine erschienene wandernde Truhe bleibt beim Zurückspringen aktiv
-- Wächterdrohne ausschalten, den nächsten Sektor als Vorschau sehen und danach Kraft oder Design des Eispickels verbessern
+- Wächterdrohne ausschalten, den nächsten Sektor als Vorschau sehen und danach die konkrete Kraft- oder Designstufe des Eispickels auswählen
 - Sichtbare Roboterschäden, Sensorflackern und Funken bei verlorenen Leben erleben
 - Erreichte Level dauerhaft lokal freischalten und nach einem Lauf direkt als neues Startlevel auswählen
 - Lücken, fallenden Energiesplittern und Patrouillendrohnen ausweichen
@@ -81,8 +81,8 @@ Die Spielfigur ist ein kompakter Cyberpunk-Kletterroboter mit getrennten mechani
 
 Der Eispickel greift Drohnen an und zerstört beschädigte Plattformmodule vor dem Roboter. Beim ersten Eintritt in Level 2 bis 10 pausiert das Spiel kurz und bietet jeweils ein Upgrade an:
 
-- **Kraft:** erhöht die Reichweite und zerstört schrittweise mehr benachbarte Plattformmodule mit einem Schlag
-- **Design:** verändert Neonfarbe, Kopfgeometrie und Leuchtstärke des Eispickels
+- **Kraft:** zeigt vor der Wahl Reichweite und zerstörbare Plattformmodule pro Schlag und erhöht beides schrittweise
+- **Design:** zeigt vor der Wahl den Namen des nächsten Designs und verändert Kernfarbe, Kopfgeometrie und Leuchtstärke des Eispickels
 
 Die Upgrades gelten für den aktuellen Durchlauf und werden als `P`- und `S`-Werte in der Levelanzeige dargestellt.
 

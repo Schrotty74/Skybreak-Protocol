@@ -1,11 +1,8 @@
-# Unveröffentlichte Änderungen seit Skybreak Protocol 1.0.0-beta.7
+# Unveröffentlichte Änderungen seit Skybreak Protocol 1.0.0-beta.8
 
 ## Umgesetzt
 
-- Die mobile Live-FPS-Anzeige steht während einer aktiven Runde gut lesbar im schwarzen Kopfbereich unter „Skybreak Protocol“ statt klein über dem Spielfeld. Sie zeigt FPS und Framezeit größer in Gelb an und lässt sich auf Mobilgeräten wie am Desktop ein- oder ausschalten. Die Wahl bleibt lokal gespeichert.
-- Der Eispickel-Upgrade-Bildschirm zeigt vor der Wahl konkret die nächste Kraftstufe mit Reichweite und zerstörbaren Plattformen sowie das nächste Design mit Farbe und Form.
-- Normale Gegner und Wächter besitzen je Level eine eigene Silhouette, Sensorform, Bewegungsakzente und Farbwelt.
-- Der Eispickel erhält pro Level ein eigenes Grundmodell und die jeweilige Level-Farbwelt. Style-Upgrades bleiben als eigener Kern- und Leuchtakzent sichtbar.
+Noch keine weiteren Punkte festgelegt.
 
 ## Geplant: Grafik und Präsentation
 
