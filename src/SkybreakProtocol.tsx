@@ -1285,7 +1285,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const ultraFallbackRef = useRef(false);
   const pickaxeLoadoutRef = useRef({ power: 1, style: 1 });
   const avatarRef = useRef<Player["avatar"]>("robot");
-  const musicToggleCheatRef = useRef({ toggles: 0, lastToggle: 0 });
+  const musicToggleCheatRef = useRef({ cycles: 0, lastCycle: 0, switchedOff: false });
   const keyBindingsRef = useRef<KeyBindings>({ ...DEFAULT_KEY_BINDINGS });
   const bindingCaptureRef = useRef<BindableAction | null>(null);
   const unlockedLevelRef = useRef(1);
@@ -1421,16 +1421,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     world.cheatUsed = true;
     if (cheat === "immortal") {
       world.immortalSector = world.sector;
-      world.powerUpMessage = isDe ? `CHEAT // UNSTERBLICH IN LEVEL ${world.sector}` : `CHEAT // IMMORTAL IN LEVEL ${world.sector}`;
+      world.powerUpMessage = isDe ? `CHEAT BESTÄTIGT // UNSTERBLICH IN LEVEL ${world.sector}` : `CHEAT CONFIRMED // IMMORTAL IN LEVEL ${world.sector}`;
     } else if (cheat === "shield") {
       world.player.shield = 2;
-      world.powerUpMessage = isDe ? "CHEAT // DOPPELSCHILD AKTIV" : "CHEAT // DOUBLE SHIELD ACTIVE";
+      world.powerUpMessage = isDe ? "CHEAT BESTÄTIGT // DOPPELSCHILD AKTIV" : "CHEAT CONFIRMED // DOUBLE SHIELD ACTIVE";
     } else if (cheat === "overdrive") {
       world.player.overdrive = Math.max(world.player.overdrive, 30);
-      world.powerUpMessage = isDe ? "CHEAT // OVERDRIVE 30 SEKUNDEN" : "CHEAT // OVERDRIVE 30 SECONDS";
+      world.powerUpMessage = isDe ? "CHEAT BESTÄTIGT // OVERDRIVE 30 SEKUNDEN" : "CHEAT CONFIRMED // OVERDRIVE 30 SECONDS";
     } else {
       world.lives = Math.min(9, world.lives + 1);
-      world.powerUpMessage = isDe ? "CHEAT // EXTRALEBEN" : "CHEAT // EXTRA LIFE";
+      world.powerUpMessage = isDe ? "CHEAT BESTÄTIGT // EXTRALEBEN" : "CHEAT CONFIRMED // EXTRA LIFE";
     }
     world.powerUpMessageTime = 3;
     world.shake = 5;
@@ -3733,18 +3733,23 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const toggleMusic = () => {
     const now = performance.now();
     const musicCheat = musicToggleCheatRef.current;
-    musicCheat.toggles = now - musicCheat.lastToggle <= 1200 ? musicCheat.toggles + 1 : 1;
-    musicCheat.lastToggle = now;
     const next = !musicEnabledRef.current;
+    if (!next) {
+      musicCheat.switchedOff = true;
+    } else if (musicCheat.switchedOff) {
+      musicCheat.cycles = now - musicCheat.lastCycle <= 5000 ? musicCheat.cycles + 1 : 1;
+      musicCheat.lastCycle = now;
+      musicCheat.switchedOff = false;
+    }
     musicEnabledRef.current = next;
     setMusicEnabled(next);
-    if (musicCheat.toggles >= 4 && worldRef.current.status === "playing") {
-      musicCheat.toggles = 0;
+    if (musicCheat.cycles >= 2 && worldRef.current.status === "playing") {
+      musicCheat.cycles = 0;
       const world = worldRef.current;
       avatarRef.current = "bikini";
       world.player.avatar = "bikini";
-      world.powerUpMessage = isDe ? "CHEAT // BIKINI-AVATAR AKTIV" : "CHEAT // BIKINI AVATAR ACTIVE";
-      world.powerUpMessageTime = 2.5;
+      world.powerUpMessage = isDe ? "CHEAT BESTÄTIGT // BIKINI-AVATAR AKTIV" : "CHEAT CONFIRMED // BIKINI AVATAR ACTIVE";
+      world.powerUpMessageTime = 3;
       world.shake = 4;
       audioRef.current?.powerUp();
     }
