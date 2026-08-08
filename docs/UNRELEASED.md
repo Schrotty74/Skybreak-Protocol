@@ -3,6 +3,8 @@
 ## Umgesetzt
 
 - Die mobile Live-FPS-Anzeige steht während einer aktiven Runde gut lesbar im schwarzen Kopfbereich unter „Skybreak Protocol“ statt klein über dem Spielfeld. Sie zeigt FPS und Framezeit größer in Gelb an und lässt sich auf Mobilgeräten wie am Desktop ein- oder ausschalten. Die Wahl bleibt lokal gespeichert.
+- Der Eispickel-Upgrade-Bildschirm zeigt vor der Wahl konkret die nächste Kraftstufe mit Reichweite und zerstörbaren Plattformen sowie das nächste Design mit Farbe und Form.
+- Normale Gegner und Wächter besitzen je Level eine eigene Silhouette, Sensorform, Bewegungsakzente und Farbwelt.
 
 ## Geplant: Grafik und Präsentation
 
