@@ -342,6 +342,42 @@ function themeColor(sector: number, key: "accent" | "secondary" | "warning") {
   return LEVEL_THEMES[Math.max(0, Math.min(LEVEL_THEMES.length - 1, sector - 1))][key];
 }
 
+const DANCE_SPRITE_FRAMES = 16;
+const DANCE_SPRITE_WIDTH = 176;
+const DANCE_SPRITE_HEIGHT = 371;
+
+function createDanceSpriteSheet(avatar: HTMLImageElement) {
+  const sheet = document.createElement("canvas");
+  sheet.width = DANCE_SPRITE_WIDTH * DANCE_SPRITE_FRAMES;
+  sheet.height = DANCE_SPRITE_HEIGHT;
+  const ctx = sheet.getContext("2d");
+  if (!ctx) return null;
+
+  const drawPart = (sourceX: number, sourceY: number, sourceW: number, sourceH: number, pivotX: number, pivotY: number, rotation: number, offsetX = 0, offsetY = 0) => {
+    ctx.save();
+    ctx.translate(pivotX + offsetX, pivotY + offsetY);
+    ctx.rotate(rotation);
+    ctx.drawImage(avatar, sourceX, sourceY, sourceW, sourceH, sourceX - pivotX, sourceY - pivotY, sourceW, sourceH);
+    ctx.restore();
+  };
+
+  for (let frame = 0; frame < DANCE_SPRITE_FRAMES; frame += 1) {
+    const phase = (frame / DANCE_SPRITE_FRAMES) * Math.PI * 2;
+    const step = Math.sin(phase);
+    const counterStep = Math.sin(phase + Math.PI);
+    const groove = Math.sin(phase * .5);
+    ctx.save();
+    ctx.translate(frame * DANCE_SPRITE_WIDTH, (1 - Math.cos(phase * 2)) * 3);
+    drawPart(34, 194, 55, 174, 67, 202, step * .31, -step * 8, Math.max(0, -step) * 9);
+    drawPart(88, 194, 53, 174, 108, 202, counterStep * .31, step * 8, Math.max(0, step) * 9);
+    drawPart(52, 0, 72, 216, 88, 192, groove * .11, step * 4);
+    drawPart(6, 80, 51, 136, 48, 91, -.55 - step * .9, -step * 4, -Math.max(0, step) * 5);
+    drawPart(119, 80, 51, 136, 128, 91, .55 + step * .9, step * 4, -Math.max(0, -step) * 5);
+    ctx.restore();
+  }
+  return sheet;
+}
+
 const CHEST_POWER_UPS: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
 const PICKAXE_STYLES = [
   { de: "GOLD // KURVE", en: "GOLD // CURVE" },
@@ -1294,6 +1330,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fxCanvasRef = useRef<HTMLCanvasElement>(null);
   const bikiniAvatarImageRef = useRef<HTMLImageElement | null>(null);
+  const danceSpriteRef = useRef<HTMLCanvasElement | null>(null);
   const worldRef = useRef<World>(makeWorld());
   const inputRef = useRef<Record<InputKey, boolean>>({ left: false, right: false, jump: false, attack: false });
   const pressedRef = useRef<Record<InputKey, boolean>>({ left: false, right: false, jump: false, attack: false });
@@ -1360,8 +1397,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   useEffect(() => {
     const image = new Image();
     image.src = `${import.meta.env.BASE_URL}images/bikini-avatar-compact.png`;
-    image.onload = () => { bikiniAvatarImageRef.current = image; };
-    return () => { bikiniAvatarImageRef.current = null; };
+    image.onload = () => {
+      bikiniAvatarImageRef.current = image;
+      danceSpriteRef.current = createDanceSpriteSheet(image);
+    };
+    return () => {
+      bikiniAvatarImageRef.current = null;
+      danceSpriteRef.current = null;
+    };
   }, []);
 
   const ensureAudio = useCallback(() => {
@@ -3676,39 +3719,18 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.fillRect(x - 5, view.height - 48 - height, 10, height);
         }
         const avatar = bikiniAvatarImageRef.current;
+        const danceSprite = danceSpriteRef.current;
         const avatarHeight = Math.min(view.height * .72, 410) * pulse;
         const avatarWidth = avatarHeight * (176 / 371);
-        const danceBeat = elapsed * Math.PI * 2.65;
-        const step = Math.sin(danceBeat);
-        const counterStep = Math.sin(danceBeat + Math.PI);
-        const groove = Math.sin(danceBeat * .5);
-        const danceX = view.width / 2 + step * Math.min(22, view.width * .04);
-        const danceY = view.height * .53 + (1 - Math.cos(danceBeat * 2)) * 5;
+        const danceFrame = Math.floor(elapsed * 12) % DANCE_SPRITE_FRAMES;
         ctx.save();
-        ctx.translate(danceX, danceY);
+        ctx.translate(view.width / 2, view.height * .53);
         ctx.shadowBlur = 28;
         ctx.shadowColor = "#ff2b8a";
-        if (avatar?.complete && avatar.naturalWidth > 0) {
-          // The avatar is deliberately drawn in separate body parts here. A
-          // whole-sprite rotation looks like sliding; independently pivoted
-          // arms and legs make the celebration read as a real dance.
-          const scale = avatarWidth / 176;
-          const drawDancePart = (sourceX: number, sourceY: number, sourceW: number, sourceH: number, pivotX: number, pivotY: number, rotation: number, offsetX = 0, offsetY = 0) => {
-            ctx.save();
-            ctx.translate(-avatarWidth / 2 + pivotX * scale + offsetX, -avatarHeight / 2 + pivotY * scale + offsetY);
-            ctx.rotate(rotation);
-            ctx.drawImage(avatar, sourceX, sourceY, sourceW, sourceH, (sourceX - pivotX) * scale, (sourceY - pivotY) * scale, sourceW * scale, sourceH * scale);
-            ctx.restore();
-          };
-          // Legs first, then the torso and arms: alternating step, hip shift,
-          // shoulder turn, and arm swing create one continuous dance loop.
-          drawDancePart(34, 194, 55, 174, 67, 202, step * .31, -step * 8, Math.max(0, -step) * 9);
-          drawDancePart(88, 194, 53, 174, 108, 202, counterStep * .31, step * 8, Math.max(0, step) * 9);
-          // The torso crop intentionally excludes both arms. They are drawn
-          // only by the two animated parts below, avoiding duplicate arms.
-          drawDancePart(52, 0, 72, 216, 88, 192, groove * .11, step * 4, 0);
-          drawDancePart(6, 80, 51, 136, 48, 91, -.55 - step * .9, -step * 4, -Math.max(0, step) * 5);
-          drawDancePart(119, 80, 51, 136, 128, 91, .55 + step * .9, step * 4, -Math.max(0, -step) * 5);
+        if (danceSprite) {
+          ctx.drawImage(danceSprite, danceFrame * DANCE_SPRITE_WIDTH, 0, DANCE_SPRITE_WIDTH, DANCE_SPRITE_HEIGHT, -avatarWidth / 2, -avatarHeight / 2, avatarWidth, avatarHeight);
+        } else if (avatar?.complete && avatar.naturalWidth > 0) {
+          ctx.drawImage(avatar, -avatarWidth / 2, -avatarHeight / 2, avatarWidth, avatarHeight);
         } else {
           ctx.fillStyle = "#ff7eaa";
           ctx.beginPath(); ctx.arc(0, -avatarHeight * .25, avatarWidth * .23, 0, Math.PI * 2); ctx.fill();

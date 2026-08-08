@@ -35,6 +35,10 @@ Diese Datei bei jeder größeren Änderung aktualisieren. Sie enthält nur tats�
 - Mit aktiviertem Bikini-Avatar auf einem Desktop- und Mobilbrowser ein Level beenden.
 - Prüfen: Die Vollbild-Tanzsequenz läuft fünf Sekunden, die aktuelle Levelmusik bleibt hörbar und anschließend erscheint zuverlässig die Upgrade-Auswahl beziehungsweise das Finale.
 
+## Spätere Präsentationsoption – echte 3D-Abschlusssequenz
+
+- Nicht begonnen: Ein geriggtes 3D-Modell mit Skelettanimation kann die vorbereitete 2D-Sprite-Tanzsequenz später ersetzen. Vorher Mobil-Leistung, Modell-/Animationsquelle und Ladezeit bewerten.
+
 ## Bereits bekannte Beta-Einschränkungen
 
 - Bildrate und Wärmeentwicklung hängen von Gerät, Browser, Akkustand, Umgebungstemperatur und Grafikstufe ab.
