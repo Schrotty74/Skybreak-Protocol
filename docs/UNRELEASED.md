@@ -2,7 +2,7 @@
 
 ## Umgesetzt
 
-Noch keine weiteren Punkte festgelegt.
+- Die mobile Live-FPS-Anzeige steht während einer aktiven Runde gut lesbar im schwarzen Kopfbereich unter „Skybreak Protocol“ statt klein über dem Spielfeld. Sie zeigt FPS und Framezeit größer in Gelb an und lässt sich auf Mobilgeräten wie am Desktop ein- oder ausschalten. Die Wahl bleibt lokal gespeichert.
 
 ## Geplant: Grafik und Präsentation
 
