@@ -44,7 +44,7 @@ const MUSIC_TRACKS = [
 ].map((path) => `${import.meta.env.BASE_URL}${path}`);
 
 const DIFFICULTY_SETTINGS: Record<Difficulty, { enemy: number; hazards: number; hazardSpeed: number; score: number }> = {
-  easy: { enemy: 0.55, hazards: 0.42, hazardSpeed: 0.58, score: 0.75 },
+  easy: { enemy: 0.3, hazards: 0.15, hazardSpeed: 0.34, score: 0.65 },
   medium: { enemy: 1, hazards: 1, hazardSpeed: 1, score: 1 },
   hard: { enemy: 1.28, hazards: 1.42, hazardSpeed: 1.3, score: 1.35 },
 };
@@ -325,11 +325,13 @@ function applyEasyAssists(world: World) {
   world.easyAssistsApplied = true;
   // Easy is an onboarding mode: retain the visual world, but remove the
   // mechanics that create the largest frustration spikes.
-  world.lives = Math.max(world.lives, 5);
-  world.enemies = world.enemies.filter((enemy, index) => enemy.guardian || index % 2 === 0);
+  world.lives = Math.max(world.lives, 8);
+  // Regular enemies are omitted entirely in Easy. The guardian remains as a
+  // short, one-hit final encounter so the level objective still has meaning.
+  world.enemies = world.enemies.filter((enemy) => enemy.guardian).map((enemy) => ({ ...enemy, integrity: 1, attackTimer: 3.2 }));
   world.objectives = world.objectives.slice(0, 1);
   world.tiles = world.tiles.map((tile) => {
-    if (!["moving", "phase", "ice"].includes(tile.mode)) return tile;
+    if (!["moving", "phase", "ice", "fragile", "rift"].includes(tile.mode)) return tile;
     return { ...tile, mode: "stable", x: tile.baseX, travel: 0, previousX: tile.baseX };
   });
 }
@@ -2268,7 +2270,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         p.y = respawnY;
         p.vx = 0;
         p.vy = -280;
-        p.invulnerable = 2;
+        p.invulnerable = (difficultiesRef.current[Math.max(0, world.sector - 1)] || "medium") === "easy" ? 3.5 : 2;
       }
       syncHud(world);
     };
@@ -2561,7 +2563,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           const shotCounts = [1, 1, 2, 1, 2, 2, 1, 2, 1, 3];
           const shotSpeeds = [70, 92, 62, 156, 86, 122, 74, 118, 174, 102];
           const shotArcs = [115, 92, -42, 62, -108, 138, -78, 24, 172, -18];
-          enemy.attackTimer = (difficultyLevel === "easy" ? 1.55 : 1) * Math.max(1.15, 2.45 - Math.min(0.72, world.sector * 0.05) - bossPhase * 0.24);
+          enemy.attackTimer = (difficultyLevel === "easy" ? 2.6 : 1) * Math.max(1.15, 2.45 - Math.min(0.72, world.sector * 0.05) - bossPhase * 0.24);
           const shotCount = difficultyLevel === "easy" ? 1 : Math.min(4, shotCounts[bossMode] + (bossPhase === 2 ? 1 : 0));
           for (let shot = 0; shot < shotCount; shot += 1) {
             const aimed = bossMode === 1 || bossMode === 5 || bossMode === 8;
@@ -2569,7 +2571,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             world.particles.push({
               x: enemy.x + 19,
               y: enemy.y + 8,
-              vx: direction * (shotSpeeds[bossMode] + world.sector * 6 + bossPhase * 18),
+              vx: direction * (shotSpeeds[bossMode] + world.sector * 6 + bossPhase * 18) * (difficultyLevel === "easy" ? 0.45 : 1),
               vy: shotArcs[bossMode] + shot * 34,
               life: 3.2,
               color: "#ff2b8a",
@@ -2635,7 +2637,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       }
 
       world.hazardTimer -= dt;
-      if (world.hazardTimer <= 0 && (world.cameraY < -110 || levelRule.hazard === "laser")) {
+      if (difficultyLevel !== "easy" && world.hazardTimer <= 0 && (world.cameraY < -110 || levelRule.hazard === "laser")) {
         world.hazardTimer = (levelRule.hazard === "laser" ? 1.7 : 2.3 + Math.random() * 2.2) / (difficulty.hazards * levelPressure);
         const hazardY = world.cameraY + 70 + Math.random() * Math.max(90, view.height - 150);
         const laserFromLeft = Math.random() > 0.5;

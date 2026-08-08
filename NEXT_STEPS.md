@@ -11,7 +11,7 @@ Diese Datei bei jeder größeren Änderung aktualisieren. Sie enthält nur tats�
 - Manuell prüfen: Bruchzonen (Level 2/4/7), bewegliche Plattformen (1/5/10), Eisplattformen (3/7), Strömungen (3/5/7/8/10), Seitenlaser (4/7/10), Phasenplattformen (6/8), Rift-Sprünge (9), Energiezellen/Schalter sowie Boss-Angriffe nach jedem Integritätstreffer.
 - Eispickel prüfen: Schalteraktivierung, Projektil-Auflösung, Schildgegner, Kryo-Frost bei passenden Style-Stufen und die temporäre Eisbrücke ab Kraftstufe 4.
 - Dabei besonders auf unfaire Spawnpunkte, erreichbare Rifts, Kollisionen bei unsichtbaren Phasenplattformen und Wärmeentwicklung auf Mobilgeräten achten.
-- „Leicht“ auf Desktop und Mobilgerät prüfen: fünf Startleben, reduzierte Gegnerzahl, ein Pflichtziel, entschärfte Plattformen, keine Windstöße sowie langsamere und seltenere Gefahren müssen nachvollziehbar wirken.
+- „Leicht“ auf Desktop und Mobilgerät prüfen: acht Startleben, keine normalen Gegner, ein Pflichtziel, ausschließlich stabile Plattformen, keine Windstöße und keine Umweltgefahren sowie ein einzelner stark entschärfter Wächter müssen nachvollziehbar wirken.
 
 ## Priorität 2 – Musikwechsel auf echtem Gerät prüfen
 
