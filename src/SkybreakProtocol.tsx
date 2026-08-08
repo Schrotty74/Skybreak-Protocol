@@ -414,47 +414,6 @@ function drawHologramDancer(ctx: CanvasRenderingContext2D, time: number, scale: 
   ctx.restore();
 }
 
-function drawBikiniLookOverlay(ctx: CanvasRenderingContext2D, look: typeof BIKINI_LOOKS[number], scale: number) {
-  const fill = ctx.createLinearGradient(0, -145 * scale, 0, 20 * scale);
-  fill.addColorStop(0, look.secondary);
-  fill.addColorStop(.44, look.primary);
-  fill.addColorStop(1, look.secondary);
-  const path = (points: Array<[number, number]>) => {
-    ctx.beginPath();
-    points.forEach(([x, y], index) => index === 0 ? ctx.moveTo(x * scale, y * scale) : ctx.lineTo(x * scale, y * scale));
-    ctx.closePath();
-  };
-  ctx.save();
-  ctx.globalCompositeOperation = "screen";
-  ctx.globalAlpha = .88;
-  ctx.fillStyle = fill;
-  ctx.strokeStyle = look.secondary;
-  ctx.lineWidth = 1.8 * scale;
-  // A fashion overlay follows the underlying avatar's top and bottom. Each
-  // level gets a visibly different contour and an accent motif.
-  if (look.cut % 3 === 0) {
-    path([[-39, -69], [-7, -91], [0, -55], [-4, -48], [-41, -54]]); ctx.fill(); ctx.stroke();
-    path([[39, -69], [7, -91], [0, -55], [4, -48], [41, -54]]); ctx.fill(); ctx.stroke();
-  } else if (look.cut % 3 === 1) {
-    path([[-41, -59], [-7, -87], [0, -55], [-12, -45], [-43, -50]]); ctx.fill(); ctx.stroke();
-    path([[41, -59], [7, -87], [0, -55], [12, -45], [43, -50]]); ctx.fill(); ctx.stroke();
-  } else {
-    path([[-42, -54], [-5, -88], [0, -52], [-19, -44], [-45, -48]]); ctx.fill(); ctx.stroke();
-    path([[42, -54], [5, -88], [0, -52], [19, -44], [45, -48]]); ctx.fill(); ctx.stroke();
-  }
-  path([[-31, 4], [0, -13], [31, 4], [22, 30], [0, 38], [-22, 30]]); ctx.fill(); ctx.stroke();
-  ctx.globalCompositeOperation = "source-over";
-  ctx.globalAlpha = .95;
-  ctx.strokeStyle = look.secondary;
-  ctx.lineWidth = 2.2 * scale;
-  for (let accent = 0; accent < 3; accent += 1) {
-    const offset = (-12 + accent * 12) * scale;
-    ctx.beginPath(); ctx.moveTo(offset, -74 * scale); ctx.lineTo(offset * .55, -47 * scale); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(offset, 0); ctx.lineTo(offset * .55, 28 * scale); ctx.stroke();
-  }
-  ctx.restore();
-}
-
 const CHEST_POWER_UPS: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
 const PICKAXE_STYLES = [
   { de: "GOLD // KURVE", en: "GOLD // CURVE" },
@@ -3830,8 +3789,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         const elapsed = 5 - world.celebrationTime;
         const pulse = .93 + (Math.sin(elapsed * Math.PI * 2.1) + 1) * .035;
         const avatar = bikiniAvatarImageRef.current;
-        const avatarHeight = Math.min(view.height * .77, 438) * pulse;
-        const avatarWidth = avatarHeight * (176 / 371);
+        const naturalAspect = avatar?.complete && avatar.naturalHeight > 0 ? avatar.naturalWidth / avatar.naturalHeight : 176 / 371;
+        const unclampedHeight = Math.min(view.height * .77, 438) * pulse;
+        const avatarWidth = Math.min(view.width * .72, unclampedHeight * naturalAspect);
+        const avatarHeight = avatarWidth / naturalAspect;
         ctx.save();
         ctx.setTransform(sx, 0, 0, sy, 0, 0);
         ctx.fillStyle = "rgba(1, 5, 16, .95)";
@@ -3857,7 +3818,6 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.shadowColor = look.primary;
         if (avatar?.complete && avatar.naturalWidth > 0) {
           ctx.drawImage(avatar, -avatarWidth / 2, -avatarHeight / 2, avatarWidth, avatarHeight);
-          drawBikiniLookOverlay(ctx, look, avatarWidth / 176);
         }
         ctx.restore();
         ctx.fillStyle = look.primary;

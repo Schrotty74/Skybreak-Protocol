@@ -2,6 +2,7 @@
 
 Every public beta and final build has its own detailed German and English release document.
 
+- **1.0.0-beta.10:** [Deutsch](docs/releases/1.0.0-beta.10.md) · [English](docs/releases/1.0.0-beta.10.en.md) – clearer Easy mode, documented cosmetic avatar and dance completion, and unobstructed bikini-avatar presentation
 - **1.0.0-beta.9:** [Deutsch](docs/releases/1.0.0-beta.9.md) · [English](docs/releases/1.0.0-beta.9.en.md) – distinct level rules, objectives, enemy roles, guardian attack phases, and expanded manuals
 - **1.0.0-beta.8:** [Deutsch](docs/releases/1.0.0-beta.8.md) · [English](docs/releases/1.0.0-beta.8.en.md) – level-specific enemy and ice-pick designs, clear upgrade previews, and controllable mobile FPS display
 - **1.0.0-beta.7:** [Deutsch](docs/releases/1.0.0-beta.7.md) · [English](docs/releases/1.0.0-beta.7.en.md) – mobile live FPS display for real-device performance and heat checks

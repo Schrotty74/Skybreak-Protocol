@@ -106,7 +106,7 @@ TEXT = {
             ("TRUHEN", "Leicht: dauerhaft alle 2-3 Etagen. Mittel: ab der Hälfte 8 Sekunden sichtbar. Schwer: ab 2/3 nur 4,5 Sekunden und häufig versetzt. Schwere Truhen bleiben sichtbar und erscheinen bevorzugt auf Spielerhöhe oder darüber. Eine erschienene Truhe bleibt beim Zurückspringen aktiv."),
             ("ZIELE & EISPICKEL", "Je zwei Energiezellen oder Zugangsschalter müssen vor dem Levelziel aktiviert werden. Der Eispickel löst gegnerische Projektile auf und knackt Schilde. Ein erster Treffer friert einen normalen Gegner ein, der nächste schaltet ihn aus. Ab Kraft 4 entsteht kurz eine Eisbrücke."),
             ("WÄCHTER & LEVEL", "Jedes Level hat 15 Etagen, eigene Regeln, ein Eispickel-Grundmodell und einen Wächter. Dessen Schüsse unterscheiden sich je Level und werden bei der letzten Integritätsstufe schneller. Nach Sieg folgt die nächste Upgrade-Vorschau."),
-            ("PUNKTE, SCHÄDEN & SIEG", "Schwer erhöht den Multiplikator. Treffer hinterlassen Risse, Funken und Sensorflackern. Nach Level 10 aktiviert sich der Sendeturm bei Sonnenaufgang. Cheat-Läufe ändern den Rekord nicht."),
+            ("ABSCHLUSS & SIEG", "Nach jedem Levelziel zeigt der Roboter fünf Sekunden SKYBREAK DANCE vor Upgrade oder Finale. Beim kosmetischen Bikini-Avatar erscheint stattdessen eine levelabhängige Look-Präsentation. Nach Level 10 aktiviert sich der Sendeturm; Cheat-Läufe ändern den Rekord nicht."),
         ],
         "levels_a": "LEVEL 1 BIS 5",
         "levels_b": "LEVEL 6 BIS 10",
@@ -124,7 +124,7 @@ TEXT = {
         ],
         "settings": "EINSTELLUNGEN, AUDIO UND OFFLINE-MODUS",
         "settings_cards": [
-            ("SCHWIERIGKEIT", "Leicht reduziert Tempo und Gefahren, Mittel ist ausgewogen, Schwer erhöht Gegner, Gefahren und Punkte. Die Wahl wird in den nächsten Level übernommen."),
+            ("SCHWIERIGKEIT", "Leicht ist der Einstiegsmodus: 8 Leben, keine normalen Gegner, ein Pflichtziel, stabile Plattformen sowie kein Wind und keine Umweltgefahren. Der Wächter hat 1 Trefferpunkt und schießt langsamer. Mittel ist ausgewogen; Schwer erhöht Gegner, Gefahren und Punkte."),
             ("GRAFIK", "Auf einem iPhone 17 Pro erreicht Ultra bei 1080p 60 FPS. 4K Ultra ist kein 60-FPS-Mobilmodus. Ultra kann das Gerät dennoch erwärmen. Bei Hitze, Sonne oder Erwärmung Mittel oder Niedrig wählen."),
             ("MOBILE ULTRA", "60 FPS ist der sichere Standard. FPS AN/AUS schaltet die lokale Anzeige. Bis 120 FPS erhöht Wärme und Akkuverbrauch; der adaptive Wärmeschutz kann Effekte reduzieren."),
             ("AUDIO", "Jedes Level besitzt einen eigenen Track. MUSIC und SFX lassen sich vollständig getrennt schalten."),
@@ -141,7 +141,7 @@ TEXT = {
             ("FORTSCHRITT", "Erreichte Level werden lokal freigeschaltet. Im Startmenü ein freigeschaltetes Startlevel wählen; die Schwierigkeit wird beim nächsten Level übernommen."),
         ],
         "cheats": "GEHEIME CHEAT-CODES",
-        "cheat_intro": "Cheats funktionieren mit Touch und Tastatur. Sie gelten nur für den aktuellen Lauf. Ein Lauf mit Cheat aktualisiert den lokalen Highscore nicht.",
+        "cheat_intro": "Cheats funktionieren mit Touch und Tastatur. Sie gelten nur für den aktuellen Lauf. Ein Lauf mit Cheat aktualisiert den lokalen Highscore nicht. Der Bikini-Avatar ist ein zusätzlicher Musik-Schalter-Cheat und benötigt keinen CHEAT-LINK.",
         "cheat_steps": [
             "Einen Lauf starten.",
             "Das SP-Symbol links oben fünfmal schnell antippen oder anklicken.",
@@ -153,6 +153,7 @@ TEXT = {
             ("DOPPELSCHILD", "JUMP JUMP ← → PICK", "Gewährt sofort zwei Schildladungen."),
             ("30-S-OVERDRIVE", "PICK JUMP PICK JUMP ← →", "Maximale Eispickel-Verstärkung für 30 Sekunden."),
             ("EXTRALEBEN", "← ← → → JUMP PICK", "Gibt ein zusätzliches Leben, maximal neun Leben."),
+            ("BIKINI-AVATAR", "MUSIC AUS/AN ×2", "Während eines aktiven Laufs MUSIC innerhalb von 5 Sekunden zweimal aus- und wieder einschalten. Rein kosmetisch, nur für den Lauf; zeigt eine Bestätigung und levelabhängige Look-Präsentationen."),
         ],
         "cheat_note": "CHEAT-LAUF // NUR LOKAL // KEIN HIGHSCORE-EINTRAG",
         "footer": "Skybreak Protocol // Handbuch DE",
@@ -206,7 +207,7 @@ TEXT = {
             ("CHESTS", "Easy: persistent every 2-3 floors. Medium: available after halfway for 8 seconds. Hard: only after two thirds for 4.5 seconds and frequently relocated. Hard chests stay in view and prefer the player's height or above. An active chest stays active while backtracking."),
             ("OBJECTIVES & ICE PICK", "Two energy cells or access switches must be activated before the level goal. The ice pick dissolves enemy projectiles and breaks shields. A first hit freezes a normal enemy; the next disables it. From power 4, it briefly creates an ice bridge."),
             ("GUARDIANS & LEVELS", "Each level has 15 floors, unique rules, an ice-pick base model, and a guardian. Its shots vary by level and become faster at the final integrity stage. The next upgrade preview follows a win."),
-            ("SCORING, DAMAGE & VICTORY", "Hard increases the multiplier. Hits leave cracks, sparks, and sensor flicker. After level 10, the tower activates at sunrise. Cheat runs do not change the record."),
+            ("COMPLETION & VICTORY", "After every level goal, the robot shows SKYBREAK DANCE for five seconds before the upgrade or finale. The cosmetic bikini avatar instead shows a level-specific look presentation. After level 10, the tower activates; cheat runs do not change the record."),
         ],
         "levels_a": "LEVELS 1 TO 5",
         "levels_b": "LEVELS 6 TO 10",
@@ -224,7 +225,7 @@ TEXT = {
         ],
         "settings": "SETTINGS, AUDIO, AND OFFLINE MODE",
         "settings_cards": [
-            ("DIFFICULTY", "Easy lowers pace and hazards, Medium is balanced, and Hard increases enemies, hazards, and points. The choice carries into the next level."),
+            ("DIFFICULTY", "Easy is the onboarding mode: 8 lives, no regular enemies, one required objective, stable platforms, and no drafts or environmental hazards. The guardian has 1 hit point and fires more slowly. Medium is balanced; Hard increases enemies, hazards, and points."),
             ("GRAPHICS", "On an iPhone 17 Pro, Ultra reaches 60 FPS at 1080p. 4K Ultra is not a 60 FPS mobile mode. Ultra can still warm the device. In heat, sunlight, or when warm, choose Medium or Low."),
             ("MOBILE ULTRA", "60 FPS is the safer default. FPS ON/OFF toggles the local display. Up to 120 FPS increases heat and battery use; adaptive thermal protection can reduce effects."),
             ("AUDIO", "Every level has its own track. MUSIC and SFX are completely independent."),
@@ -241,7 +242,7 @@ TEXT = {
             ("PROGRESS", "Completed levels unlock locally. Choose an unlocked start level from the start menu; difficulty carries into the next level."),
         ],
         "cheats": "SECRET CHEAT CODES",
-        "cheat_intro": "Cheats work with touch and keyboard. They apply only to the current run. A run using a cheat does not update the local high score.",
+        "cheat_intro": "Cheats work with touch and keyboard. They apply only to the current run. A run using a cheat does not update the local high score. The bikini avatar is an additional music-toggle cheat and needs no CHEAT LINK.",
         "cheat_steps": [
             "Start a run.",
             "Quickly tap or click the SP symbol at the top left five times.",
@@ -253,6 +254,7 @@ TEXT = {
             ("DOUBLE SHIELD", "JUMP JUMP ← → PICK", "Immediately grants two shield charges."),
             ("30-S OVERDRIVE", "PICK JUMP PICK JUMP ← →", "Maximum ice-pick enhancement for 30 seconds."),
             ("EXTRA LIFE", "← ← → → JUMP PICK", "Adds one life, up to a maximum of nine."),
+            ("BIKINI AVATAR", "MUSIC OFF/ON ×2", "During an active run, switch MUSIC off and on twice within 5 seconds. Cosmetic only and only for that run; shows a confirmation and level-specific look presentations."),
         ],
         "cheat_note": "CHEAT RUN // LOCAL ONLY // NO HIGH-SCORE ENTRY",
         "footer": "Skybreak Protocol // Manual EN",
@@ -479,18 +481,21 @@ def draw_cheats(c, data, page_no):
     y = draw_wrapped(c, data["cheat_intro"], MARGIN, PAGE_H - 92, PAGE_W - 2 * MARGIN, size=9.5, leading=14, fill=MUTED)
     y = bullet_list(c, data["cheat_steps"], MARGIN, y - 12, PAGE_W - 2 * MARGIN, leading=22)
     y -= 8
+    compact = len(data["codes"]) > 4
+    card_height = 62 if compact else 80
+    card_step = card_height + 9
     for index, (name, code, body) in enumerate(data["codes"]):
-        accent = [YELLOW, CYAN, PINK, YELLOW][index]
+        accent = [YELLOW, CYAN, PINK][index % 3]
         c.setFillColor(color(PANEL))
         c.setStrokeColor(color(accent))
-        c.roundRect(MARGIN, y - 91, PAGE_W - 2 * MARGIN, 80, 6, fill=1, stroke=1)
+        c.roundRect(MARGIN, y - card_height - 11, PAGE_W - 2 * MARGIN, card_height, 6, fill=1, stroke=1)
         c.setFillColor(color(accent))
         c.setFont("SkyMonoBold", 10)
-        c.drawString(MARGIN + 12, y - 31, name)
-        c.setFont("SkyMonoBold", 12)
-        c.drawRightString(PAGE_W - MARGIN - 12, y - 31, code)
-        draw_wrapped(c, body, MARGIN + 12, y - 53, PAGE_W - 2 * MARGIN - 24, size=8.5, leading=12, fill=WHITE)
-        y -= 89
+        c.drawString(MARGIN + 12, y - (26 if compact else 31), name)
+        c.setFont("SkyMonoBold", 9.5 if compact else 12)
+        c.drawRightString(PAGE_W - MARGIN - 12, y - (26 if compact else 31), code)
+        draw_wrapped(c, body, MARGIN + 12, y - (42 if compact else 53), PAGE_W - 2 * MARGIN - 24, size=7.5 if compact else 8.5, leading=10 if compact else 12, fill=WHITE, max_lines=2 if compact else None)
+        y -= card_step
     c.drawImage(optimized_image(str(ICON), 220), MARGIN, 58, 60, 60, mask="auto")
     c.setFillColor(color(PANEL))
     c.setStrokeColor(color(PINK))

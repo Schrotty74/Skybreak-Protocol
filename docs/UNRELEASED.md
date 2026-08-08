@@ -1,17 +1,8 @@
-# Unveröffentlichte Änderungen seit Skybreak Protocol 1.0.0-beta.7
+# Unveröffentlichte Änderungen seit Skybreak Protocol 1.0.0-beta.10
 
 ## Umgesetzt
 
-- Die mobile Live-FPS-Anzeige steht während einer aktiven Runde gut lesbar im schwarzen Kopfbereich unter „Skybreak Protocol“ statt klein über dem Spielfeld. Sie zeigt FPS und Framezeit größer in Gelb an und lässt sich auf Mobilgeräten wie am Desktop ein- oder ausschalten. Die Wahl bleibt lokal gespeichert.
-- Der Eispickel-Upgrade-Bildschirm zeigt vor der Wahl konkret die nächste Kraftstufe mit Reichweite und zerstörbaren Plattformen sowie das nächste Design mit Farbe und Form.
-- Normale Gegner und Wächter besitzen je Level eine eigene Silhouette, Sensorform, Bewegungsakzente und Farbwelt.
-- Der Eispickel erhält pro Level ein klar anderes Werkzeugmodell und die jeweilige Level-Farbwelt: Klinge, Doppelklinge, Gabel, Axt, Dreizack, Sichel, Hammer, Halbmond, Rift-Prisma oder Gipfelspeer. Style-Upgrades bleiben als eigener Kern- und Leuchtakzent sichtbar.
-- Jede Welt kombiniert nun drei klar erkennbare Gegner-Archetypen: Patrouille (ein Sensor), Sprungangriff (zwei Sensoren und lange Beine) und Richtungswechsel (Rundsensor mit Energiering). Jeder der zehn Wächter hat ein eigenes Schussmuster mit Richtung, Tempo, Anzahl und Flugbahn.
-- Die Level unterscheiden sich nun auch spielerisch: Bruchzonen, bewegliche und vereiste Plattformen, seitliche Strömungen, horizontale Laser, vertikale Energiepulse, zeitweise phasenverschobene Plattformen und Rift-Sprungfelder. Energiezellen und Zugangsschalter müssen vor dem Ziel erreicht werden. Schild-, Schützen- und Schwebegner ergänzen die bisherigen Gegnerrollen. Der Eispickel kann Schalter aktivieren, Projektile auflösen, Schildgegner knacken, Kryo-Frost auslösen und ab Kraftstufe 4 zeitweise Eisbrücken erzeugen. Die Wächter beschleunigen ihre Angriffe in der letzten Integritätsphase.
-- Ein rein kosmetischer Cheat schaltet während einer aktiven Runde nach zwei Musik-Aus/An-Zyklen innerhalb von fünf Sekunden einen erwachsenen weiblichen Bikini-Avatar frei. Jede Cheat-Aktivierung zeigt eine Bestätigung im Spielfeld. Er speichert nichts und verändert keine Spielwerte.
-- Der Bikini-Avatar verwendet ein transparentes, realistisches Figuren-Asset mit schwarzem Cyberpunk-Bikini und Cyan-/Magenta-Akzenten statt der vereinfachten Canvas-Zeichnung.
-- Wenn die normale Roboterfigur ein Levelziel erreicht, zeigt das Spiel vor der Upgrade-Auswahl beziehungsweise dem Finale eine fünfsekündige, nicht explizite Vollbild-Tanzsequenz. Die laufende Levelmusik bleibt währenddessen aktiv; eine eigenständige Cyberpunk-Hologramm-Tänzerin animiert dabei sichtbar Arme, Beine, Hüfte und Oberkörper. Der Bikini-Avatar zeigt stattdessen eine fünfsekündige Vollbild-Look-Präsentation mit einer anderen levelabhängigen Farbwelt, Kontur und Akzentgestaltung.
-- Die Schwierigkeitsstufe „Leicht“ ist nun ein echter Einstiegsmodus: acht Leben, keine normalen Gegner, nur ein Pflichtziel je Level, ausschließlich stabile Plattformen, keine Windstöße und keine Umweltgefahren. Der Wächter hat dort nur einen Trefferpunkt und schießt deutlich langsamer und seltener.
+Noch keine weiteren Punkte festgelegt.
 
 ## Geplant: Grafik und Präsentation
 
