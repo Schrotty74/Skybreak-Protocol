@@ -2942,6 +2942,45 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.moveTo(-14, 10); ctx.lineTo(-24, 4); ctx.moveTo(14, 10); ctx.lineTo(24, 4);
         }
         ctx.stroke();
+        ctx.strokeStyle = enemySecondary;
+        ctx.lineWidth = enemy.guardian ? 2.5 : 1.7;
+        ctx.beginPath();
+        if (enemyVariant === 0) {
+          ctx.moveTo(0, -16); ctx.lineTo(0, -28); ctx.arc(0, -30, 3, 0, Math.PI * 2);
+        } else if (enemyVariant === 1) {
+          ctx.moveTo(-16, -4); ctx.lineTo(-31, -16); ctx.moveTo(16, -4); ctx.lineTo(31, -16);
+        } else if (enemyVariant === 2) {
+          for (let spoke = 0; spoke < 6; spoke += 1) {
+            const angle = spoke * Math.PI / 3;
+            ctx.moveTo(Math.cos(angle) * 18, Math.sin(angle) * 15);
+            ctx.lineTo(Math.cos(angle) * 30, Math.sin(angle) * 24);
+          }
+        } else if (enemyVariant === 3) {
+          ctx.moveTo(-15, 12); ctx.lineTo(-27, 25); ctx.lineTo(-8, 20);
+          ctx.moveTo(15, 12); ctx.lineTo(27, 25); ctx.lineTo(8, 20);
+        } else if (enemyVariant === 4) {
+          ctx.ellipse(0, 0, 31, 21, 0, 0, Math.PI * 2);
+        } else if (enemyVariant === 5) {
+          ctx.moveTo(-14, 9); ctx.lineTo(-30, 20); ctx.lineTo(-24, 29);
+          ctx.moveTo(14, 9); ctx.lineTo(30, 20); ctx.lineTo(24, 29);
+        } else if (enemyVariant === 6) {
+          ctx.moveTo(-14, -11); ctx.lineTo(-34, -21); ctx.moveTo(14, -11); ctx.lineTo(34, -21);
+          ctx.moveTo(-16, 9); ctx.lineTo(-34, 19); ctx.moveTo(16, 9); ctx.lineTo(34, 19);
+        } else if (enemyVariant === 7) {
+          ctx.moveTo(-14, 13); ctx.quadraticCurveTo(-22, 30, -11, 35);
+          ctx.moveTo(0, 16); ctx.quadraticCurveTo(0, 34, 0, 39);
+          ctx.moveTo(14, 13); ctx.quadraticCurveTo(22, 30, 11, 35);
+        } else if (enemyVariant === 8) {
+          for (let spike = 0; spike < 4; spike += 1) {
+            const angle = Math.PI / 4 + spike * Math.PI / 2;
+            ctx.moveTo(Math.cos(angle) * 14, Math.sin(angle) * 14);
+            ctx.lineTo(Math.cos(angle) * 34, Math.sin(angle) * 34);
+          }
+        } else {
+          ctx.moveTo(-14, -5); ctx.lineTo(-28, -28); ctx.lineTo(-4, -17);
+          ctx.moveTo(14, -5); ctx.lineTo(28, -28); ctx.lineTo(4, -17);
+        }
+        ctx.stroke();
         ctx.globalAlpha = 0.35;
         ctx.strokeStyle = enemyAccent;
         ctx.beginPath();
@@ -3018,7 +3057,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.globalAlpha = 1;
         }
         const pickaxeColors = ["#ffd84d", "#00f0ff", "#ff2b8a", "#72ff4d", "#ff9f32", "#c65cff", "#84fff2", "#9c6bff", "#ffffff", "#ffcf4a"];
-        const pickaxeColor = p.overdrive > 0 ? "#ffd84d" : pickaxeColors[Math.min(9, p.pickaxeStyle - 1)];
+        const pickaxeStyleColor = pickaxeColors[Math.min(9, p.pickaxeStyle - 1)];
+        const pickaxeColor = p.overdrive > 0 ? "#ffd84d" : theme.accent;
+        const pickaxeVariant = world.sector - 1;
         const renderPower = Math.min(10, p.pickaxePower + (p.overdrive > 0 ? 3 : 0));
         const metal = ctx.createLinearGradient(-16, -22, 16, 24);
         metal.addColorStop(0, "#54728a");
@@ -3104,7 +3145,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(0, -25); ctx.lineTo(3, -31); ctx.stroke();
-        ctx.fillStyle = pickaxeColor;
+        ctx.fillStyle = pickaxeStyleColor;
         ctx.beginPath(); ctx.arc(3, -32, 2, 0, Math.PI * 2); ctx.fill();
 
         const idlePlaying = p.idleTime > 0.75;
@@ -3130,14 +3171,30 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(29, 0); ctx.stroke();
         ctx.strokeStyle = "#dffcff";
         ctx.lineWidth = 2.5;
-        const styleShape = (p.pickaxeStyle - 1) % 3;
-        const headSize = 11 + Math.min(8, renderPower) + styleShape * 1.5;
         ctx.beginPath();
-        ctx.moveTo(24, -headSize);
-        ctx.quadraticCurveTo(31, -4, 27, 0);
-        ctx.quadraticCurveTo(31 + styleShape * 2, 5, 22 - styleShape, headSize * (styleShape === 2 ? 0.9 : 0.65));
+        if (pickaxeVariant === 0) {
+          ctx.moveTo(24, -17); ctx.quadraticCurveTo(31, -4, 27, 0); ctx.quadraticCurveTo(31, 5, 22, 12);
+        } else if (pickaxeVariant === 1) {
+          ctx.moveTo(21, -18); ctx.lineTo(31, -9); ctx.lineTo(25, 0); ctx.lineTo(31, 9); ctx.lineTo(21, 18);
+        } else if (pickaxeVariant === 2) {
+          ctx.moveTo(21, -18); ctx.lineTo(30, -13); ctx.lineTo(25, -3); ctx.moveTo(25, 3); ctx.lineTo(30, 13); ctx.lineTo(21, 18);
+        } else if (pickaxeVariant === 3) {
+          ctx.moveTo(20, -18); ctx.lineTo(32, -10); ctx.lineTo(24, -4); ctx.lineTo(34, 3); ctx.lineTo(22, 15);
+        } else if (pickaxeVariant === 4) {
+          ctx.moveTo(22, -19); ctx.lineTo(30, -12); ctx.lineTo(26, -2); ctx.lineTo(33, 0); ctx.lineTo(26, 2); ctx.lineTo(30, 12); ctx.lineTo(22, 19);
+        } else if (pickaxeVariant === 5) {
+          ctx.moveTo(20, -20); ctx.quadraticCurveTo(36, -12, 29, 3); ctx.quadraticCurveTo(26, 15, 16, 17);
+        } else if (pickaxeVariant === 6) {
+          ctx.moveTo(18, -17); ctx.lineTo(33, -17); ctx.lineTo(33, 17); ctx.lineTo(18, 17); ctx.closePath();
+        } else if (pickaxeVariant === 7) {
+          ctx.moveTo(19, -20); ctx.quadraticCurveTo(35, -2, 19, 20); ctx.lineTo(26, 4); ctx.lineTo(26, -4); ctx.closePath();
+        } else if (pickaxeVariant === 8) {
+          ctx.moveTo(20, -20); ctx.lineTo(32, -8); ctx.lineTo(26, 0); ctx.lineTo(32, 8); ctx.lineTo(20, 20);
+        } else {
+          ctx.moveTo(18, -20); ctx.lineTo(27, -11); ctx.lineTo(31, -20); ctx.lineTo(35, 0); ctx.lineTo(31, 20); ctx.lineTo(27, 11); ctx.lineTo(18, 20);
+        }
         ctx.stroke();
-        ctx.fillStyle = pickaxeColor;
+        ctx.fillStyle = pickaxeStyleColor;
         ctx.beginPath(); ctx.arc(28, 0, 3, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
 
