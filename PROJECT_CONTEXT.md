@@ -1,6 +1,6 @@
 # Skybreak Protocol – Projektkontext
 
-**Stand:** 1. August 2026  
+**Stand:** 8. August 2026
 **Status:** öffentliche Web-Beta `1.0.0-beta.7`
 
 Diese Datei ist die zentrale technische Übergabe für neue Codex-Chats. Zuerst diese Datei und anschließend [`NEXT_STEPS.md`](NEXT_STEPS.md) lesen. Für Release-Vorhaben zusätzlich [`docs/RELEASE_WORKFLOW.md`](docs/RELEASE_WORKFLOW.md), [`docs/UNRELEASED.md`](docs/UNRELEASED.md), [`CHANGELOG.md`](CHANGELOG.md) und die passenden Release-Notizen lesen.
@@ -38,12 +38,13 @@ Die zentralen Daten sind In-Memory-Spielzustand in `SkybreakProtocol.tsx` sowie 
 
 ## Umgesetzter Stand
 
-- Zehn vollständige 15-Etagen-Level, Schwierigkeitsübernahme, freischaltbare Startlevel, Wächter und Eispickel-Upgrades.
+- Zehn vollständige 15-Etagen-Level mit eigenen Plattformregeln, Energiezellen/Schaltern als Level-Zielen, Umweltgefahren, Gegner-Archetypen, Wächter-Phasen, Schwierigkeitsübernahme, freischaltbaren Startleveln und Eispickel-Upgrades.
 - Desktop-Tastatursteuerung, Touch-Steuerung, Pause, Vollbild/immersiver Safari-Fallback, Cheats und Power-ups.
 - Grafikstufen Niedrig, Mittel, Hoch und Ultra; Canvas-2D-Hauptszene, WebGPU-Ultra-Effekte und WebGL2-Fallback.
 - Mobile Live-FPS-Anzeige während aktiver Runden sowie Desktop-Performance-Anzeige.
 - Lokale Fortschritts- und Einstellungsspeicherung, getrennt nach Entwicklungs-, Beta- und Final-Kanal.
 - Eigener Level-Soundtrack und synthetisierte Arcade-Soundeffekte.
+- Level-Regeln bleiben zustandslos im Spielstand: Bruchzonen, bewegliche und vereiste Plattformen, Strömungen, seitliche Laser, Reaktor-/Geist-Phasen und Rift-Sprünge verändern das jeweilige Level, ohne neue Browserdaten zu speichern. Der Eispickel kann Schalter aktivieren, Projektilenergie auflösen, Schildgegner knacken, Kryo-Frost auslösen und ab Kraftstufe 4 zeitweise Eisbrücken erzeugen.
 - Öffentliche, optionale GitHub-Release-Prüfung für Beta und Final.
 
 ## Feste technische Regeln
