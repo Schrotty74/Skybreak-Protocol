@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 43336)
-Total output lines: 3770
-
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -1457,7 +1454,1215 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     setIPhoneSafari(isIPhone && !isStandalone);
     try {
       const savedDifficulties = JSON.parse(getStoredItem("skybreak-level-difficulties") || "[]") as Difficulty[];
-      if (save…13336 tokens truncated…071426" : "#0a1730");
+      if (savedDifficulties.length === LEVEL_COUNT && savedDifficulties.every((value) => value in DIFFICULTY_SETTINGS)) {
+        difficultiesRef.current = savedDifficulties;
+        setLevelDifficulties(savedDifficulties);
+      }
+    } catch {
+      // Ignore malformed local settings and keep the balanced defaults.
+    }
+    try {
+      const bindings = normalizeKeyBindings(JSON.parse(getStoredItem("skybreak-key-bindings") || "null"));
+      keyBindingsRef.current = bindings;
+      setKeyBindings(bindings);
+    } catch {
+      keyBindingsRef.current = { ...DEFAULT_KEY_BINDINGS };
+    }
+    const storedUnlockedLevel = Number(getStoredItem("skybreak-unlocked-level") || 1);
+    const savedUnlockedLevel = Number.isFinite(storedUnlockedLevel)
+      ? Math.min(LEVEL_COUNT, Math.max(1, Math.round(storedUnlockedLevel)))
+      : 1;
+    unlockedLevelRef.current = savedUnlockedLevel;
+    selectedStartLevelRef.current = savedUnlockedLevel;
+    setUnlockedLevel(savedUnlockedLevel);
+    setSelectedStartLevel(savedUnlockedLevel);
+  }, []);
+
+  useEffect(() => {
+    if (APP_BUILD_CHANNEL === "dev") return;
+    let active = true;
+    void checkForUpdate(APP_VERSION).then((update) => {
+      if (active) setAvailableUpdate(update);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncFullscreen = () => setNativeFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
+
+  useEffect(() => () => {
+    audioRef.current?.stop();
+    audioRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("immersive-active", immersiveMode);
+    return () => document.documentElement.classList.remove("immersive-active");
+  }, [immersiveMode]);
+
+  const chooseQuality = (next: Quality) => {
+    const nextUltraScale = 1;
+    desktopUltraPerformanceRef.current = { scale: nextUltraScale, samples: 0, totalFrameMs: 0 };
+    setDesktopUltraScale(nextUltraScale);
+    qualityRef.current = next;
+    setQuality(next);
+    setStoredItem("skybreak-quality", next);
+    window.dispatchEvent(new Event("skybreak-quality"));
+  };
+
+  const chooseRenderResolution = (next: RenderResolution) => {
+    renderResolutionRef.current = next;
+    setRenderResolution(next);
+    setStoredItem("skybreak-render-resolution", next);
+    window.dispatchEvent(new Event("skybreak-quality"));
+  };
+
+  const chooseMobileUltra120 = (enabled: boolean) => {
+    mobileUltra120Ref.current = enabled;
+    setMobileUltra120(enabled);
+    setStoredItem("skybreak-mobile-ultra-120", String(enabled));
+  };
+
+  const chooseDifficulty = (next: Difficulty) => {
+    const updated = [...difficultiesRef.current];
+    updated[Math.max(0, sector - 1)] = next;
+    difficultiesRef.current = updated;
+    setLevelDifficulties(updated);
+    setStoredItem("skybreak-level-difficulties", JSON.stringify(updated));
+  };
+
+  const getUltraSceneInstances = useCallback(() => {
+    const world = worldRef.current;
+    const view = renderViewRef.current;
+    const instances: number[] = [];
+    const add = (x: number, y: number, width: number, height: number, r: number, g: number, b: number, alpha: number) => {
+      if (x < -0.1 || x > 1.1 || y < -0.1 || y > 1.1 || instances.length >= 800 * 8) return;
+      instances.push(x, y, width, height, r, g, b, alpha);
+    };
+
+    for (const tile of world.tiles) {
+      if (!tile.alive || tile.y < world.cameraY - 80 || tile.y > world.cameraY + view.height + 60) continue;
+      add(
+        (tile.x - world.cameraX + TILE * 0.5) / view.width,
+        (tile.y - world.cameraY + 4) / view.height,
+        TILE / view.width,
+        5 / view.height,
+        tile.cracked ? 0 : 1,
+        tile.cracked ? 0.88 : 0.76,
+        tile.cracked ? 1 : 0.18,
+        0.2,
+      );
+    }
+    for (const enemy of world.enemies) {
+      if (!enemy.alive || enemy.y < world.cameraY - 70 || enemy.y > world.cameraY + view.height + 70) continue;
+      add(
+        (enemy.x - world.cameraX + 18) / view.width,
+        (enemy.y - world.cameraY + 17) / view.height,
+        44 / view.width,
+        44 / view.height,
+        1,
+        0.04,
+        0.45,
+        0.22,
+      );
+    }
+    const ultraChests = difficultiesRef.current[world.sector - 1] === "easy" ? [...world.chests] : [];
+    if (world.roamingChest) ultraChests.push(world.roamingChest);
+    for (const chest of ultraChests) {
+      if (chest.opened || chest.y < world.cameraY - 50 || chest.y > world.cameraY + view.height + 50) continue;
+      add(
+        (chest.x - world.cameraX + 19) / view.width,
+        (chest.y - world.cameraY + 14) / view.height,
+        48 / view.width,
+        36 / view.height,
+        1,
+        0.62,
+        0.08,
+        0.25,
+      );
+    }
+    for (const particle of world.particles) {
+      if (particle.y < world.cameraY - 50 || particle.y > world.cameraY + view.height + 50) continue;
+      const pink = particle.color === "#ff2b8a";
+      add(
+        (particle.x - world.cameraX) / view.width,
+        (particle.y - world.cameraY) / view.height,
+        (pink ? 11 : 7) / view.width,
+        (pink ? 11 : 7) / view.height,
+        pink ? 1 : 0.08,
+        pink ? 0.05 : 0.82,
+        pink ? 0.44 : 1,
+        Math.min(0.42, Math.max(0.08, particle.life * 0.3)),
+      );
+    }
+    return new Float32Array(instances);
+  }, []);
+
+  useEffect(() => {
+    const canvas = fxCanvasRef.current;
+    const sourceCanvas = canvasRef.current;
+    if (!canvas || !sourceCanvas) return;
+    canvas.classList.remove("fx-ready");
+    if (quality === "ultra") {
+      ultraFallbackRef.current = false;
+      const desktopMac = /Macintosh|Mac OS X/i.test(navigator.userAgent)
+        && window.matchMedia("(pointer: fine)").matches;
+      const firefox = /Firefox\//i.test(navigator.userAgent);
+      // Keep Ultra visually identical across desktop browsers: detailed Canvas
+      // sprites plus additive WebGPU object glows.
+      const useGpuSceneInstances = benchmarkVariant === "instances-off"
+        ? false
+        : benchmarkVariant === "instances-on"
+          ? true
+          : true;
+      let disposed = false;
+      let cleanup: EffectCleanup | null = null;
+      const startFallback = () => {
+        ultraFallbackRef.current = true;
+        const fallbackFps = firefox ? 30 : 40;
+        ultraFpsRef.current = fallbackFps;
+        setUltraFps(fallbackFps);
+        window.dispatchEvent(new Event("skybreak-quality"));
+        return startWebGlEffects(canvas, setRenderer, () => "medium", () => renderResolutionRef.current);
+      };
+
+      const startFullSceneRenderer = () => startWebGpuUltraRenderer(
+            canvas,
+            sourceCanvas,
+            setRenderer,
+            useGpuSceneInstances ? getUltraSceneInstances : () => new Float32Array(0),
+            (nextFps) => {
+              ultraFpsRef.current = nextFps;
+              setUltraFps(nextFps);
+            },
+            () => window.matchMedia("(pointer: fine)").matches || mobileUltra120Ref.current,
+            setThermalProtection,
+            () => renderResolutionRef.current,
+          );
+      // Benchmark-only isolation: retain the identical Ultra Canvas scene
+      // while omitting the transparent GPU compositor, so its actual cost can
+      // be measured without asking the player to change settings.
+      const gpuRenderer = benchmarkVariant === "effects-off"
+        ? Promise.resolve<EffectCleanup>(() => setRenderer("CANVAS 2D"))
+        : desktopMac
+          ? startWebGpuEffects(canvas, setRenderer, useGpuSceneInstances ? getUltraSceneInstances : () => new Float32Array(0), () => renderResolutionRef.current)
+          : startFullSceneRenderer();
+
+      void gpuRenderer
+        .then((gpuCleanup) => {
+          if (disposed) {
+            gpuCleanup?.();
+            return;
+          }
+          if (gpuCleanup) {
+            cleanup = gpuCleanup;
+          } else {
+            cleanup = startFallback();
+          }
+        })
+        .catch(() => {
+          if (!disposed) {
+            cleanup = startFallback();
+          }
+        });
+      return () => {
+        disposed = true;
+        cleanup?.();
+        ultraFallbackRef.current = false;
+      };
+    }
+    ultraFallbackRef.current = false;
+    if (quality === "low") {
+      // Do not allocate a second GPU surface for a profile whose WebGL
+      // effects are disabled. Resetting the transparent canvas also removes
+      // a previously active Medium/High frame after switching down to Low.
+      canvas.width = 1;
+      canvas.height = 1;
+      setRenderer("CANVAS 2D");
+      return;
+    }
+    const gl = canvas.getContext("webgl2", {
+      alpha: true,
+      antialias: false,
+      depth: false,
+      powerPreference: "high-performance",
+      premultipliedAlpha: true,
+    });
+    if (!gl) return;
+    setRenderer("WEBGL2");
+
+    const vertexSource = `#version 300 es
+      precision highp float;
+      const vec2 points[3] = vec2[3](vec2(-1.0,-1.0), vec2(3.0,-1.0), vec2(-1.0,3.0));
+      void main(){ gl_Position = vec4(points[gl_VertexID], 0.0, 1.0); }
+    `;
+    const fragmentSource = `#version 300 es
+      precision highp float;
+      uniform vec2 u_resolution;
+      uniform float u_time;
+      out vec4 outColor;
+
+      float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+      }
+
+      float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2(1,0)), f.x),
+                   mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x), f.y);
+      }
+
+      void main() {
+        vec2 uv = gl_FragCoord.xy / u_resolution;
+        vec2 p = uv * 2.0 - 1.0;
+        p.x *= u_resolution.x / u_resolution.y;
+        float n = noise(p * 2.8 + vec2(u_time * .035, -u_time * .06));
+        float fogA = exp(-7.0 * abs(p.y + .26 + sin(p.x * 2.2 + u_time * .22) * .12));
+        float fogB = exp(-9.0 * abs(p.y - .38 + sin(p.x * 3.4 - u_time * .17) * .08));
+        vec3 color = vec3(0.0, .85, 1.0) * fogA * n * .16;
+        color += vec3(1.0, .04, .42) * fogB * (1.0 - n) * .13;
+
+        vec2 rainUv = uv * vec2(95.0, 24.0);
+        float lane = floor(rainUv.x);
+        float drop = fract(rainUv.y + u_time * (2.4 + hash(vec2(lane, 4.0))) + hash(vec2(lane, 7.0)) * 7.0);
+        float rain = smoothstep(.94, 1.0, drop) * step(.82, hash(vec2(lane, floor(rainUv.y))));
+        color += mix(vec3(0.0,.75,1.0), vec3(1.0,.08,.5), hash(vec2(lane,2.0))) * rain * .1;
+
+        float scan = sin(gl_FragCoord.y * 1.55 + u_time * 3.0) * .5 + .5;
+        color += vec3(.02,.05,.08) * scan * .035;
+        float edge = smoothstep(.72, 1.25, length(p));
+        color += vec3(.0,.32,.42) * edge * .035;
+        float alpha = clamp(max(max(color.r, color.g), color.b) * 1.7, 0.0, .28);
+        outColor = vec4(color, alpha);
+      }
+    `;
+    const compile = (type: number, source: string) => {
+      const shader = gl.createShader(type);
+      if (!shader) return null;
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    };
+    const vertex = compile(gl.VERTEX_SHADER, vertexSource);
+    const fragment = compile(gl.FRAGMENT_SHADER, fragmentSource);
+    if (!vertex || !fragment) return;
+    const program = gl.createProgram();
+    if (!program) return;
+    gl.attachShader(program, vertex);
+    gl.attachShader(program, fragment);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return;
+    const resolutionLocation = gl.getUniformLocation(program, "u_resolution");
+    const timeLocation = gl.getUniformLocation(program, "u_time");
+    let animation = 0;
+    let lastGlFrame = 0;
+
+    const render = (time: number) => {
+      const settings = activeQualitySettings(qualityRef.current, ultraFallbackRef.current, mobileHighThermalRef.current.active);
+      const frameInterval = 1000 / settings.glFps;
+      if (time - lastGlFrame < frameInterval) {
+        animation = requestAnimationFrame(render);
+        return;
+      }
+      lastGlFrame = time;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = cappedPixelRatio(rect, Math.min(window.devicePixelRatio || 1, settings.glDpr), renderResolutionRef.current);
+      const width = Math.max(1, Math.round(rect.width * dpr));
+      const height = Math.max(1, Math.round(rect.height * dpr));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+      gl.viewport(0, 0, width, height);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      if (!settings.webgl) {
+        animation = requestAnimationFrame(render);
+        return;
+      }
+      gl.useProgram(program);
+      gl.uniform2f(resolutionLocation, width, height);
+      gl.uniform1f(timeLocation, time * 0.001);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      canvas.classList.add("fx-ready");
+      animation = requestAnimationFrame(render);
+    };
+    animation = requestAnimationFrame(render);
+    return () => {
+      cancelAnimationFrame(animation);
+      gl.deleteProgram(program);
+      gl.deleteShader(vertex);
+      gl.deleteShader(fragment);
+    };
+  }, [getUltraSceneInstances, quality]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      ensureAudio();
+      const capturedAction = bindingCaptureRef.current;
+      if (capturedAction) {
+        event.preventDefault();
+        bindingCaptureRef.current = null;
+        setBindingCapture(null);
+        if (event.code === "Escape") return;
+        const updated = rebindKey(keyBindingsRef.current, capturedAction, event.code);
+        keyBindingsRef.current = updated;
+        setKeyBindings(updated);
+        setStoredItem("skybreak-key-bindings", JSON.stringify(updated));
+        return;
+      }
+      const key = actionForCode(keyBindingsRef.current, event.code);
+      if (key) {
+        event.preventDefault();
+        setInput(key, true);
+      }
+      if (event.code === "KeyP" || event.code === "Escape") {
+        const world = worldRef.current;
+        if (world.status === "playing" || world.status === "paused") {
+          world.status = world.status === "playing" ? "paused" : "playing";
+          if (world.status === "paused") audioRef.current?.pauseMusic();
+          else if (musicEnabledRef.current) void audioRef.current?.playMusic(world.sector);
+          setStatus(world.status);
+        }
+      }
+      if (event.code === "Enter" && ["ready", "gameover", "won"].includes(worldRef.current.status)) restart();
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      const key = actionForCode(keyBindingsRef.current, event.code);
+      if (key) setInput(key, false);
+    };
+    const clear = () => {
+      inputRef.current = { left: false, right: false, jump: false, attack: false };
+    };
+    window.addEventListener("keydown", onKeyDown, { passive: false });
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", clear);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", clear);
+    };
+  }, [ensureAudio, restart, setInput]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+    if (!ctx) return;
+
+    let frame = 0;
+    const view = renderViewRef.current;
+    let staticBackdrop: HTMLCanvasElement | null = null;
+    let staticBackdropKey = "";
+    let staticOverlay: HTMLCanvasElement | null = null;
+    let staticOverlayKey = "";
+    let mobileRainLayer: HTMLCanvasElement | null = null;
+    let mobileRainKey = "";
+    let mobileRainUpdatedAt = 0;
+    let mobileFogLayer: HTMLCanvasElement | null = null;
+    let mobileFogKey = "";
+    let mobileFogUpdatedAt = 0;
+    const platformSurfaceCache = new Map<string, HTMLCanvasElement>();
+    const makeLayer = () => document.createElement("canvas");
+    const drawStaticBackdrop = (theme: typeof LEVEL_THEMES[number]) => {
+      const key = `${theme.name}:${Math.round(view.width)}:${Math.round(view.height)}`;
+      if (key !== staticBackdropKey || !staticBackdrop) {
+        staticBackdropKey = key;
+        staticBackdrop = makeLayer();
+        staticBackdrop.width = Math.max(1, Math.ceil(view.width));
+        staticBackdrop.height = Math.max(1, Math.ceil(view.height));
+        const layer = staticBackdrop.getContext("2d");
+        if (layer) {
+          const bg = layer.createLinearGradient(0, 0, 0, view.height);
+          bg.addColorStop(0, theme.top);
+          bg.addColorStop(0.48, theme.mid);
+          bg.addColorStop(1, theme.bottom);
+          layer.fillStyle = bg;
+          layer.fillRect(0, 0, view.width, view.height);
+        }
+      }
+      ctx.drawImage(staticBackdrop, 0, 0, view.width, view.height);
+    };
+    const drawStaticOverlay = () => {
+      const key = `${Math.round(view.width)}:${Math.round(view.height)}`;
+      if (key !== staticOverlayKey || !staticOverlay) {
+        staticOverlayKey = key;
+        staticOverlay = makeLayer();
+        staticOverlay.width = Math.max(1, Math.ceil(view.width));
+        staticOverlay.height = Math.max(1, Math.ceil(view.height));
+        const layer = staticOverlay.getContext("2d");
+        if (layer) {
+          const vignette = layer.createRadialGradient(view.width / 2, view.height / 2, 150, view.width / 2, view.height / 2, Math.max(view.width, view.height) * 0.72);
+          vignette.addColorStop(0.55, "rgba(0,0,0,0)");
+          vignette.addColorStop(1, "rgba(0,0,0,.52)");
+          layer.fillStyle = vignette;
+          layer.fillRect(0, 0, view.width, view.height);
+          layer.fillStyle = "rgba(255,255,255,.025)";
+          for (let y = 0; y < view.height; y += 4) layer.fillRect(0, y, view.width, 1);
+        }
+      }
+      ctx.drawImage(staticOverlay, 0, 0, view.width, view.height);
+    };
+    const mobileEffectInterval = (status: GameStatus) => status === "ready" ? 1000 / 12 : 1000 / 30;
+    const drawMobileRain = (world: World, theme: typeof LEVEL_THEMES[number], settings: ReturnType<typeof activeQualitySettings>) => {
+      const now = performance.now();
+      const key = `${theme.name}:${Math.round(view.width)}:${Math.round(view.height)}:${settings.rain}`;
+      if (key !== mobileRainKey || !mobileRainLayer || now - mobileRainUpdatedAt >= mobileEffectInterval(world.status)) {
+        mobileRainKey = key;
+        mobileRainUpdatedAt = now;
+        mobileRainLayer ??= makeLayer();
+        mobileRainLayer.width = Math.max(1, Math.ceil(view.width));
+        mobileRainLayer.height = Math.max(1, Math.ceil(view.height));
+        const layer = mobileRainLayer.getContext("2d");
+        if (layer) {
+          layer.clearRect(0, 0, view.width, view.height);
+          layer.globalCompositeOperation = "screen";
+          const rainCount = [0, 3, 7, 9].includes(theme.motif) ? settings.rain : 0;
+          for (let i = 0; i < rainCount; i++) {
+            const x = (i * 79 + (i % 7) * 23 - world.fxTime * 36) % (view.width + 80) - 40;
+            const y = (i * 113 + world.fxTime * (280 + (i % 5) * 46)) % (view.height + 100) - 50;
+            const length = 8 + (i % 6) * 3;
+            const rain = layer.createLinearGradient(x, y, x - 3, y + length);
+            rain.addColorStop(0, "rgba(120,240,255,0)");
+            rain.addColorStop(1, i % 11 === 0 ? "rgba(255,77,166,.44)" : "rgba(122,231,255,.3)");
+            layer.strokeStyle = rain;
+            layer.lineWidth = i % 4 === 0 ? 1.2 : 0.65;
+            layer.beginPath(); layer.moveTo(x, y); layer.lineTo(x - 3, y + length); layer.stroke();
+          }
+        }
+      }
+      ctx.drawImage(mobileRainLayer, 0, 0, view.width, view.height);
+    };
+    const drawMobileFog = (world: World, settings: ReturnType<typeof activeQualitySettings>) => {
+      const now = performance.now();
+      const key = `${Math.round(view.width)}:${Math.round(view.height)}:${settings.fog}`;
+      if (key !== mobileFogKey || !mobileFogLayer || now - mobileFogUpdatedAt >= mobileEffectInterval(world.status)) {
+        mobileFogKey = key;
+        mobileFogUpdatedAt = now;
+        mobileFogLayer ??= makeLayer();
+        mobileFogLayer.width = Math.max(1, Math.ceil(view.width));
+        mobileFogLayer.height = Math.max(1, Math.ceil(view.height));
+        const layer = mobileFogLayer.getContext("2d");
+        if (layer) {
+          layer.clearRect(0, 0, view.width, view.height);
+          layer.globalCompositeOperation = "screen";
+          for (let i = 0; i < settings.fog; i++) {
+            const fogY = ((world.fxTime * (9 + i * 3) + i * view.height * 0.29) % (view.height + 180)) - 90;
+            const fog = layer.createLinearGradient(0, fogY - 45, 0, fogY + 45);
+            fog.addColorStop(0, "rgba(0,0,0,0)");
+            fog.addColorStop(0.5, i % 2 ? "rgba(255,43,138,.035)" : "rgba(0,240,255,.045)");
+            fog.addColorStop(1, "rgba(0,0,0,0)");
+            layer.fillStyle = fog;
+            layer.fillRect(0, fogY - 45, view.width, 90);
+          }
+        }
+      }
+      ctx.drawImage(mobileFogLayer, 0, 0, view.width, view.height);
+    };
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      const settings = activeQualitySettings(qualityRef.current, ultraFallbackRef.current, mobileHighThermalRef.current.active);
+      const ratio = cappedPixelRatio(
+        rect,
+        Math.min(window.devicePixelRatio || 1, settings.dpr),
+        renderResolutionRef.current,
+      ) * (qualityRef.current === "ultra" && !ultraFallbackRef.current && window.matchMedia("(pointer: fine)").matches
+        ? desktopUltraPerformanceRef.current.scale
+        : 1);
+      canvas.width = Math.max(1, Math.round(rect.width * ratio));
+      canvas.height = Math.max(1, Math.round(rect.height * ratio));
+      const aspect = Math.max(0.5, rect.width / Math.max(1, rect.height));
+      view.portrait = aspect < 1.05;
+      view.width = view.portrait ? 540 : VIEW_W;
+      view.height = view.width / aspect;
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+    window.addEventListener("skybreak-quality", resize);
+
+    const burst = (world: World, x: number, y: number, color: string, amount = 8) => {
+      for (let i = 0; i < amount; i++) {
+        world.particles.push({
+          x,
+          y,
+          vx: (Math.random() - 0.5) * 260,
+          vy: (Math.random() - 0.7) * 240,
+          life: 0.35 + Math.random() * 0.35,
+          color,
+        });
+      }
+    };
+
+    const hurt = (world: World) => {
+      const p = world.player;
+      // On a very shallow desktop fullscreen canvas, `view.height - 130` can
+      // become negative. Keep a respawn position inside the visible play area.
+      const respawnY = world.cameraY + Math.max(PLAYER_H + 28, Math.min(410, view.height - 130));
+      if (p.invulnerable > 0) return;
+      if (world.immortalSector === world.sector) {
+        if (p.y > world.cameraY + view.height + 100) {
+          p.x = 463;
+          p.y = respawnY;
+          p.vx = 0;
+          p.vy = -280;
+        }
+        p.invulnerable = 0.65;
+        world.powerUpMessage = isDe ? "UNSTERBLICH // TREFFER BLOCKIERT" : "IMMORTAL // HIT BLOCKED";
+        world.powerUpMessageTime = 1.2;
+        burst(world, p.x + PLAYER_W / 2, p.y + PLAYER_H / 2, "#ffd84d", 18);
+        audioRef.current?.shield();
+        return;
+      }
+      if (p.shield > 0) {
+        p.shield -= 1;
+        p.invulnerable = 0.8;
+        world.shake = 8;
+        world.powerUpMessage = isDe ? "SCHUTZSCHILD HAT DEN TREFFER ABGEFANGEN" : "SHIELD ABSORBED THE HIT";
+        world.powerUpMessageTime = 1.8;
+        audioRef.current?.shield();
+        burst(world, p.x + PLAYER_W / 2, p.y + PLAYER_H / 2, "#72ffef", 22);
+        return;
+      }
+      world.lives -= 1;
+      p.damage = Math.min(3, p.damage + 1);
+      world.shake = 18;
+      audioRef.current?.hit();
+      burst(world, p.x + PLAYER_W / 2, p.y + PLAYER_H / 2, "#ff2b8a", 18);
+      if (world.lives <= 0) {
+        world.status = "gameover";
+        setStatus("gameover");
+        if (!world.cheatUsed) {
+          const best = Math.max(world.score, Number(getStoredItem("neon-ascent-highscore") || 0));
+          setStoredItem("neon-ascent-highscore", String(best));
+          setHighScore(best);
+        }
+      } else {
+        p.x = 463;
+        p.y = respawnY;
+        p.vx = 0;
+        p.vy = -280;
+        p.invulnerable = 2;
+      }
+      syncHud(world);
+    };
+
+    const update = (world: World, dt: number) => {
+      if (world.status !== "playing") return;
+      const difficultyLevel = difficultiesRef.current[Math.max(0, world.sector - 1)] || "medium";
+      const difficulty = DIFFICULTY_SETTINGS[difficultyLevel];
+      const levelPressure = 1 + (world.sector - 1) * 0.075;
+      world.fxTime += dt;
+      world.transition = Math.max(0, world.transition - dt);
+      world.shake = Math.max(0, world.shake - dt * 38);
+      const p = world.player;
+      const input = inputRef.current;
+      const pressed = pressedRef.current;
+      p.invulnerable = Math.max(0, p.invulnerable - dt);
+      p.attack = Math.max(0, p.attack - dt);
+      p.overdrive = Math.max(0, p.overdrive - dt);
+      world.powerUpMessageTime = Math.max(0, world.powerUpMessageTime - dt);
+
+      if (world.roamingChestSector !== world.sector) {
+        world.roamingChest = null;
+        world.roamingChestTimer = 0;
+        world.roamingChestMoves = 0;
+        world.roamingChestSector = world.sector;
+      }
+      if (difficultyLevel === "easy") {
+        world.roamingChest = null;
+        world.roamingChestTimer = 0;
+      } else {
+        const roamingDifficulty = difficultyLevel as RoamingChestDifficulty;
+        const rules = ROAMING_CHEST_RULES[roamingDifficulty];
+        const unlocked = levelProgress(p.y) >= rules.unlockProgress;
+        const alreadyCollected = world.collectedRoamingChestSectors[world.sector - 1];
+        if (alreadyCollected) {
+          world.roamingChest = null;
+          world.roamingChestTimer = 0;
+        } else if (!world.roamingChest && unlocked) {
+          placeRoamingChest(world, roamingDifficulty, renderViewRef.current.height);
+        } else if (world.roamingChest) {
+          world.roamingChestTimer -= dt;
+          if (world.roamingChestTimer <= 0) {
+            world.roamingChestMoves += 1;
+            const movedBelow = placeRoamingChest(world, roamingDifficulty, renderViewRef.current.height);
+            if (movedBelow) {
+              world.powerUpMessage = isDe ? "TRUHE UNTER DIR NEU GEORTET" : "CHEST RELOCATED BELOW";
+              world.powerUpMessageTime = 1.5;
+            }
+          }
+        }
+      }
+
+      p.vx = input.left ? -MOVE_SPEED : input.right ? MOVE_SPEED : p.vx * Math.pow(0.002, dt);
+      if (p.vx) p.facing = Math.sign(p.vx);
+      const activelyMoving = input.left || input.right || !p.grounded || Math.abs(p.vx) > 18;
+      p.idleTime = activelyMoving || input.attack || input.jump ? 0 : p.idleTime + dt;
+      if (pressed.jump && p.grounded) {
+        p.vy = -JUMP_SPEED;
+        p.grounded = false;
+        audioRef.current?.jump();
+      }
+      const startedAttack = pressed.attack;
+      if (startedAttack) p.attack = 0.22;
+      pressed.jump = false;
+      pressed.attack = false;
+
+      const oldY = p.y;
+      p.vy += GRAVITY * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.x < -PLAYER_W) p.x = VIEW_W;
+      if (p.x > VIEW_W) p.x = -PLAYER_W;
+      p.grounded = false;
+
+      for (const tile of world.tiles) {
+        if (!tile.alive) continue;
+        const intersectsX = p.x + PLAYER_W - 7 > tile.x && p.x + 7 < tile.x + TILE;
+        if (!intersectsX) continue;
+
+        const oldBottom = oldY + PLAYER_H;
+        const newBottom = p.y + PLAYER_H;
+        if (p.vy >= 0 && oldBottom <= tile.y + 2 && newBottom >= tile.y) {
+          p.y = tile.y - PLAYER_H;
+          p.vy = 0;
+          p.grounded = true;
+        } else if (p.vy < 0 && oldY >= tile.y + 16 && p.y <= tile.y + 30 && tile.cracked) {
+          tile.alive = false;
+          world.shake = 9;
+          p.vy *= 0.78;
+          world.score += Math.round(100 * difficulty.score);
+          burst(world, tile.x + TILE / 2, tile.y + 12, themeColor(world.sector, "accent"), 12);
+          audioRef.current?.smash();
+          syncHud(world);
+        }
+      }
+
+      const collectableChests = difficultyLevel === "easy"
+        ? world.chests
+        : world.roamingChest ? [world.roamingChest] : [];
+      for (const chest of collectableChests) {
+        if (chest.opened) continue;
+        const intersects = p.x + PLAYER_W > chest.x
+          && p.x < chest.x + 38
+          && p.y + PLAYER_H > chest.y
+          && p.y < chest.y + 30;
+        if (!intersects) continue;
+        chest.opened = true;
+        if (chest === world.roamingChest) {
+          world.collectedRoamingChestSectors[world.sector - 1] = true;
+          world.roamingChest = null;
+          world.roamingChestTimer = 0;
+        }
+        const reward = applyPowerUp(chest.powerUp, {
+          lives: world.lives,
+          shield: p.shield,
+          overdrive: p.overdrive,
+          score: world.score,
+        }, difficulty.score);
+        world.lives = reward.lives;
+        world.score = reward.score;
+        p.shield = reward.shield;
+        p.overdrive = reward.overdrive;
+        if (reward.message === "shield") world.powerUpMessage = isDe ? "SCHUTZSCHILD AKTIV" : "SHIELD ACTIVE";
+        else if (reward.message === "life") world.powerUpMessage = isDe ? "EXTRALEBEN ERHALTEN" : "EXTRA LIFE ACQUIRED";
+        else if (reward.message === "life-full") world.powerUpMessage = `${isDe ? "LEBEN VOLL" : "LIVES FULL"} // +${reward.awardedScore}`;
+        else if (reward.message === "score") world.powerUpMessage = `${isDe ? "DATENBONUS" : "DATA BONUS"} // +${reward.awardedScore}`;
+        else world.powerUpMessage = isDe ? "EISPICKEL-OVERDRIVE // 12 SEKUNDEN" : "ICE PICK OVERDRIVE // 12 SECONDS";
+        world.powerUpMessageTime = 2.5;
+        world.shake = 5;
+        audioRef.current?.powerUp();
+        burst(world, chest.x + 19, chest.y + 14, chest.powerUp === "shield" ? "#72ffef" : "#ffd84d", 24);
+        syncHud(world);
+      }
+
+      if (p.attack > 0) {
+        const attackX = p.x + (p.facing > 0 ? PLAYER_W - 2 : -28);
+        for (const enemy of world.enemies) {
+          if (!enemy.alive) continue;
+          if (Math.abs(enemy.x - attackX) < (enemy.guardian ? 62 : 48) && Math.abs(enemy.y - p.y) < (enemy.guardian ? 64 : 50)) {
+            if (enemy.guardian) {
+              enemy.integrity = Math.max(0, (enemy.integrity ?? 1) - 1);
+              enemy.alive = enemy.integrity > 0;
+              world.powerUpMessage = enemy.alive
+                ? (isDe ? `WÄCHTER-INTEGRITÄT ${enemy.integrity}/3` : `GUARDIAN INTEGRITY ${enemy.integrity}/3`)
+                : (isDe ? "WÄCHTER NEUTRALISIERT" : "GUARDIAN NEUTRALIZED");
+              world.powerUpMessageTime = 1.4;
+              world.shake = Math.max(world.shake, 11);
+              burst(world, enemy.x + 18, enemy.y + 16, themeColor(world.sector, "warning"), 24);
+            } else {
+              enemy.alive = false;
+              world.score += Math.round(250 * difficulty.score);
+              burst(world, enemy.x + 18, enemy.y + 16, "#ffd84d", 14);
+            }
+            audioRef.current?.enemy();
+            syncHud(world);
+          }
+        }
+        if (startedAttack) {
+          const effectivePower = Math.min(10, p.pickaxePower + (p.overdrive > 0 ? 3 : 0));
+          const reach = 42 + effectivePower * 8;
+          const breakCount = pickaxeBreakCount(effectivePower);
+          const breakableTiles = world.tiles
+            .filter((tile) => {
+              const tileCenter = tile.x + TILE / 2;
+              const inFront = p.facing > 0 ? tileCenter > p.x + PLAYER_W + 6 : tileCenter < p.x - 6;
+              return tile.alive && tile.cracked && inFront
+                && Math.abs(tile.y + 12 - (p.y + PLAYER_H * 0.45)) < 54
+                && Math.abs(tileCenter - attackX) < reach;
+            })
+            .sort((a, b) => Math.abs(a.x + TILE / 2 - attackX) - Math.abs(b.x + TILE / 2 - attackX))
+            .slice(0, breakCount);
+          for (const tile of breakableTiles) {
+            tile.alive = false;
+            world.shake = Math.max(world.shake, 6 + effectivePower * 0.45);
+            world.score += Math.round(75 * difficulty.score);
+            burst(world, tile.x + TILE / 2, tile.y + 12, themeColor(world.sector, "secondary"), 7 + effectivePower);
+            audioRef.current?.smash();
+            syncHud(world);
+          }
+        }
+      }
+
+      for (const enemy of world.enemies) {
+        if (!enemy.alive) continue;
+        const enemyOldY = enemy.y;
+        const enemyArchetype = (enemy.kind + world.sector - 1) % 3;
+        enemy.attackTimer -= dt;
+        if (enemy.guardian && enemy.attackTimer <= 0) {
+          const bossMode = world.sector - 1;
+          const shotCounts = [1, 1, 2, 1, 2, 2, 1, 2, 1, 3];
+          const shotSpeeds = [70, 92, 62, 156, 86, 122, 74, 118, 174, 102];
+          const shotArcs = [115, 92, -42, 62, -108, 138, -78, 24, 172, -18];
+          enemy.attackTimer = 2.45 - Math.min(0.72, world.sector * 0.05);
+          const shotCount = shotCounts[bossMode];
+          for (let shot = 0; shot < shotCount; shot += 1) {
+            const aimed = bossMode === 1 || bossMode === 5 || bossMode === 8;
+            const direction = aimed ? Math.sign(p.x - enemy.x) || 1 : shotCount === 1 ? (bossMode % 2 === 0 ? -1 : 1) : shot - (shotCount - 1) / 2;
+            world.particles.push({
+              x: enemy.x + 19,
+              y: enemy.y + 8,
+              vx: direction * (shotSpeeds[bossMode] + world.sector * 6),
+              vy: shotArcs[bossMode] + shot * 34,
+              life: 3.2,
+              color: "#ff2b8a",
+            });
+          }
+          world.powerUpMessage = isDe ? "WÄCHTER-ANGRIFF" : "GUARDIAN ATTACK";
+          world.powerUpMessageTime = 0.7;
+          burst(world, enemy.x + 19, enemy.y + 12, themeColor(world.sector, "warning"), 10 + world.sector);
+        } else if (!enemy.guardian && enemyArchetype === 1 && enemy.grounded && enemy.attackTimer <= 0) {
+          enemy.vy = -260 - world.sector * 8;
+          enemy.attackTimer = 1.4;
+        } else if (!enemy.guardian && enemyArchetype === 2 && enemy.attackTimer <= 0) {
+          enemy.vx = -enemy.vx;
+          enemy.attackTimer = 1.1;
+        }
+        enemy.vy += GRAVITY * (enemyArchetype === 2 ? 0.4 : 0.78) * dt;
+        enemy.x += enemy.vx * difficulty.enemy * levelPressure * (enemyArchetype === 2 ? 1.18 : 1) * dt;
+        enemy.y += enemy.vy * dt;
+        if (enemy.x < 18) {
+          enemy.x = 18;
+          enemy.vx = Math.abs(enemy.vx);
+        } else if (enemy.x > VIEW_W - 54) {
+          enemy.x = VIEW_W - 54;
+          enemy.vx = -Math.abs(enemy.vx);
+        }
+        enemy.grounded = false;
+        for (const tile of world.tiles) {
+          if (!tile.alive) continue;
+          const horizontal = enemy.x + 34 > tile.x && enemy.x + 4 < tile.x + TILE;
+          if (!horizontal) continue;
+          const oldBottom = enemyOldY + 32;
+          const newBottom = enemy.y + 32;
+          if (enemy.vy >= 0 && oldBottom <= tile.y + 3 && newBottom >= tile.y) {
+            enemy.y = tile.y - 32;
+            enemy.vy = 0;
+            enemy.grounded = true;
+            break;
+          }
+        }
+        if (enemy.y > world.cameraY + view.height + 120) {
+          enemy.alive = false;
+          continue;
+        }
+        if (
+          p.x + PLAYER_W > enemy.x &&
+          p.x < enemy.x + 38 &&
+          p.y + PLAYER_H > enemy.y &&
+          p.y < enemy.y + 32
+        ) {
+          if (p.vy > 110 && p.y + PLAYER_H - enemy.y < 22) {
+            enemy.alive = false;
+            p.vy = -320;
+            world.score += Math.round(200 * difficulty.score);
+            burst(world, enemy.x + 18, enemy.y + 16, "#ffd84d", 12);
+            audioRef.current?.enemy();
+            syncHud(world);
+          } else hurt(world);
+        }
+      }
+
+      world.hazardTimer -= dt;
+      if (world.hazardTimer <= 0 && world.cameraY < -400) {
+        world.hazardTimer = (2.3 + Math.random() * 2.2) / (difficulty.hazards * levelPressure);
+        world.particles.push({
+          x: 50 + Math.random() * 860,
+          y: world.cameraY - 30,
+          vx: (Math.random() - 0.5) * 35,
+          vy: 360 * difficulty.hazardSpeed * levelPressure,
+          life: 4,
+          color: "#ff2b8a",
+        });
+      }
+
+      for (const particle of world.particles) {
+        particle.life -= dt;
+        particle.vy += 560 * dt;
+        particle.x += particle.vx * dt;
+        particle.y += particle.vy * dt;
+        if (
+          particle.color === "#ff2b8a" &&
+          particle.life > 1 &&
+          Math.abs(particle.x - (p.x + PLAYER_W / 2)) < 24 &&
+          Math.abs(particle.y - (p.y + PLAYER_H / 2)) < 30
+        ) {
+          particle.life = 0;
+          hurt(world);
+        }
+      }
+      world.particles = world.particles.filter((particle) => particle.life > 0);
+
+      const maxCameraX = Math.max(0, VIEW_W - view.width);
+      const targetCameraX = Math.min(maxCameraX, Math.max(0, p.x + PLAYER_W / 2 - view.width / 2));
+      world.cameraX += (targetCameraX - world.cameraX) * Math.min(1, dt * 5.5);
+      // Desktop fullscreen can produce a very wide, shallow canvas. In that
+      // case the old origin clamp left the player below the lower edge. Track
+      // the player upward just enough to retain a visible safety band.
+      const bottomSafeMargin = Math.max(26, Math.min(96, view.height * 0.12));
+      const lowestVisiblePlayerTop = Math.max(0, view.height - PLAYER_H - bottomSafeMargin);
+      const targetCamera = p.y > lowestVisiblePlayerTop
+        ? p.y - lowestVisiblePlayerTop
+        : Math.min(0, p.y - view.height * (view.portrait ? 0.66 : 0.61));
+      world.cameraY += (targetCamera - world.cameraY) * Math.min(1, dt * 4.5);
+      if (p.y > world.cameraY + view.height + 130) hurt(world);
+      const guardianAlive = world.enemies.some((enemy) => enemy.alive && enemy.guardian);
+      if (p.y < WORLD_TOP && !guardianAlive) {
+        world.score += 5000;
+        audioRef.current?.win();
+        const nextLevel = Math.min(LEVEL_COUNT, world.sector + 1);
+        if (nextLevel > unlockedLevelRef.current) {
+          unlockedLevelRef.current = nextLevel;
+          selectedStartLevelRef.current = nextLevel;
+          setUnlockedLevel(nextLevel);
+          setSelectedStartLevel(nextLevel);
+          setStoredItem("skybreak-unlocked-level", String(nextLevel));
+        }
+        if (world.sector < LEVEL_COUNT) {
+          const updatedDifficulties = [...difficultiesRef.current];
+          updatedDifficulties[world.sector] = difficultyLevel;
+          difficultiesRef.current = updatedDifficulties;
+          setLevelDifficulties(updatedDifficulties);
+          setStoredItem("skybreak-level-difficulties", JSON.stringify(updatedDifficulties));
+        }
+        world.status = world.sector < LEVEL_COUNT ? "upgrade" : "won";
+        world.transition = 2.4;
+        world.victoryTime = world.sector === LEVEL_COUNT ? 0.01 : 0;
+        p.vx = 0;
+        p.vy = 0;
+        if (!world.cheatUsed) {
+          const best = Math.max(world.score, Number(getStoredItem("neon-ascent-highscore") || 0));
+          setStoredItem("neon-ascent-highscore", String(best));
+          setHighScore(best);
+        }
+        syncHud(world);
+      } else if (p.y < WORLD_TOP && guardianAlive) {
+        p.y = WORLD_TOP + 48;
+        p.vy = 120;
+        world.powerUpMessage = isDe ? "WÄCHTER ZUERST AUSSCHALTEN" : "DISABLE THE GUARDIAN FIRST";
+        world.powerUpMessageTime = 1.5;
+      }
+    };
+
+    const draw = (world: World) => {
+      const settings = activeQualitySettings(qualityRef.current, ultraFallbackRef.current, mobileHighThermalRef.current.active);
+      const ultraActive = qualityRef.current === "ultra" && !ultraFallbackRef.current;
+      const mobileHigh = qualityRef.current === "high" && window.matchMedia("(pointer: coarse)").matches;
+      const theme = LEVEL_THEMES[Math.max(0, world.sector - 1)] || LEVEL_THEMES[0];
+      const sx = canvas.width / view.width;
+      const sy = canvas.height / view.height;
+      ctx.setTransform(sx, 0, 0, sy, 0, 0);
+      ctx.clearRect(0, 0, view.width, view.height);
+      const shakeX = world.shake ? (Math.random() - 0.5) * world.shake : 0;
+      const shakeY = world.shake ? (Math.random() - 0.5) * world.shake : 0;
+      ctx.translate(shakeX, shakeY);
+
+      drawStaticBackdrop(theme);
+
+      // Low intentionally keeps the playable scene but omits the expensive
+      // decorative panorama. Desktop Low is a performance mode, not a
+      // 30-FPS-limited version of the full Ultra background.
+      if (settings.layers > 0 && !(benchmarkMode && benchmarkVariant === "background-off")) {
+      // Each level has a distinct animated skyline signature.
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.strokeStyle = theme.accent;
+      ctx.fillStyle = theme.secondary;
+      ctx.lineWidth = 1.4;
+      const pulse = world.fxTime;
+      if (theme.motif === 0) {
+        // Neon Undercity: deep shafts, service pipes and fast maglev traffic.
+        ctx.globalAlpha = 0.24;
+        for (let i = 0; i < 12; i++) {
+          const x = (i * 113 - world.cameraX * 0.08) % (view.width + 80) - 40;
+          ctx.fillRect(x, 0, 5 + (i % 3) * 3, view.height);
+          ctx.fillRect(x - 18, 72 + (i * 47) % (view.height - 90), 62, 3);
+        }
+        for (let i = 0; i < 7; i++) {
+          const x = (i * 171 + pulse * 95) % (view.width + 180) - 90;
+          const y = 52 + (i * 73) % Math.max(100, view.height - 100);
+          ctx.fillStyle = i % 2 ? theme.secondary : theme.accent;
+          ctx.fillRect(x, y, 74, 3);
+          ctx.fillRect(x + 69, y - 2, 9, 7);
+        }
+      } else if (theme.motif === 1) {
+        // Chrome Bazaar: hanging signs, market canopies and floating lanterns.
+        for (let i = 0; i < 10; i++) {
+          const x = (i * 131 - world.cameraX * 0.12) % (view.width + 100) - 50;
+          const y = 45 + (i * 79) % Math.max(130, view.height - 120);
+          const width = 56 + (i % 3) * 20;
+          ctx.globalAlpha = 0.16 + (Math.sin(pulse * 2.4 + i) + 1) * 0.06;
+          ctx.fillStyle = i % 2 ? theme.secondary : theme.accent;
+          ctx.fillRect(x, y, width, 22);
+          ctx.strokeRect(x - 3, y - 3, width + 6, 28);
+          ctx.beginPath();
+          ctx.arc(x + width / 2, y - 18 - Math.sin(pulse * 1.7 + i) * 5, 5 + (i % 2) * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (theme.motif === 2) {
+        // Toxic Transit: tunnel ribs, moving train windows and rising gas.
+        ctx.globalAlpha = 0.2;
+        for (let rib = 0; rib < 8; rib++) {
+          const radius = 90 + rib * 65;
+          ctx.beginPath();
+          ctx.arc(view.width / 2, view.height + 35, radius, Math.PI, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = theme.accent;
+        for (let i = 0; i < 11; i++) {
+          const x = (i * 96 - pulse * 115) % (view.width + 120) - 60;
+          ctx.fillRect(x, view.height * 0.62, 55, 18);
+          ctx.fillStyle = i % 2 ? theme.secondary : theme.accent;
+        }
+        for (let i = 0; i < 18; i++) {
+          ctx.beginPath();
+          ctx.arc((i * 83 + pulse * 17) % view.width, view.height - ((i * 61 + pulse * 34) % view.height), 3 + (i % 5) * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (theme.motif === 3) {
+        // Crimson Firewall: pulsing data walls and upward-flying embers.
+        ctx.globalAlpha = 0.22;
+        for (let i = 0; i < 15; i++) {
+          const x = i * (view.width / 14);
+          const opening = 45 + (Math.sin(pulse * 2.8 + i) + 1) * 28;
+          ctx.fillRect(x, 0, 4, view.height - opening);
+          ctx.fillRect(x + 7, opening + 24, 2, view.height - opening - 24);
+        }
+        for (let i = 0; i < 30; i++) {
+          const x = (i * 47 + Math.sin(i) * 35) % view.width;
+          const y = view.height - ((i * 29 + pulse * (75 + i % 5 * 17)) % view.height);
+          ctx.fillStyle = i % 3 ? theme.accent : theme.warning;
+          ctx.fillRect(x, y, 2, 8 + i % 9);
+        }
+      } else if (theme.motif === 4) {
+        // Azure Data Sea: layered waves, bubbles and luminous data jellyfish.
+        ctx.globalAlpha = 0.25;
+        for (let band = 0; band < 7; band++) {
+          ctx.beginPath();
+          for (let x = 0; x <= view.width; x += 18) {
+            const y = 55 + band * 72 + Math.sin(x * 0.021 + pulse * (1.3 + band * 0.08) + band) * (10 + band * 2);
+            if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+        for (let i = 0; i < 9; i++) {
+          const x = (i * 127 + Math.sin(pulse + i) * 42) % view.width;
+          const y = view.height - ((i * 71 + pulse * 24) % (view.height + 80));
+          ctx.beginPath(); ctx.arc(x, y, 11 + i % 4 * 4, Math.PI, 0); ctx.stroke();
+          for (let arm = -1; arm <= 1; arm++) {
+            ctx.beginPath(); ctx.moveTo(x + arm * 7, y); ctx.lineTo(x + arm * 10 + Math.sin(pulse * 2 + i) * 4, y + 26); ctx.stroke();
+          }
+        }
+      } else if (theme.motif === 5) {
+        // Violet Reactor: rotating containment rings and an unstable core.
+        const cx = view.width * 0.5;
+        const cy = view.height * 0.48;
+        const core = ctx.createRadialGradient(cx, cy, 4, cx, cy, 125);
+        core.addColorStop(0, theme.warning);
+        core.addColorStop(0.2, theme.secondary);
+        core.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = core;
+        ctx.fillRect(cx - 140, cy - 140, 280, 280);
+        for (let i = 0; i < 8; i++) {
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, 42 + i * 34, 20 + i * 18, pulse * (i % 2 ? 0.22 : -0.17) + i, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        for (let i = 0; i < 6; i++) {
+          const angle = pulse * 1.8 + i * Math.PI / 3;
+          ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(angle) * 220, cy + Math.sin(angle) * 135); ctx.stroke();
+        }
+      } else if (theme.motif === 6) {
+        // Solar Megagrid: blazing sun, heat shimmer and moving panel arrays.
+        const sun = ctx.createRadialGradient(view.width * 0.72, view.height * 0.28, 8, view.width * 0.72, view.height * 0.28, 210);
+        sun.addColorStop(0, theme.warning);
+        sun.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = sun;
+        ctx.fillRect(0, 0, view.width, view.height);
+        for (let row = 0; row < 6; row++) {
+          for (let col = 0; col < 9; col++) {
+            const x = col * 128 - ((world.cameraX * 0.08 + row * 47) % 128);
+            const y = view.height * 0.48 + row * 55 + Math.sin(pulse * 1.5 + col) * 3;
+            ctx.fillStyle = (col + row) % 2 ? theme.accent : theme.secondary;
+            ctx.fillRect(x, y, 82, 28);
+            ctx.strokeRect(x, y, 82, 28);
+          }
+        }
+      } else if (theme.motif === 7) {
+        // Ghost Network: broken packet streams and flickering phantom nodes.
+        ctx.globalAlpha = 0.21;
+        for (let i = 0; i < 28; i++) {
+          const x = (i * 67 + Math.sin(pulse * 1.7 + i) * 45) % view.width;
+          const y = (i * 97 + pulse * (38 + i % 4 * 11)) % view.height;
+          ctx.fillRect(x, y, 2, 18 + (i % 7) * 7);
+          if (i % 3 === 0) ctx.fillRect(x - 22, y + 8, 46, 1);
+        }
+        ctx.globalAlpha = 0.1 + (Math.sin(pulse * 9) + 1) * 0.05;
+        for (let i = 0; i < 5; i++) {
+          const x = 100 + i * 190 + Math.sin(pulse + i) * 30;
+          const y = 100 + (i * 83) % 330;
+          ctx.beginPath(); ctx.arc(x, y, 28, Math.PI, 0); ctx.lineTo(x + 28, y + 52); ctx.lineTo(x - 28, y + 52); ctx.closePath(); ctx.stroke();
+        }
+      } else if (theme.motif === 8) {
+        // Quantum Rift: rotating singularity with warped star trails.
+        const cx = view.width * 0.52;
+        const cy = view.height * 0.44;
+        ctx.globalAlpha = 0.25;
+        for (let arm = 0; arm < 7; arm++) {
+          ctx.beginPath();
+          for (let i = 0; i < 22; i++) {
+            const radius = 12 + i * 15;
+            const angle = pulse * 0.28 + arm * 0.9 + i * 0.19;
+            const x = cx + Math.cos(angle) * radius;
+            const y = cy + Math.sin(angle) * radius * 0.58;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+        for (let i = 0; i < 45; i++) {
+          const angle = i * 2.399 + pulse * 0.08;
+          const radius = 65 + (i * 47) % 370;
+          ctx.fillRect(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius * 0.62, 2 + i % 3, 2 + i % 3);
+        }
+      } else {
+        // Skybreak Apex: dawn above the clouds and the transmission beacon.
+        const horizon = view.height * 0.55;
+        const dawn = ctx.createRadialGradient(view.width / 2, horizon, 8, view.width / 2, horizon, 310);
+        dawn.addColorStop(0, theme.warning);
+        dawn.addColorStop(0.35, theme.secondary);
+        dawn.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = dawn;
+        ctx.fillRect(0, 0, view.width, view.height);
+        for (let i = 0; i < 24; i++) {
+          const angle = (Math.PI * 2 * i) / 24 + pulse * 0.025;
+          ctx.beginPath();
+          ctx.moveTo(view.width / 2, horizon);
+          ctx.lineTo(view.width / 2 + Math.cos(angle) * view.width, horizon + Math.sin(angle) * view.height);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 0.24;
+        for (let i = 0; i < 10; i++) {
+          const x = (i * 137 + pulse * (8 + i % 3 * 4)) % (view.width + 220) - 110;
+          const y = horizon + 35 + (i % 3) * 42;
+          ctx.beginPath(); ctx.ellipse(x, y, 90 + i % 4 * 18, 20 + i % 3 * 7, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 0.42;
+        ctx.fillStyle = theme.accent;
+        ctx.fillRect(view.width / 2 - 4, 45, 8, horizon - 45);
+        ctx.fillRect(view.width / 2 - 58, 86, 116, 3);
+      }
+      ctx.restore();
+
+      // Ultra draws its moving shafts, bloom, rain, and grid in the WebGPU
+      // overlay. Keep the Canvas 2D version only for lower graphics levels.
+      if (!ultraActive && settings.layers > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = 0.16;
+        const searchlightCount = [0, 1, 3, 9].includes(theme.motif) ? 4 : theme.motif === 5 ? 2 : 0;
+        for (let i = 0; i < searchlightCount; i++) {
+          const origin = ((i * 281 + world.fxTime * (i % 2 ? 13 : -9)) % (view.width + 260)) - 130;
+          const beam = ctx.createLinearGradient(origin, 0, origin + 190, view.height);
+          beam.addColorStop(0, i % 2 ? theme.secondary : theme.accent);
+          beam.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = beam;
+          ctx.beginPath();
+          ctx.moveTo(origin - 15, 0);
+          ctx.lineTo(origin + 38, 0);
+          ctx.lineTo(origin + 260, view.height);
+          ctx.lineTo(origin + 80, view.height);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Distant air traffic gives the skyline depth without bitmap assets.
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const trafficCount = [0, 1, 6, 9].includes(theme.motif) ? settings.traffic : 0;
+      for (let i = 0; i < trafficCount; i++) {
+        const speed = 18 + (i % 5) * 8;
+        const x = (i * 151 + world.fxTime * speed) % (view.width + 120) - 60;
+        const y = 35 + ((i * 89 - world.cameraY * 0.025) % Math.max(100, view.height * 0.62));
+        const color = i % 3 === 0 ? theme.secondary : theme.accent;
+        const trail = ctx.createLinearGradient(x - 34, y, x + 8, y);
+        trail.addColorStop(0, "rgba(0,0,0,0)");
+        trail.addColorStop(1, color);
+        ctx.fillStyle = trail;
+        ctx.fillRect(x - 34, y, 42, 1.5);
+      }
+      ctx.restore();
+
+      ctx.save();
+      const skylineLayers = [0, 1, 3, 6, 9].includes(theme.motif) ? settings.layers : 0;
+      for (let layer = 0; layer < skylineLayers; layer++) {
+        const alpha = 0.18 + layer * 0.13;
+        const scale = 0.72 + layer * 0.22;
+        ctx.globalAlpha = alpha;
+        for (let i = 0; i < 16; i++) {
+          const width = (44 + ((i * 29 + layer * 17) % 52)) * scale;
+          const x = ((i * 103 + layer * 37 - world.cameraX * (0.045 + layer * 0.055)) % (view.width + 100)) - 50;
+          const height = (120 + ((i * 71 + layer * 83) % 340)) * scale;
+          const parallax = ((-world.cameraY * (0.025 + layer * 0.025)) % 110);
+          const top = view.height - height + parallax;
+          const tower = ctx.createLinearGradient(x, top, x + width, top);
+          tower.addColorStop(0, layer === 2 ? "#071426" : "#0a1730");
           tower.addColorStop(0.55, layer === 2 ? "#14233c" : "#101b36");
           tower.addColorStop(1, "#030814");
           ctx.fillStyle = tower;
@@ -2010,8 +3215,6 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.save();
         ctx.translate(handX, handY);
         ctx.rotate(pickAngle);
-        const pickaxeScale = [1, 1.16, 0.94, 1.12, 1.06, 1.18, 0.9, 1.14, 1.03, 1.22][pickaxeVariant];
-        ctx.scale(pickaxeScale, pickaxeScale);
         ctx.shadowBlur = ultraActive ? 0 : 9 + p.pickaxeStyle;
         ctx.shadowColor = pickaxeColor;
         ctx.strokeStyle = pickaxeColor;
@@ -2020,29 +3223,28 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.strokeStyle = "#dffcff";
         ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.fillStyle = pickaxeColor;
         if (pickaxeVariant === 0) {
-          ctx.moveTo(22, -18); ctx.quadraticCurveTo(35, -7, 28, 0); ctx.quadraticCurveTo(34, 8, 19, 14); ctx.lineTo(24, 3); ctx.lineTo(24, -8); ctx.closePath();
+          ctx.moveTo(24, -17); ctx.quadraticCurveTo(31, -4, 27, 0); ctx.quadraticCurveTo(31, 5, 22, 12);
         } else if (pickaxeVariant === 1) {
-          ctx.moveTo(19, -20); ctx.lineTo(35, -10); ctx.lineTo(27, 0); ctx.lineTo(35, 10); ctx.lineTo(19, 20); ctx.lineTo(25, 5); ctx.lineTo(25, -5); ctx.closePath();
+          ctx.moveTo(21, -18); ctx.lineTo(31, -9); ctx.lineTo(25, 0); ctx.lineTo(31, 9); ctx.lineTo(21, 18);
         } else if (pickaxeVariant === 2) {
-          ctx.moveTo(19, -20); ctx.lineTo(31, -17); ctx.lineTo(27, -4); ctx.lineTo(35, -1); ctx.lineTo(27, 4); ctx.lineTo(31, 17); ctx.lineTo(19, 20); ctx.lineTo(24, 4); ctx.lineTo(24, -4); ctx.closePath();
+          ctx.moveTo(21, -18); ctx.lineTo(30, -13); ctx.lineTo(25, -3); ctx.moveTo(25, 3); ctx.lineTo(30, 13); ctx.lineTo(21, 18);
         } else if (pickaxeVariant === 3) {
-          ctx.moveTo(17, -21); ctx.lineTo(37, -12); ctx.lineTo(32, 4); ctx.lineTo(22, 18); ctx.lineTo(22, 5); ctx.lineTo(16, -2); ctx.closePath();
+          ctx.moveTo(20, -18); ctx.lineTo(32, -10); ctx.lineTo(24, -4); ctx.lineTo(34, 3); ctx.lineTo(22, 15);
         } else if (pickaxeVariant === 4) {
-          ctx.moveTo(21, -21); ctx.lineTo(31, -14); ctx.lineTo(29, -4); ctx.lineTo(38, 0); ctx.lineTo(29, 4); ctx.lineTo(31, 14); ctx.lineTo(21, 21); ctx.lineTo(25, 4); ctx.lineTo(25, -4); ctx.closePath();
+          ctx.moveTo(22, -19); ctx.lineTo(30, -12); ctx.lineTo(26, -2); ctx.lineTo(33, 0); ctx.lineTo(26, 2); ctx.lineTo(30, 12); ctx.lineTo(22, 19);
         } else if (pickaxeVariant === 5) {
-          ctx.moveTo(17, -23); ctx.quadraticCurveTo(43, -16, 35, 4); ctx.quadraticCurveTo(30, 20, 15, 22); ctx.lineTo(27, 7); ctx.lineTo(28, -8); ctx.closePath();
+          ctx.moveTo(20, -20); ctx.quadraticCurveTo(36, -12, 29, 3); ctx.quadraticCurveTo(26, 15, 16, 17);
         } else if (pickaxeVariant === 6) {
-          ctx.rect(18, -21, 21, 42);
+          ctx.moveTo(18, -17); ctx.lineTo(33, -17); ctx.lineTo(33, 17); ctx.lineTo(18, 17); ctx.closePath();
         } else if (pickaxeVariant === 7) {
-          ctx.moveTo(18, -23); ctx.quadraticCurveTo(43, -3, 18, 23); ctx.lineTo(30, 7); ctx.lineTo(30, -7); ctx.closePath();
+          ctx.moveTo(19, -20); ctx.quadraticCurveTo(35, -2, 19, 20); ctx.lineTo(26, 4); ctx.lineTo(26, -4); ctx.closePath();
         } else if (pickaxeVariant === 8) {
-          ctx.moveTo(18, -24); ctx.lineTo(38, -9); ctx.lineTo(29, 0); ctx.lineTo(38, 9); ctx.lineTo(18, 24); ctx.lineTo(25, 5); ctx.lineTo(25, -5); ctx.closePath();
+          ctx.moveTo(20, -20); ctx.lineTo(32, -8); ctx.lineTo(26, 0); ctx.lineTo(32, 8); ctx.lineTo(20, 20);
         } else {
-          ctx.moveTo(18, -24); ctx.lineTo(30, -13); ctx.lineTo(36, -25); ctx.lineTo(42, 0); ctx.lineTo(36, 25); ctx.lineTo(30, 13); ctx.lineTo(18, 24); ctx.lineTo(26, 5); ctx.lineTo(26, -5); ctx.closePath();
+          ctx.moveTo(18, -20); ctx.lineTo(27, -11); ctx.lineTo(31, -20); ctx.lineTo(35, 0); ctx.lineTo(31, 20); ctx.lineTo(27, 11); ctx.lineTo(18, 20);
         }
-        ctx.fill(); ctx.stroke();
+        ctx.stroke();
         ctx.fillStyle = pickaxeStyleColor;
         ctx.beginPath(); ctx.arc(28, 0, 3, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
