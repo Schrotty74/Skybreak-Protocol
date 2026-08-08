@@ -110,7 +110,7 @@ const JUMP_SPEED = 610;
 const WORLD_TOP = FLOOR_BASE_Y - (LEVEL_FLOORS - 1) * FLOOR_SPACING - PLAYER_H + 13;
 
 type Tile = { x: number; y: number; alive: boolean; cracked: boolean };
-type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean; guardian?: boolean; integrity?: number };
+type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean; kind: number; attackTimer: number; guardian?: boolean; integrity?: number };
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; color: string };
 type Chest = { x: number; y: number; opened: boolean; powerUp: PowerUpKind };
 type Player = {
@@ -189,7 +189,7 @@ function buildLevel(): Pick<World, "tiles" | "enemies" | "chests"> {
     }
     const enemyStep = Math.max(2, 5 - Math.floor(row / 11));
     if (row === LEVEL_FLOORS - 2) {
-      enemies.push({ x: VIEW_W / 2 - 28, y: y - 56, vx: 46, vy: 0, alive: true, grounded: true, guardian: true, integrity: 3 });
+      enemies.push({ x: VIEW_W / 2 - 28, y: y - 56, vx: 46, vy: 0, alive: true, grounded: true, kind: 0, attackTimer: 1.8, guardian: true, integrity: 3 });
     } else if (row > 2 && row % enemyStep === 1) {
       enemies.push({
         x: ((row * 137) % 720) + 110,
@@ -198,6 +198,8 @@ function buildLevel(): Pick<World, "tiles" | "enemies" | "chests"> {
         vy: 0,
         alive: true,
         grounded: true,
+        kind: row % 3,
+        attackTimer: 1 + (row % 3) * 0.35,
       });
     }
   }
@@ -2237,8 +2239,39 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       for (const enemy of world.enemies) {
         if (!enemy.alive) continue;
         const enemyOldY = enemy.y;
-        enemy.vy += GRAVITY * 0.78 * dt;
-        enemy.x += enemy.vx * difficulty.enemy * levelPressure * dt;
+        const enemyArchetype = (enemy.kind + world.sector - 1) % 3;
+        enemy.attackTimer -= dt;
+        if (enemy.guardian && enemy.attackTimer <= 0) {
+          const bossMode = world.sector - 1;
+          const shotCounts = [1, 1, 2, 1, 2, 2, 1, 2, 1, 3];
+          const shotSpeeds = [70, 92, 62, 156, 86, 122, 74, 118, 174, 102];
+          const shotArcs = [115, 92, -42, 62, -108, 138, -78, 24, 172, -18];
+          enemy.attackTimer = 2.45 - Math.min(0.72, world.sector * 0.05);
+          const shotCount = shotCounts[bossMode];
+          for (let shot = 0; shot < shotCount; shot += 1) {
+            const aimed = bossMode === 1 || bossMode === 5 || bossMode === 8;
+            const direction = aimed ? Math.sign(p.x - enemy.x) || 1 : shotCount === 1 ? (bossMode % 2 === 0 ? -1 : 1) : shot - (shotCount - 1) / 2;
+            world.particles.push({
+              x: enemy.x + 19,
+              y: enemy.y + 8,
+              vx: direction * (shotSpeeds[bossMode] + world.sector * 6),
+              vy: shotArcs[bossMode] + shot * 34,
+              life: 3.2,
+              color: "#ff2b8a",
+            });
+          }
+          world.powerUpMessage = isDe ? "WÄCHTER-ANGRIFF" : "GUARDIAN ATTACK";
+          world.powerUpMessageTime = 0.7;
+          burst(world, enemy.x + 19, enemy.y + 12, themeColor(world.sector, "warning"), 10 + world.sector);
+        } else if (!enemy.guardian && enemyArchetype === 1 && enemy.grounded && enemy.attackTimer <= 0) {
+          enemy.vy = -260 - world.sector * 8;
+          enemy.attackTimer = 1.4;
+        } else if (!enemy.guardian && enemyArchetype === 2 && enemy.attackTimer <= 0) {
+          enemy.vx = -enemy.vx;
+          enemy.attackTimer = 1.1;
+        }
+        enemy.vy += GRAVITY * (enemyArchetype === 2 ? 0.4 : 0.78) * dt;
+        enemy.x += enemy.vx * difficulty.enemy * levelPressure * (enemyArchetype === 2 ? 1.18 : 1) * dt;
         enemy.y += enemy.vy * dt;
         if (enemy.x < 18) {
           enemy.x = 18;
@@ -2876,6 +2909,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         const tilt = Math.max(-0.18, Math.min(0.18, enemy.vy / 900));
         ctx.rotate(tilt);
         const enemyVariant = world.sector - 1;
+        const enemyArchetype = (enemy.kind + world.sector - 1) % 3;
         const enemyAccent = theme.accent;
         const enemySecondary = theme.secondary;
         ctx.shadowBlur = ultraActive ? 0 : 24;
@@ -2929,17 +2963,26 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.fillStyle = theme.warning;
         ctx.shadowBlur = ultraActive ? 0 : 11;
         ctx.shadowColor = theme.warning;
-        if (enemyVariant % 2 === 0) ctx.fillRect(enemy.vx > 0 ? 5 : -11, -10, 7, 3);
-        else ctx.fillRect(-3, -9, 6, 4);
+        if (enemyArchetype === 0) ctx.fillRect(enemy.vx > 0 ? 5 : -11, -10, 7, 3);
+        else if (enemyArchetype === 1) {
+          ctx.fillRect(-10, -10, 6, 4);
+          ctx.fillRect(4, -10, 6, 4);
+        } else {
+          ctx.beginPath(); ctx.arc(0, -8, 4.5, 0, Math.PI * 2); ctx.fill();
+        }
         ctx.shadowBlur = 0;
         ctx.strokeStyle = enemyAccent;
         ctx.lineWidth = 2.5;
         ctx.beginPath();
-        if (enemyVariant % 2 === 0) {
+        if (enemyArchetype === 0) {
           ctx.moveTo(-12, 12); ctx.lineTo(-17, 21); ctx.lineTo(-21, 21);
           ctx.moveTo(11, 12); ctx.lineTo(17, 21); ctx.lineTo(21, 21);
+        } else if (enemyArchetype === 1) {
+          ctx.moveTo(-13, 11); ctx.lineTo(-19, 25); ctx.lineTo(-10, 28);
+          ctx.moveTo(13, 11); ctx.lineTo(19, 25); ctx.lineTo(10, 28);
         } else {
           ctx.moveTo(-14, 10); ctx.lineTo(-24, 4); ctx.moveTo(14, 10); ctx.lineTo(24, 4);
+          ctx.moveTo(-15, 14); ctx.lineTo(-26, 18); ctx.moveTo(15, 14); ctx.lineTo(26, 18);
         }
         ctx.stroke();
         ctx.strokeStyle = enemySecondary;
@@ -2981,6 +3024,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.moveTo(14, -5); ctx.lineTo(28, -28); ctx.lineTo(4, -17);
         }
         ctx.stroke();
+        if (!enemy.guardian && enemyArchetype === 2) {
+          ctx.globalAlpha = 0.75;
+          ctx.strokeStyle = theme.warning;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, 29, world.fxTime * 4, world.fxTime * 4 + Math.PI * 1.25);
+          ctx.stroke();
+        }
         ctx.globalAlpha = 0.35;
         ctx.strokeStyle = enemyAccent;
         ctx.beginPath();
