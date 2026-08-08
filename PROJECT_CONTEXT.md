@@ -1,7 +1,7 @@
 # Skybreak Protocol – Projektkontext
 
 **Stand:** 8. August 2026
-**Status:** öffentliche Web-Beta `1.0.0-beta.7`
+**Status:** öffentliche Web-Beta `1.0.0-beta.9`
 
 Diese Datei ist die zentrale technische Übergabe für neue Codex-Chats. Zuerst diese Datei und anschließend [`NEXT_STEPS.md`](NEXT_STEPS.md) lesen. Für Release-Vorhaben zusätzlich [`docs/RELEASE_WORKFLOW.md`](docs/RELEASE_WORKFLOW.md), [`docs/UNRELEASED.md`](docs/UNRELEASED.md), [`CHANGELOG.md`](CHANGELOG.md) und die passenden Release-Notizen lesen.
 

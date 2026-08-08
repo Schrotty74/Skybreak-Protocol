@@ -75,10 +75,10 @@ TEXT = {
         ],
         "menu_title": "MENÜ- UND SYSTEMBUTTONS",
         "menu_buttons": [
-            ("START / TRY AGAIN", "Startet einen neuen Lauf."),
+            ("START / TRY AGAIN", "Startet einen neuen Lauf; freigeschaltete Startlevel lassen sich vorher wählen."),
             ("CHANGELOG", "Öffnet die Änderungen der aktuellen Version."),
             ("DEUTSCH / ENGLISH", "Wechselt die Sprache der Spielseite."),
-            ("POWER / STYLE", "Wählt beim Levelwechsel das Eispickel-Upgrade."),
+            ("POWER / STYLE", "Wählt nach einem Level die angezeigte nächste Kraft- oder Designstufe."),
             ("RESUME / WEITER", "Setzt ein pausiertes Spiel fort."),
             ("VIEW / ANSEHEN", "Öffnet ein verfügbares Update; X schließt den Hinweis."),
             ("GOT IT / VERSTANDEN", "Schließt den iPhone-App-Modus-Hinweis."),
@@ -91,6 +91,7 @@ TEXT = {
             ("PICK", "Eispickel", "Standard X, am Desktop frei belegbar. Drohnen und beschädigte Module angreifen."),
             ("SFX", "Soundeffekte", "SFX unabhängig von der Musik ein- oder ausschalten."),
             ("MUSIC", "Musik", "Soundtrack separat ein- oder ausschalten."),
+            ("FPS AN/AUS", "Leistungsanzeige", "Zeigt oder verbirgt FPS und Framezeit lokal. Auf Desktop erscheinen zusätzlich CPU-Werte."),
             ("FULLSCREEN", "Vollbild", "Vollbild starten; auf iPhone erklärt APP-MODUS die Installation."),
             ("PAUSE", "Pause", "Spiel anhalten oder fortsetzen. Tastatur: P oder Esc."),
             ("GRAPHICS", "Grafik", "Niedrig, Mittel, Hoch oder Ultra auswählen. Daneben 720p, 1080p oder 4K für die interne Renderauflösung wählen. FPS AN/AUS schaltet die lokale FPS-Anzeige."),
@@ -100,26 +101,26 @@ TEXT = {
         ],
         "systems": "SPIELSYSTEME",
         "systems_cards": [
-            ("PLATTFORMEN", "Jedes Level besitzt eine eigene Blockform und ein eigenes Material: Kryostahl, Chrom-Eis, Korrosionseis, Schmelzglas, Tiefeneis, Plasmakristall, Solarfelder, Phaseneis, Riftkristall oder Apex-Eis. Beschädigte Module lassen sich von unten oder mit dem Eispickel zerstören."),
-            ("GEGNER & GEFAHREN", "Patrouillendrohnen und Wächter besitzen je Level eigene Silhouette, Sensorform, Bewegungsakzente und Farbwelt. Fallende Energiesplitter kosten ein Leben. Von oben getroffene Drohnen werden ausgeschaltet."),
+            ("PLATTFORMEN", "Neben stabilen und brüchigen Modulen gibt es bewegliche, vereiste, zeitweise phasenverschobene und Rift-Plattformen. Beschädigte Module lassen sich von unten oder mit dem Eispickel zerstören. Unsichtbare Phasenplattformen tragen nicht."),
+            ("GEGNER & GEFAHREN", "Patrouille, Sprungangriff und Richtungswechsel bilden die drei Gegner-Archetypen; Schild-, Schützen- und Schwebegner ergänzen sie. Energiesplitter, Seitenlaser und Energiepulse kosten ein Leben. Von oben getroffene Drohnen werden ausgeschaltet."),
             ("TRUHEN", "Leicht: dauerhaft alle 2-3 Etagen. Mittel: ab der Hälfte 8 Sekunden sichtbar. Schwer: ab 2/3 nur 4,5 Sekunden und häufig versetzt. Schwere Truhen bleiben sichtbar und erscheinen bevorzugt auf Spielerhöhe oder darüber. Eine erschienene Truhe bleibt beim Zurückspringen aktiv."),
-            ("POWER-UPS", "Schutzschild, Extraleben, Punktebonus oder 12 Sekunden Eispickel-Overdrive. Ein Schild kann bis zu zwei Ladungen tragen."),
-            ("UPGRADES & LEVEL", "Jedes Level hat 15 Etagen, eine gleichbleibende Welt, eigenes Eispickel-Grundmodell und eine Wächterdrohne am Ende. Nach deren Ausschaltung erscheint die Vorschau des nächsten Sektors sowie die konkrete nächste Kraft- oder Designstufe."),
+            ("ZIELE & EISPICKEL", "Je zwei Energiezellen oder Zugangsschalter müssen vor dem Levelziel aktiviert werden. Der Eispickel löst gegnerische Projektile auf und knackt Schilde. Ein erster Treffer friert einen normalen Gegner ein, der nächste schaltet ihn aus. Ab Kraft 4 entsteht kurz eine Eisbrücke."),
+            ("WÄCHTER & LEVEL", "Jedes Level hat 15 Etagen, eigene Regeln, ein Eispickel-Grundmodell und einen Wächter. Dessen Schüsse unterscheiden sich je Level und werden bei der letzten Integritätsstufe schneller. Nach Sieg folgt die nächste Upgrade-Vorschau."),
             ("PUNKTE, SCHÄDEN & SIEG", "Schwer erhöht den Multiplikator. Treffer hinterlassen Risse, Funken und Sensorflackern. Nach Level 10 aktiviert sich der Sendeturm bei Sonnenaufgang. Cheat-Läufe ändern den Rekord nicht."),
         ],
         "levels_a": "LEVEL 1 BIS 5",
         "levels_b": "LEVEL 6 BIS 10",
         "levels": [
-            (1, "Neon Undercity", "Cyan-magenta Unterstadt mit Versorgungsschächten, Rohren, Regen und schnellen Magnetschwebebahnen."),
-            (2, "Chrome Bazaar", "Pink-mintfarbener Chrommarkt mit schwebenden Laternen, Marktständen und animierten Reklamen."),
-            (3, "Toxic Transit", "Giftgrüner Transittunnel mit Tunnelrippen, fahrenden Zugfenstern und aufsteigenden Gasblasen."),
-            (4, "Crimson Firewall", "Rot-orange Sicherheitszone mit pulsierenden Datenwänden, Firewall-Säulen und fliegender Glut."),
-            (5, "Azure Data Sea", "Tiefblaues Datenmeer mit mehreren Wellenebenen, Blasen und leuchtenden Datenquallen."),
-            (6, "Violet Reactor", "Violetter Energiekern mit rotierenden Reaktorringen, Plasmabögen und instabilem Zentrum."),
-            (7, "Solar Megagrid", "Bernsteinrotes Solarfeld mit großer Sonne, Hitzeschimmer und beweglichen Modulreihen."),
-            (8, "Ghost Network", "Blass-cyanfarbene Netzruine mit flackernden Phantomknoten, Paketströmen und Glitches."),
-            (9, "Quantum Rift", "Violett-blaue Dimensionszone mit rotierender Singularität, Spiralarmen und verzogenen Sternspuren."),
-            (10, "Skybreak Apex", "Leuchtender Gipfel über Wolken mit Morgendämmerung, Sendestrahlen und Transmissionsturm."),
+            (1, "Neon Undercity", "Cyan-magenta Unterstadt mit Versorgungsschächten, Rohren, Regen und schnellen Magnetschwebebahnen. Regel: Aufstieg mit beweglichen Plattformen."),
+            (2, "Chrome Bazaar", "Pink-mintfarbener Chrommarkt mit schwebenden Laternen, Marktständen und animierten Reklamen. Regel: Bruchzonen mit vielen fragilen Modulen."),
+            (3, "Toxic Transit", "Giftgrüner Transittunnel mit Tunnelrippen, fahrenden Zugfenstern und aufsteigenden Gasblasen. Regel: Toxinwind drückt seitlich; vereiste Plattformen sind rutschig."),
+            (4, "Crimson Firewall", "Rot-orange Sicherheitszone mit pulsierenden Datenwänden, Firewall-Säulen und fliegender Glut. Regel: Bruchzonen und horizontale Firewall-Laser."),
+            (5, "Azure Data Sea", "Tiefblaues Datenmeer mit mehreren Wellenebenen, Blasen und leuchtenden Datenquallen. Regel: Datenströmung nach links und bewegliche Plattformen."),
+            (6, "Violet Reactor", "Violetter Energiekern mit rotierenden Reaktorringen, Plasmabögen und instabilem Zentrum. Regel: Energiepulse und phasenverschobene Plattformen."),
+            (7, "Solar Megagrid", "Bernsteinrotes Solarfeld mit großer Sonne, Hitzeschimmer und beweglichen Modulreihen. Regel: Solarsturm, Seitenlaser, Seitenwind, Eis und Bruchzonen."),
+            (8, "Ghost Network", "Blass-cyanfarbene Netzruine mit flackernden Phantomknoten, Paketströmen und Glitches. Regel: Energiepulse, Phasenplattformen und Seitenwind."),
+            (9, "Quantum Rift", "Violett-blaue Dimensionszone mit rotierender Singularität, Spiralarmen und verzogenen Sternspuren. Regel: Rift-Sprungfelder versetzen die Spielfigur."),
+            (10, "Skybreak Apex", "Leuchtender Gipfel über Wolken mit Morgendämmerung, Sendestrahlen und Transmissionsturm. Regel: Apex-Aufstieg mit Bewegung, Seitenlaser und Seitenwind."),
         ],
         "settings": "EINSTELLUNGEN, AUDIO UND OFFLINE-MODUS",
         "settings_cards": [
@@ -129,6 +130,15 @@ TEXT = {
             ("AUDIO", "Jedes Level besitzt einen eigenen Track. MUSIC und SFX lassen sich vollständig getrennt schalten."),
             ("OFFLINE", "Das Release-ZIP entpacken und den Starter für macOS, Windows oder Linux öffnen. Alle zehn Musikstücke sind enthalten."),
             ("UPDATES", "Beim Start prüft das Spiel öffentliche GitHub-Releases. Nur die Update-Prüfung benötigt Internet; Spielstände bleiben lokal."),
+        ],
+        "upgrades": "UPGRADES UND LEISTUNGSANZEIGE",
+        "upgrade_cards": [
+            ("KRAFT 1 BIS 10", "Jede Kraftstufe erhöht die Reichweite um 8. P1-2 zerstört 1, P3-4 2, P5-6 3, P7-8 4 und P9-10 5 benachbarte Plattformmodule pro Schlag."),
+            ("DESIGN 1 BIS 10", "Gold Kurve, Cyan Klinge, Pink Spitze, Grün Kurve, Orange Klinge, Violett Spitze, Eis Kurve, Lila Klinge, Weiß Spitze und Sonne Kurve. Die Vorschau nennt die nächste Stufe."),
+            ("LEVEL-MODELLE", "Jedes Level verwendet unabhängig vom Design-Upgrade ein eigenes Eispickel-Grundmodell, eigene Gegner- und Wächterform sowie seine Farbwelt."),
+            ("FPS AN/AUS", "Während einer Runde zeigt die mobile Kopfzeile FPS und mittlere Framezeit. Auf Desktop zeigt LIVE zusätzlich die CPU-Zeit für Spielaktualisierung und Zeichnen."),
+            ("AUFLÖSUNG", "720p spart Leistung, 1080p ist der empfohlene Mobile-Ultra-Modus auf dem getesteten iPhone 17 Pro. 4K ist ein Qualitäts- und Screenshot-Modus."),
+            ("FORTSCHRITT", "Erreichte Level werden lokal freigeschaltet. Im Startmenü ein freigeschaltetes Startlevel wählen; die Schwierigkeit wird beim nächsten Level übernommen."),
         ],
         "cheats": "GEHEIME CHEAT-CODES",
         "cheat_intro": "Cheats funktionieren mit Touch und Tastatur. Sie gelten nur für den aktuellen Lauf. Ein Lauf mit Cheat aktualisiert den lokalen Highscore nicht.",
@@ -165,10 +175,10 @@ TEXT = {
         ],
         "menu_title": "MENU AND SYSTEM BUTTONS",
         "menu_buttons": [
-            ("START / TRY AGAIN", "Starts a new run."),
+            ("START / TRY AGAIN", "Starts a new run; choose an unlocked start level first."),
             ("CHANGELOG", "Opens the changes for the current version."),
             ("DEUTSCH / ENGLISH", "Switches the language of the game page."),
-            ("POWER / STYLE", "Selects the ice-pick upgrade at a level transition."),
+            ("POWER / STYLE", "Selects the displayed next power or style level after a completed level."),
             ("RESUME / WEITER", "Continues a paused game."),
             ("VIEW / ANSEHEN", "Opens an available update; X dismisses the notice."),
             ("GOT IT / VERSTANDEN", "Closes the iPhone app-mode notice."),
@@ -181,6 +191,7 @@ TEXT = {
             ("PICK", "Ice pick", "Default X, configurable on desktop. Attack drones and damaged modules."),
             ("SFX", "Sound effects", "Switch sound effects independently from music."),
             ("MUSIC", "Music", "Switch the soundtrack independently from SFX."),
+            ("FPS ON/OFF", "Performance display", "Shows or hides local FPS and frame time. Desktop also shows CPU values."),
             ("FULLSCREEN", "Fullscreen", "Enter fullscreen; on iPhone, APP MODE explains installation."),
             ("PAUSE", "Pause", "Pause or resume the game. Keyboard: P or Esc."),
             ("GRAPHICS", "Graphics", "Select Low, Medium, High, or Ultra. Next to it, select 720p, 1080p, or 4K for the internal render resolution. FPS ON/OFF toggles the local FPS display."),
@@ -190,26 +201,26 @@ TEXT = {
         ],
         "systems": "GAME SYSTEMS",
         "systems_cards": [
-            ("PLATFORMS", "Every level has its own block shape and material: cryo steel, chrome ice, corroded ice, molten glass, deep ice, plasma crystal, solar arrays, phase ice, rift crystal, or apex ice. Damaged modules can be destroyed from below or with the ice pick."),
-            ("ENEMIES & HAZARDS", "Patrol drones and guardians have their own silhouette, sensor form, movement accents, and color world in every level. Falling energy fragments cost a life. Landing on a drone disables it."),
+            ("PLATFORMS", "Alongside stable and fragile modules, there are moving, icy, temporarily phased, and rift platforms. Damaged modules can be destroyed from below or with the ice pick. Invisible phase platforms do not support the robot."),
+            ("ENEMIES & HAZARDS", "Patrol, leap attack, and direction change form the three enemy archetypes; shield, shooter, and hover enemies add roles. Energy fragments, side lasers, and energy pulses cost a life. Landing on a drone disables it."),
             ("CHESTS", "Easy: persistent every 2-3 floors. Medium: available after halfway for 8 seconds. Hard: only after two thirds for 4.5 seconds and frequently relocated. Hard chests stay in view and prefer the player's height or above. An active chest stays active while backtracking."),
-            ("POWER-UPS", "Shield, extra life, score bonus, or 12 seconds of ice-pick overdrive. The shield can hold up to two charges."),
-            ("UPGRADES & LEVELS", "Each level has 15 floors, one consistent world, its own ice-pick base model, and a guardian drone at the end. After disabling it, the next sector preview and the concrete next power or style upgrade appear."),
+            ("OBJECTIVES & ICE PICK", "Two energy cells or access switches must be activated before the level goal. The ice pick dissolves enemy projectiles and breaks shields. A first hit freezes a normal enemy; the next disables it. From power 4, it briefly creates an ice bridge."),
+            ("GUARDIANS & LEVELS", "Each level has 15 floors, unique rules, an ice-pick base model, and a guardian. Its shots vary by level and become faster at the final integrity stage. The next upgrade preview follows a win."),
             ("SCORING, DAMAGE & VICTORY", "Hard increases the multiplier. Hits leave cracks, sparks, and sensor flicker. After level 10, the tower activates at sunrise. Cheat runs do not change the record."),
         ],
         "levels_a": "LEVELS 1 TO 5",
         "levels_b": "LEVELS 6 TO 10",
         "levels": [
-            (1, "Neon Undercity", "Cyan-magenta depths with service shafts, pipes, rain, and fast maglev traffic."),
-            (2, "Chrome Bazaar", "Pink-mint chrome market with floating lanterns, stalls, and animated advertising."),
-            (3, "Toxic Transit", "Toxic-green tunnel with structural ribs, moving train windows, and rising gas bubbles."),
-            (4, "Crimson Firewall", "Red-orange security zone with pulsing data walls, firewall columns, and flying embers."),
-            (5, "Azure Data Sea", "Deep-blue data sea with layered waves, bubbles, and luminous data jellyfish."),
-            (6, "Violet Reactor", "Violet energy core with rotating reactor rings, plasma arcs, and an unstable center."),
-            (7, "Solar Megagrid", "Amber-red solar field with a blazing sun, heat shimmer, and moving panel arrays."),
-            (8, "Ghost Network", "Pale-cyan network ruins with flickering phantom nodes, packet streams, and glitches."),
-            (9, "Quantum Rift", "Purple-blue dimension with a rotating singularity, spiral arms, and warped star trails."),
-            (10, "Skybreak Apex", "Bright summit above the clouds with dawn light, transmission rays, and the final tower."),
+            (1, "Neon Undercity", "Cyan-magenta depths with service shafts, pipes, rain, and fast maglev traffic. Rule: ascent with moving platforms."),
+            (2, "Chrome Bazaar", "Pink-mint chrome market with floating lanterns, stalls, and animated advertising. Rule: fracture zones with many fragile modules."),
+            (3, "Toxic Transit", "Toxic-green tunnel with structural ribs, moving train windows, and rising gas bubbles. Rule: toxic draft pushes sideways; icy platforms are slippery."),
+            (4, "Crimson Firewall", "Red-orange security zone with pulsing data walls, firewall columns, and flying embers. Rule: fracture zones and horizontal firewall lasers."),
+            (5, "Azure Data Sea", "Deep-blue data sea with layered waves, bubbles, and luminous data jellyfish. Rule: data current to the left and moving platforms."),
+            (6, "Violet Reactor", "Violet energy core with rotating reactor rings, plasma arcs, and an unstable center. Rule: energy pulses and phased platforms."),
+            (7, "Solar Megagrid", "Amber-red solar field with a blazing sun, heat shimmer, and moving panel arrays. Rule: solar storm, side lasers, side draft, ice, and fracture zones."),
+            (8, "Ghost Network", "Pale-cyan network ruins with flickering phantom nodes, packet streams, and glitches. Rule: energy pulses, phased platforms, and side draft."),
+            (9, "Quantum Rift", "Purple-blue dimension with a rotating singularity, spiral arms, and warped star trails. Rule: rift jump fields reposition the robot."),
+            (10, "Skybreak Apex", "Bright summit above the clouds with dawn light, transmission rays, and the final tower. Rule: apex ascent with movement, side lasers, and side draft."),
         ],
         "settings": "SETTINGS, AUDIO, AND OFFLINE MODE",
         "settings_cards": [
@@ -219,6 +230,15 @@ TEXT = {
             ("AUDIO", "Every level has its own track. MUSIC and SFX are completely independent."),
             ("OFFLINE", "Extract the release ZIP and open the starter for macOS, Windows, or Linux. All ten music tracks are included."),
             ("UPDATES", "On startup, the game checks public GitHub releases. Only the update check needs internet; game data remains local."),
+        ],
+        "upgrades": "UPGRADES AND PERFORMANCE DISPLAY",
+        "upgrade_cards": [
+            ("POWER 1 TO 10", "Every power level adds 8 reach. P1-2 breaks 1, P3-4 2, P5-6 3, P7-8 4, and P9-10 5 adjacent platform modules per strike."),
+            ("STYLE 1 TO 10", "Gold Curve, Cyan Blade, Pink Spike, Green Curve, Orange Blade, Violet Spike, Ice Curve, Lilac Blade, White Spike, and Sun Curve. The preview names the next level."),
+            ("LEVEL MODELS", "Independently from the style upgrade, every level uses its own ice-pick base model, enemy and guardian form, and color world."),
+            ("FPS ON/OFF", "During a run, the mobile header shows FPS and average frame time. On desktop, LIVE also shows CPU time for updating and drawing the game."),
+            ("RESOLUTION", "720p saves performance, 1080p is the recommended Mobile Ultra mode on the tested iPhone 17 Pro. 4K is a quality and screenshot mode."),
+            ("PROGRESS", "Completed levels unlock locally. Choose an unlocked start level from the start menu; difficulty carries into the next level."),
         ],
         "cheats": "SECRET CHEAT CODES",
         "cheat_intro": "Cheats work with touch and keyboard. They apply only to the current run. A run using a cheat does not update the local high score.",
@@ -411,7 +431,7 @@ def draw_controls(c, data, page_no):
         accent = [CYAN, YELLOW, PINK][index % 3]
         c.setFillColor(color(PANEL))
         c.setStrokeColor(color(accent))
-        c.roundRect(x, y - 60, width, 53, 5, fill=1, stroke=1)
+        c.roundRect(x, y - 55, width, 50, 5, fill=1, stroke=1)
         c.setFillColor(color(accent))
         c.setFont("SkyMonoBold", 8)
         c.drawString(x + 10, y - 23, button)
@@ -419,7 +439,7 @@ def draw_controls(c, data, page_no):
         c.setFont("SkySansBold", 8.5)
         c.drawString(x + 100, y - 23, heading)
         draw_wrapped(c, body, x + 10, y - 39, width - 20, size=7.5, leading=10, fill=MUTED, max_lines=2)
-        y -= 61
+        y -= 55
     c.showPage()
 
 
@@ -499,7 +519,8 @@ def build(lang):
     draw_levels(c, data, 5, data["levels_a"], data["levels"][:5])
     draw_levels(c, data, 6, data["levels_b"], data["levels"][5:])
     draw_cards_page(c, data, 7, data["settings"], data["settings_cards"])
-    draw_cheats(c, data, 8)
+    draw_cards_page(c, data, 8, data["upgrades"], data["upgrade_cards"])
+    draw_cheats(c, data, 9)
     c.save()
     print(target)
 

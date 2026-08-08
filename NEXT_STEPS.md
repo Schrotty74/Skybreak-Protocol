@@ -1,7 +1,7 @@
 # Nächste Schritte – Skybreak Protocol
 
 **Stand:** 8. August 2026
-**Ausgangsstand:** `1.0.0-beta.7`
+**Ausgangsstand:** `1.0.0-beta.9`
 
 Diese Datei bei jeder größeren Änderung aktualisieren. Sie enthält nur tatsächlich bekannte, noch offene Punkte.
 
