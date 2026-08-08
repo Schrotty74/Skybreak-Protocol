@@ -1,7 +1,7 @@
 # Skybreak Protocol – Projektkontext
 
 **Stand:** 8. August 2026
-**Status:** öffentliche Web-Beta `1.0.0-beta.9`
+**Status:** öffentliche Web-Beta `1.0.0-beta.7`
 
 Diese Datei ist die zentrale technische Übergabe für neue Codex-Chats. Zuerst diese Datei und anschließend [`NEXT_STEPS.md`](NEXT_STEPS.md) lesen. Für Release-Vorhaben zusätzlich [`docs/RELEASE_WORKFLOW.md`](docs/RELEASE_WORKFLOW.md), [`docs/UNRELEASED.md`](docs/UNRELEASED.md), [`CHANGELOG.md`](CHANGELOG.md) und die passenden Release-Notizen lesen.
 
@@ -45,6 +45,7 @@ Die zentralen Daten sind In-Memory-Spielzustand in `SkybreakProtocol.tsx` sowie 
 - Lokale Fortschritts- und Einstellungsspeicherung, getrennt nach Entwicklungs-, Beta- und Final-Kanal.
 - Eigener Level-Soundtrack und synthetisierte Arcade-Soundeffekte.
 - Level-Regeln bleiben zustandslos im Spielstand: Bruchzonen, bewegliche und vereiste Plattformen, Strömungen, seitliche Laser, Reaktor-/Geist-Phasen und Rift-Sprünge verändern das jeweilige Level, ohne neue Browserdaten zu speichern. Der Eispickel kann Schalter aktivieren, Projektilenergie auflösen, Schildgegner knacken, Kryo-Frost auslösen und ab Kraftstufe 4 zeitweise Eisbrücken erzeugen.
+- Der rein kosmetische Bikini-Avatar-Cheat wird während einer aktiven Runde durch zwei schnelle Musik-Aus/An-Zyklen ausgelöst (insgesamt vier Betätigungen innerhalb von jeweils 1,2 Sekunden). Er verändert weder Punkte noch Spielwerte und gilt nur bis zum Neuladen der Seite.
 - Öffentliche, optionale GitHub-Release-Prüfung für Beta und Final.
 
 ## Feste technische Regeln
