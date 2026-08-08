@@ -3998,3 +3998,331 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   };
 
   const toggleSound = () => {
+    const next = !soundEnabledRef.current;
+    soundEnabledRef.current = next;
+    setSoundEnabled(next);
+    audioRef.current ??= createAudio();
+    audioRef.current.setSoundEnabled(next);
+  };
+
+  const toggleMusic = () => {
+    const now = performance.now();
+    const musicCheat = musicToggleCheatRef.current;
+    const next = !musicEnabledRef.current;
+    if (!next) {
+      musicCheat.switchedOff = true;
+    } else if (musicCheat.switchedOff) {
+      musicCheat.cycles = now - musicCheat.lastCycle <= 5000 ? musicCheat.cycles + 1 : 1;
+      musicCheat.lastCycle = now;
+      musicCheat.switchedOff = false;
+    }
+    musicEnabledRef.current = next;
+    setMusicEnabled(next);
+    if (musicCheat.cycles >= 2 && worldRef.current.status === "playing") {
+      musicCheat.cycles = 0;
+      const world = worldRef.current;
+      avatarRef.current = "bikini";
+      world.player.avatar = "bikini";
+      world.powerUpMessage = isDe ? "CHEAT BESTÄTIGT // BIKINI-AVATAR AKTIV" : "CHEAT CONFIRMED // BIKINI AVATAR ACTIVE";
+      world.powerUpMessageTime = 3;
+      world.shake = 4;
+      audioRef.current?.powerUp();
+    }
+    if (!next) {
+      audioRef.current?.pauseMusic();
+      return;
+    }
+    audioRef.current ??= createAudio();
+    audioRef.current.setSoundEnabled(soundEnabledRef.current);
+    void audioRef.current.playMusic(worldRef.current.sector);
+  };
+
+  const toggleFrameTelemetry = () => {
+    const next = !showFrameTelemetry;
+    setShowFrameTelemetry(next);
+    setStoredItem("skybreak-show-fps", String(next));
+  };
+
+  const toggleFullscreen = async () => {
+    if (iPhoneSafari) {
+      setShowInstallHint(true);
+      return;
+    }
+
+    const shell = canvasRef.current?.closest(".game-shell") as HTMLElement | null;
+    if (!shell) return;
+
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    if (immersiveMode) {
+      setImmersiveMode(false);
+      return;
+    }
+
+    if (document.fullscreenEnabled && shell.requestFullscreen) {
+      try {
+        await shell.requestFullscreen();
+        return;
+      } catch {
+        // Safari on iPhone can expose the API but still reject non-video elements.
+      }
+    }
+
+    setImmersiveMode(true);
+  };
+
+  const fullscreenActive = nativeFullscreen || immersiveMode;
+
+  const controlProps = (key: InputKey) => ({
+    onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setInput(key, true);
+    },
+    onPointerUp: () => setInput(key, false),
+    onPointerCancel: () => setInput(key, false),
+    onContextMenu: (event: React.MouseEvent<HTMLButtonElement>) => event.preventDefault(),
+  });
+
+  const overlayTitle =
+    status === "ready" ? "SKYBREAK PROTOCOL" : status === "paused" ? (isDe ? "SYSTEM PAUSIERT" : "SYSTEM PAUSED") : status === "upgrade" ? (isDe ? "LEVEL GESCHAFFT" : "LEVEL COMPLETE") : status === "won" ? (sector === LEVEL_COUNT ? (isDe ? "GIPFEL ERREICHT" : "SUMMIT REACHED") : (isDe ? "LEVEL GESCHAFFT" : "LEVEL COMPLETE")) : (isDe ? "LAUF BEENDET" : "RUN TERMINATED");
+  const overlayCopy =
+    status === "ready"
+      ? (isDe
+        ? `Zielregel: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].de}. Durchbrich 10 Cyberpunk-Level und erreiche den Sendeturm.`
+        : `Level rule: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].en}. Break through 10 cyberpunk levels and reach the transmission tower.`)
+      : status === "paused"
+        ? (isDe ? "Die Zeit steht still. Noch." : "Time stands still. For now.")
+        : status === "upgrade"
+          ? (isDe ? `Level ${sector} abgeschlossen. Wähle ein Eispickel-Upgrade für Level ${Math.min(LEVEL_COUNT, sector + 1)}.` : `Level ${sector} complete. Choose an ice-pick upgrade for level ${Math.min(LEVEL_COUNT, sector + 1)}.`)
+        : status === "won"
+          ? (isDe ? `Level ${sector} befreit · ${score.toLocaleString("de-AT")} Punkte` : `Level ${sector} liberated · ${score.toLocaleString("en-US")} points`)
+          : (isDe ? `Dein Lauf endet bei ${score.toLocaleString("de-AT")} Punkten.` : `Your run ends at ${score.toLocaleString("en-US")} points.`);
+
+  const nextPickaxePower = Math.min(10, pickaxeStats.power + 1);
+  const nextPickaxeStyle = Math.min(10, pickaxeStats.style + 1);
+  const nextStylePreview = PICKAXE_STYLES[nextPickaxeStyle - 1];
+
+  return (
+    <main className={`game-shell${immersiveMode ? " immersive-mode" : ""}`} onPointerDownCapture={ensureAudio}>
+      <header className="topbar">
+        <div className="brand">
+          <button className="brand-mark" type="button" onClick={armCheats} aria-label={isDe ? "Skybreak-Protokoll-Symbol" : "Skybreak Protocol symbol"}>SP</button>
+          <div>
+            <strong>SKYBREAK PROTOCOL</strong>
+            <span>VERTICAL ARCADE PROTOCOL</span>
+            {showFrameTelemetry && mobileDevice && status === "playing" && frameTelemetry && (
+              <output className="mobile-performance-hud" aria-label={isDe ? "Aktuelle Bildrate" : "Current frame rate"}>
+                {frameTelemetry.fps} FPS · {frameTelemetry.frameMs} MS
+              </output>
+            )}
+          </div>
+        </div>
+        <div className="hud" aria-live="polite">
+          <div><span>SCORE</span><strong>{score.toString().padStart(6, "0")}</strong></div>
+          <div><span>LEVEL</span><strong>{sector} / {LEVEL_COUNT}</strong></div>
+          <div><span>LIVES</span><strong>{"◆".repeat(Math.max(0, lives))}</strong></div>
+        </div>
+        <div className="header-actions">
+          <button className="icon-button" onClick={toggleSound} aria-pressed={soundEnabled} aria-label={soundEnabled ? (isDe ? "Soundeffekte ausschalten" : "Disable sound effects") : (isDe ? "Soundeffekte einschalten" : "Enable sound effects")}>
+            {soundEnabled ? "SFX ON" : "SFX OFF"}
+          </button>
+          <button className="icon-button" onClick={toggleMusic} aria-pressed={musicEnabled} aria-label={musicEnabled ? (isDe ? "Musik ausschalten" : "Disable music") : (isDe ? "Musik einschalten" : "Enable music")}>
+            {musicEnabled ? "MUSIC ON" : "MUSIC OFF"}
+          </button>
+          {showFrameTelemetry && frameTelemetry && <span className="performance-hud">LIVE {frameTelemetry.fps} FPS · CPU {frameTelemetry.updateMs}+{frameTelemetry.drawMs} MS</span>}
+          <button className="icon-button" onClick={toggleFrameTelemetry} aria-pressed={showFrameTelemetry} aria-label={showFrameTelemetry ? (isDe ? "FPS-Anzeige ausschalten" : "Disable FPS display") : (isDe ? "FPS-Anzeige einschalten" : "Enable FPS display")}>
+            {showFrameTelemetry ? "FPS ON" : "FPS OFF"}
+          </button>
+          <button className="icon-button" onClick={toggleFullscreen} aria-label={iPhoneSafari ? (isDe ? "App-Modus erklären" : "Explain app mode") : fullscreenActive ? (isDe ? "Vollbild beenden" : "Exit fullscreen") : (isDe ? "Vollbildmodus starten" : "Enter fullscreen")}>{iPhoneSafari ? (isDe ? "APP-MODUS" : "APP MODE") : fullscreenActive ? "EXIT" : "FULLSCREEN"}</button>
+          <button className="icon-button" onClick={togglePause} aria-label={isDe ? "Spiel pausieren" : "Pause game"}>PAUSE</button>
+        </div>
+      </header>
+
+      <section className="game-frame" aria-label={isDe ? "Skybreak Protocol Spielfeld" : "Skybreak Protocol game field"}>
+        {availableUpdate && (
+          <aside className="update-notice" role="status">
+            <span>{isDe ? `${availableUpdate.prerelease ? "Beta" : "Final"} ${availableUpdate.version} verfügbar` : `${availableUpdate.prerelease ? "Beta" : "Final"} ${availableUpdate.version} available`}</span>
+            <a href={availableUpdate.url} target="_blank" rel="noopener">{isDe ? "Ansehen" : "View"} ↗</a>
+            <button type="button" onClick={() => setAvailableUpdate(null)} aria-label={isDe ? "Update-Hinweis schließen" : "Dismiss update notice"}>×</button>
+          </aside>
+        )}
+        <canvas
+          key={quality === "ultra" ? "webgpu" : "webgl"}
+          ref={fxCanvasRef}
+          className={`fx-canvas${quality === "ultra" && !(/Macintosh|Mac OS X/i.test(navigator.userAgent) && window.matchMedia("(pointer: fine)").matches) ? " full-scene-fx" : ""}`}
+          aria-hidden="true"
+        />
+        <canvas ref={canvasRef} aria-label={isDe ? "Spielansicht: Klettere durch die Cyberpunk-Megacity" : "Game view: climb through the cyberpunk megacity"} />
+        {status !== "playing" && status !== "celebration" && status !== "bikiniShowcase" && (
+          <div className="game-overlay">
+            {status === "ready" && (
+              <>
+                <img className="game-logo" src={iconSrc} alt="Skybreak Protocol emblem" />
+                <a className="changelog-link" href={`${CHANGELOG_BASE_URL}/${APP_VERSION}${isDe ? "" : ".en"}.md`} target="_blank" rel="noopener">CHANGELOG ↗</a>
+                <a className="language-link" href={languageHref} lang={isDe ? "en" : "de"}>{isDe ? "ENGLISH" : "DEUTSCH"}</a>
+              </>
+            )}
+            <p className="eyebrow">{status === "ready" ? `NIGHT CITY // 03:17 // ${APP_BUILD_CHANNEL === "dev" ? "LOCAL TEST // " : APP_BUILD_CHANNEL === "beta" ? "BETA // " : "FINAL // "}v${APP_VERSION}` : status === "upgrade" ? `PICKAXE CORE // LEVEL ${sector}` : "NEURAL LINK STATUS"}</p>
+            <h1 className={status === "upgrade" ? "upgrade-title" : undefined}>{overlayTitle}</h1>
+            <p>{overlayCopy}</p>
+            {status === "upgrade" ? (
+              <div className="transition-panel" style={{ "--next-accent": LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].accent, "--next-secondary": LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].secondary } as React.CSSProperties}>
+                <div className="level-transition-card">
+                  <span>{isDe ? "NÄCHSTER SEKTOR" : "NEXT SECTOR"}</span>
+                  <strong>LEVEL {Math.min(LEVEL_COUNT, sector + 1).toString().padStart(2, "0")}</strong>
+                  <b>{LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].name}</b>
+                  <small>{isDe ? `${LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].platform.replaceAll("-", " ")} // WÄCHTERSIGNAL ERFASST` : `${LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].platform.replaceAll("-", " ")} // GUARDIAN SIGNAL DETECTED`}</small>
+                </div>
+                <div className="upgrade-grid">
+                  <button onClick={() => applyPickaxeUpgrade("power")}>
+                    <strong>{isDe ? "KRAFT" : "POWER"} {nextPickaxePower}</strong>
+                    <span>{isDe
+                      ? `REICHWEITE +8 // ${pickaxeBreakCount(nextPickaxePower)} PLATTFORM${pickaxeBreakCount(nextPickaxePower) === 1 ? "" : "EN"} PRO SCHLAG`
+                      : `RANGE +8 // ${pickaxeBreakCount(nextPickaxePower)} PLATFORM${pickaxeBreakCount(nextPickaxePower) === 1 ? "" : "S"} PER STRIKE`}</span>
+                  </button>
+                  <button onClick={() => applyPickaxeUpgrade("style")}>
+                    <strong>{isDe ? "DESIGN" : "STYLE"} {nextPickaxeStyle}</strong>
+                    <span>{isDe
+                      ? `${nextStylePreview.de} // NEUE FARBE, FORM UND STÄRKERES LEUCHTEN`
+                      : `${nextStylePreview.en} // NEW COLOR, SHAPE, AND STRONGER GLOW`}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {status !== "paused" && (
+                  <label className="start-level-picker">
+                    <span>{isDe ? "STARTLEVEL" : "START LEVEL"}</span>
+                    <select value={selectedStartLevel} onChange={(event) => chooseStartLevel(Number(event.target.value))}>
+                      {Array.from({ length: unlockedLevel }, (_, index) => index + 1).map((level) => (
+                        <option key={level} value={level}>LEVEL {level.toString().padStart(2, "0")} // {LEVEL_THEMES[level - 1].name}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <button className="primary-button" onClick={status === "paused" ? togglePause : restart}>
+                  {status === "paused" ? (isDe ? "WEITER" : "RESUME") : status === "ready" ? (isDe ? "AUFSTIEG STARTEN" : "START ASCENT") : (isDe ? "AUSGEWÄHLTES LEVEL STARTEN" : "START SELECTED LEVEL")}
+                </button>
+              </>
+            )}
+            {status === "ready" && (
+              <>
+                <div className="mission-grid">
+                  <span><b>01</b> {isDe ? "Ebenen von unten durchbrechen" : "Break levels from below"}</span>
+                  <span><b>02</b> {isDe ? "Drohnen ausschalten" : "Disable the drones"}</span>
+                  <span><b>03</b> {isDe ? "Sendeturm erreichen" : "Reach the transmission tower"}</span>
+                </div>
+                <div className="level-map" aria-label={isDe ? "Levelkarte" : "Level map"}>
+                  {LEVEL_THEMES.map((theme, index) => {
+                    const level = index + 1;
+                    return <span key={theme.name} className={`${level === selectedStartLevel ? "selected" : ""}${level > unlockedLevel ? " locked" : ""}`} style={{ "--map-accent": theme.accent } as React.CSSProperties}>{level.toString().padStart(2, "0")}</span>;
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        <div className={`sector-tag${worldRef.current.immortalSector === sector ? " cheat-active" : ""}`}>LEVEL {sector.toString().padStart(2, "0")} // {LEVEL_THEMES[sector - 1].name} // {isDe ? LEVEL_GAMEPLAY[sector - 1].de : LEVEL_GAMEPLAY[sector - 1].en} // PICK P{pickaxeStats.power} S{pickaxeStats.style}{worldRef.current.immortalSector === sector ? " // IMMORTAL" : ""} // v{APP_VERSION}</div>
+      </section>
+
+      <section className="control-panel">
+        <div className="desktop-help">
+          <span><kbd>{displayKey(keyBindings.left)}</kbd><kbd>{displayKey(keyBindings.right)}</kbd> {isDe ? "Bewegen" : "Move"}</span>
+          <span><kbd>{displayKey(keyBindings.jump)}</kbd> {isDe ? "Springen" : "Jump"}</span>
+          <span><kbd>{displayKey(keyBindings.attack)}</kbd> {isDe ? "Eispickel" : "Ice pick"}</span>
+          <span><kbd>P</kbd> Pause</span>
+        </div>
+        <div className="touch-controls" aria-label={isDe ? "Touch-Steuerung" : "Touch controls"}>
+          <div className="touch-group">
+            <button {...controlProps("left")} aria-label={isDe ? "Nach links" : "Move left"}>←</button>
+            <button {...controlProps("right")} aria-label={isDe ? "Nach rechts" : "Move right"}>→</button>
+          </div>
+          <div className="touch-group">
+            <button className="jump" {...controlProps("jump")} aria-label={isDe ? "Springen" : "Jump"}>JUMP</button>
+            <button className="attack" {...controlProps("attack")} aria-label={isDe ? "Eispickel einsetzen" : "Use ice pick"}>PICK</button>
+          </div>
+        </div>
+        <div className="mobile-actions">
+          <button onClick={toggleSound} aria-pressed={soundEnabled}>{soundEnabled ? (isDe ? "SFX AUS" : "SFX OFF") : (isDe ? "SFX AN" : "SFX ON")}</button>
+          <button onClick={toggleMusic} aria-pressed={musicEnabled}>{musicEnabled ? (isDe ? "MUSIK AUS" : "MUSIC OFF") : (isDe ? "MUSIK AN" : "MUSIC ON")}</button>
+          <button onClick={toggleFrameTelemetry} aria-pressed={showFrameTelemetry}>{showFrameTelemetry ? "FPS AUS" : "FPS AN"}</button>
+          <button onClick={toggleFullscreen}>{iPhoneSafari ? (isDe ? "APP-MODUS" : "APP MODE") : fullscreenActive ? (isDe ? "BEENDEN" : "EXIT") : (isDe ? "VOLLBILD" : "FULLSCREEN")}</button>
+          <button onClick={togglePause}>PAUSE</button>
+        </div>
+        <label className="quality-picker">
+          <span>{isDe ? "GRAFIK" : "GRAPHICS"}</span>
+          <select value={quality} onChange={(event) => chooseQuality(event.target.value as Quality)}>
+            <option value="low">{isDe ? "Niedrig" : "Low"}</option>
+            <option value="medium">{isDe ? "Mittel" : "Medium"}</option>
+            <option value="high">{isDe ? "Hoch" : "High"}</option>
+            <option value="ultra">Ultra</option>
+          </select>
+        </label>
+        <label className="quality-picker">
+          <span>{isDe ? "AUFLÖSUNG" : "RESOLUTION"}</span>
+          <select value={renderResolution} onChange={(event) => chooseRenderResolution(event.target.value as RenderResolution)}>
+            <option value="720p">720p</option>
+            <option value="1080p">1080p</option>
+            <option value="4k">4K</option>
+          </select>
+        </label>
+        {quality === "ultra" && mobileDevice && (
+          <p className="mobile-ultra-warning" role="alert">
+            {isDe
+              ? "ULTRA KANN DAS HANDY SEHR ERWÄRMEN. NICHT BEI HITZE ODER DIREKTER SONNE NUTZEN."
+              : "ULTRA CAN MAKE THE PHONE VERY WARM. DO NOT USE IN HOT WEATHER OR DIRECT SUNLIGHT."}
+          </p>
+        )}
+        {quality === "ultra" && mobileDevice && (
+          <label className="mobile-ultra-picker">
+            <span>MOBILE ULTRA</span>
+            <select value={mobileUltra120 ? "120" : "60"} onChange={(event) => chooseMobileUltra120(event.target.value === "120")}>
+              <option value="60">60 FPS</option>
+              <option value="120">{isDe ? "Bis 120 FPS" : "Up to 120 FPS"}</option>
+            </select>
+            <small>{isDe ? "120 FPS erhöht Wärme und Akkuverbrauch" : "120 FPS increases heat and battery use"}</small>
+          </label>
+        )}
+        <label className="difficulty-picker">
+          <span>{isDe ? `LEVEL ${sector} SCHWIERIGKEIT` : `LEVEL ${sector} DIFFICULTY`}</span>
+          <select value={levelDifficulties[sector - 1]} onChange={(event) => chooseDifficulty(event.target.value as Difficulty)}>
+            <option value="easy">{isDe ? "Leicht" : "Easy"}</option>
+            <option value="medium">{isDe ? "Mittel" : "Medium"}</option>
+            <option value="hard">{isDe ? "Schwer" : "Hard"}</option>
+          </select>
+          <small>{LEVEL_THEMES[sector - 1].name}</small>
+        </label>
+        <div className="run-record">
+          <span>{renderer} · {quality.toUpperCase()}{quality === "ultra" ? ` · ${ultraFps} FPS` : quality === "high" && mobileDevice ? " · 60 FPS" : ""}{thermalProtection && (quality === "ultra" || (quality === "high" && mobileDevice)) ? ` · ${isDe ? "WÄRMESCHUTZ" : "THERMAL SAFE"}` : ""}{desktopUltraScale < 1 ? ` · ${isDe ? "LEISTUNGSSCHUTZ" : "PERFORMANCE SAFE"} ${Math.round(desktopUltraScale * 100)}%` : ""} · LOCAL RECORD</span>
+          <strong>{highScore.toString().padStart(6, "0")}</strong>
+        </div>
+        {!mobileDevice && (
+          <div className="key-binding-panel">
+            <span>{isDe ? "TASTENBELEGUNG" : "KEY BINDINGS"}</span>
+            {(["left", "right", "jump", "attack"] as BindableAction[]).map((action) => (
+              <button key={action} type="button" className={bindingCapture === action ? "listening" : ""} onClick={() => beginKeyCapture(action)}>
+                <small>{action === "left" ? (isDe ? "LINKS" : "LEFT") : action === "right" ? (isDe ? "RECHTS" : "RIGHT") : action === "jump" ? (isDe ? "SPRINGEN" : "JUMP") : (isDe ? "HÄMMERN" : "PICK")}</small>
+                <strong>{bindingCapture === action ? (isDe ? "TASTE DRÜCKEN" : "PRESS KEY") : displayKey(keyBindings[action])}</strong>
+              </button>
+            ))}
+            <button type="button" className="reset-keys" onClick={resetKeyBindings}>{isDe ? "STANDARD" : "RESET"}</button>
+          </div>
+        )}
+      </section>
+      {showInstallHint && (
+        <div className="install-hint" role="dialog" aria-modal="true" aria-labelledby="install-hint-title">
+          <div className="install-hint-card">
+            <span>IPHONE // APP MODE</span>
+            <h2 id="install-hint-title">{isDe ? "ECHTES VOLLBILD" : "TRUE FULLSCREEN"}</h2>
+            <p>{isDe ? "Tippe in Safari auf Teilen und dann auf „Zum Home-Bildschirm“. Starte Skybreak anschließend über das App-Symbol." : "In Safari, tap Share and then “Add to Home Screen”. Launch Skybreak from its app icon afterwards."}</p>
+            <button onClick={() => setShowInstallHint(false)}>{isDe ? "VERSTANDEN" : "GOT IT"}</button>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
