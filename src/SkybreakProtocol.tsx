@@ -2316,12 +2316,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
               world.powerUpMessage = isDe ? "SCHILD GEBROCHEN" : "SHIELD BROKEN";
               world.powerUpMessageTime = 0.8;
               burst(world, enemy.x + 18, enemy.y + 16, themeColor(world.sector, "warning"), 12);
-            } else if (p.pickaxeStyle % 3 === 0 && enemy.frozen <= 0) {
-              enemy.frozen = 1.7;
+            } else if (enemy.frozen <= 0) {
+              enemy.frozen = 2.2;
               enemy.vx = p.facing * 180;
               world.powerUpMessage = isDe ? "KRIO-FROST" : "CRYO FREEZE";
-              world.powerUpMessageTime = 0.6;
-              burst(world, enemy.x + 18, enemy.y + 16, "#72ffef", 12);
+              world.powerUpMessageTime = 1.2;
+              burst(world, enemy.x + 18, enemy.y + 16, "#72ffef", 20);
             } else {
               enemy.alive = false;
               world.score += Math.round(250 * difficulty.score);
@@ -2457,7 +2457,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       }
 
       world.hazardTimer -= dt;
-      if (world.hazardTimer <= 0 && world.cameraY < -400) {
+      if (world.hazardTimer <= 0 && (world.cameraY < -110 || levelRule.hazard === "laser")) {
         world.hazardTimer = (levelRule.hazard === "laser" ? 1.7 : 2.3 + Math.random() * 2.2) / (difficulty.hazards * levelPressure);
         const hazardY = world.cameraY + 70 + Math.random() * Math.max(90, view.height - 150);
         const laserFromLeft = Math.random() > 0.5;
@@ -3244,6 +3244,17 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.setLineDash([3, 3]);
           ctx.beginPath(); ctx.ellipse(0, 18, 24, 7, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
         }
+        if (!enemy.guardian && enemy.frozen > 0) {
+          ctx.globalAlpha = 0.72;
+          ctx.strokeStyle = "#72ffef";
+          ctx.lineWidth = 2.5;
+          ctx.shadowBlur = ultraActive ? 0 : 18;
+          ctx.shadowColor = "#72ffef";
+          ctx.beginPath(); ctx.arc(0, 0, 27 + Math.sin(world.fxTime * 8) * 2, 0, Math.PI * 2); ctx.stroke();
+          ctx.fillStyle = "rgba(114,255,239,.18)";
+          ctx.fillRect(-18, -15, 36, 30);
+          ctx.shadowBlur = 0;
+        }
         if (enemy.guardian) {
           ctx.globalAlpha = 1;
           ctx.strokeStyle = enemySecondary;
@@ -3267,8 +3278,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.fillStyle = particle.color;
         ctx.shadowBlur = ultraActive ? 0 : 9;
         ctx.shadowColor = particle.color;
-        const size = particle.color === "#ff2b8a" && particle.life > 1 ? 11 : 5;
-        ctx.fillRect(particle.x, particle.y, size, size);
+        if (particle.hazard === "laser") {
+          const length = 92;
+          ctx.fillStyle = "rgba(255,43,138,.28)";
+          ctx.fillRect(particle.x - length / 2, particle.y - 6, length, 12);
+          ctx.fillStyle = "#fff1a8";
+          ctx.fillRect(particle.x - length / 2, particle.y - 1.5, length, 3);
+        } else {
+          const size = particle.color === "#ff2b8a" && particle.life > 1 ? 11 : 5;
+          ctx.fillRect(particle.x, particle.y, size, size);
+        }
       }
       ctx.globalAlpha = 1;
       ctx.shadowBlur = 0;
