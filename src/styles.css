@@ -930,17 +930,16 @@ kbd {
   }
 
   .mobile-performance-hud {
-    position: absolute;
-    z-index: 4;
-    top: max(8px, env(safe-area-inset-top));
-    right: max(8px, env(safe-area-inset-right));
-    display: block;
-    padding: 5px 7px;
-    border: 1px solid rgba(0, 240, 255, .42);
-    background: rgba(2, 8, 18, .78);
-    color: var(--cyan);
-    font: 800 8px ui-monospace, SFMono-Regular, Menlo, monospace;
-    letter-spacing: .06em;
+    width: fit-content;
+    margin-top: 5px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 1px 0;
+    color: var(--yellow);
+    font: 900 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: .08em;
+    line-height: 1;
     pointer-events: none;
   }
 
