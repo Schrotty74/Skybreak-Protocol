@@ -3656,15 +3656,34 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         const avatar = bikiniAvatarImageRef.current;
         const avatarHeight = Math.min(view.height * .72, 410) * pulse;
         const avatarWidth = avatarHeight * (176 / 371);
-        const danceX = view.width / 2 + Math.sin(elapsed * Math.PI * 2.4) * Math.min(24, view.width * .045);
-        const danceY = view.height * .53 + Math.abs(Math.sin(elapsed * Math.PI * 2.4)) * 11;
+        const danceBeat = elapsed * Math.PI * 2.4;
+        const danceX = view.width / 2 + Math.sin(danceBeat) * Math.min(17, view.width * .032);
+        const danceY = view.height * .53 + Math.abs(Math.sin(danceBeat)) * 7;
         ctx.save();
         ctx.translate(danceX, danceY);
-        ctx.rotate(Math.sin(elapsed * Math.PI * 2.4) * .09);
         ctx.shadowBlur = 28;
         ctx.shadowColor = "#ff2b8a";
         if (avatar?.complete && avatar.naturalWidth > 0) {
-          ctx.drawImage(avatar, -avatarWidth / 2, -avatarHeight / 2, avatarWidth, avatarHeight);
+          // The avatar is deliberately drawn in separate body parts here. A
+          // whole-sprite rotation looks like sliding; independently pivoted
+          // arms and legs make the celebration read as a real dance.
+          const scale = avatarWidth / 176;
+          const drawDancePart = (sourceX: number, sourceY: number, sourceW: number, sourceH: number, pivotX: number, pivotY: number, rotation: number, offsetX = 0, offsetY = 0) => {
+            ctx.save();
+            ctx.translate(-avatarWidth / 2 + pivotX * scale + offsetX, -avatarHeight / 2 + pivotY * scale + offsetY);
+            ctx.rotate(rotation);
+            ctx.drawImage(avatar, sourceX, sourceY, sourceW, sourceH, (sourceX - pivotX) * scale, (sourceY - pivotY) * scale, sourceW * scale, sourceH * scale);
+            ctx.restore();
+          };
+          const step = Math.sin(danceBeat);
+          const sway = Math.sin(danceBeat * .5);
+          // Legs first, then the torso and arms: this keeps the hips and
+          // shoulders visually connected while the limbs move on the beat.
+          drawDancePart(34, 194, 55, 174, 67, 202, step * .22, -step * 4, Math.max(0, -step) * 3);
+          drawDancePart(88, 194, 53, 174, 108, 202, -step * .22, step * 4, Math.max(0, step) * 3);
+          drawDancePart(34, 0, 108, 216, 88, 192, sway * .055);
+          drawDancePart(6, 80, 51, 136, 48, 91, -.22 - step * .62, -step * 2, 0);
+          drawDancePart(119, 80, 51, 136, 128, 91, .22 + step * .62, step * 2, 0);
         } else {
           ctx.fillStyle = "#ff7eaa";
           ctx.beginPath(); ctx.arc(0, -avatarHeight * .25, avatarWidth * .23, 0, Math.PI * 2); ctx.fill();
