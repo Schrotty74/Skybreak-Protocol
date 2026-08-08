@@ -30,14 +30,15 @@ Diese Datei bei jeder größeren Änderung aktualisieren. Sie enthält nur tats�
 - Die Anzeige wurde aus dem Spielfeld in den schwarzen Kopfbereich unter „Skybreak Protocol“ verschoben und größer in Gelb gestaltet.
 - Auf einem echten Mobilgerät im aktiven Spiel prüfen, ob sie bei unterschiedlichen Bildschirmbreiten lesbar bleibt und weder Score noch Lives verdeckt.
 
-## Priorität 5 – Bikini-Abschlusssequenz abnehmen
+## Priorität 5 – Roboter-Abschlusssequenz abnehmen
 
-- Mit aktiviertem Bikini-Avatar auf einem Desktop- und Mobilbrowser ein Level beenden.
-- Prüfen: Die Vollbild-Tanzsequenz läuft fünf Sekunden, die aktuelle Levelmusik bleibt hörbar und anschließend erscheint zuverlässig die Upgrade-Auswahl beziehungsweise das Finale.
+- Mit der normalen Roboterfigur auf einem Desktop- und Mobilbrowser ein Level beenden.
+- Prüfen: Die Vollbild-Tanzsequenz läuft fünf Sekunden, die aktuelle Levelmusik bleibt hörbar, die Hologramm-Tänzerin bewegt Arme, Beine und Hüfte sichtbar und anschließend erscheint zuverlässig die Upgrade-Auswahl beziehungsweise das Finale.
+- Mit aktiviertem Bikini-Avatar ein Level beenden: Die Vollbild-Look-Präsentation muss fünf Sekunden erscheinen, je Level sichtbar anders aussehen und danach zuverlässig weiterführen.
 
 ## Spätere Präsentationsoption – echte 3D-Abschlusssequenz
 
-- Nicht begonnen: Ein geriggtes 3D-Modell mit Skelettanimation kann die vorbereitete 2D-Sprite-Tanzsequenz später ersetzen. Vorher Mobil-Leistung, Modell-/Animationsquelle und Ladezeit bewerten.
+- Nicht begonnen: Ein geriggtes 3D-Modell mit Skelettanimation kann die aktuelle 2D-Hologramm-Tanzeinlage später ersetzen. Vorher Mobil-Leistung, Modell-/Animationsquelle und Ladezeit bewerten.
 
 ## Bereits bekannte Beta-Einschränkungen
 

@@ -7,7 +7,7 @@ import { detectCheat, type CheatId } from "./cheats";
 import { actionForCode, DEFAULT_KEY_BINDINGS, displayKey, normalizeKeyBindings, rebindKey, type BindableAction, type KeyBindings } from "./keyBindings";
 import { getStoredItem, setStoredItem } from "./storage";
 
-type GameStatus = "ready" | "playing" | "paused" | "celebration" | "upgrade" | "gameover" | "won";
+type GameStatus = "ready" | "playing" | "paused" | "celebration" | "bikiniShowcase" | "upgrade" | "gameover" | "won";
 type InputKey = BindableAction;
 type Quality = "low" | "medium" | "high" | "ultra";
 type RenderResolution = "720p" | "1080p" | "4k";
@@ -342,40 +342,115 @@ function themeColor(sector: number, key: "accent" | "secondary" | "warning") {
   return LEVEL_THEMES[Math.max(0, Math.min(LEVEL_THEMES.length - 1, sector - 1))][key];
 }
 
-const DANCE_SPRITE_FRAMES = 16;
-const DANCE_SPRITE_WIDTH = 176;
-const DANCE_SPRITE_HEIGHT = 371;
-
-function createDanceSpriteSheet(avatar: HTMLImageElement) {
-  const sheet = document.createElement("canvas");
-  sheet.width = DANCE_SPRITE_WIDTH * DANCE_SPRITE_FRAMES;
-  sheet.height = DANCE_SPRITE_HEIGHT;
-  const ctx = sheet.getContext("2d");
-  if (!ctx) return null;
-
-  const drawPart = (sourceX: number, sourceY: number, sourceW: number, sourceH: number, pivotX: number, pivotY: number, rotation: number, offsetX = 0, offsetY = 0) => {
-    ctx.save();
-    ctx.translate(pivotX + offsetX, pivotY + offsetY);
-    ctx.rotate(rotation);
-    ctx.drawImage(avatar, sourceX, sourceY, sourceW, sourceH, sourceX - pivotX, sourceY - pivotY, sourceW, sourceH);
-    ctx.restore();
+function drawHologramDancer(ctx: CanvasRenderingContext2D, time: number, scale: number) {
+  const beat = time * Math.PI * 2.55;
+  const step = Math.sin(beat);
+  const groove = Math.sin(beat * .5);
+  const pulse = .74 + (Math.sin(beat * 2) + 1) * .13;
+  const point = (x: number, y: number, length: number, angle: number) => ({ x: x + Math.cos(angle) * length, y: y + Math.sin(angle) * length });
+  const limb = (start: { x: number; y: number }, elbow: { x: number; y: number }, end: { x: number; y: number }, color: string) => {
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(1, 8, 20, .96)";
+    ctx.lineWidth = 17;
+    ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(elbow.x, elbow.y); ctx.lineTo(end.x, end.y); ctx.stroke();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(elbow.x, elbow.y); ctx.lineTo(end.x, end.y); ctx.stroke();
+    ctx.fillStyle = "#ffd84d";
+    ctx.beginPath(); ctx.arc(elbow.x, elbow.y, 3.5, 0, Math.PI * 2); ctx.fill();
   };
 
-  for (let frame = 0; frame < DANCE_SPRITE_FRAMES; frame += 1) {
-    const phase = (frame / DANCE_SPRITE_FRAMES) * Math.PI * 2;
-    const step = Math.sin(phase);
-    const counterStep = Math.sin(phase + Math.PI);
-    const groove = Math.sin(phase * .5);
-    ctx.save();
-    ctx.translate(frame * DANCE_SPRITE_WIDTH, (1 - Math.cos(phase * 2)) * 3);
-    drawPart(34, 194, 55, 174, 67, 202, step * .31, -step * 8, Math.max(0, -step) * 9);
-    drawPart(88, 194, 53, 174, 108, 202, counterStep * .31, step * 8, Math.max(0, step) * 9);
-    drawPart(52, 0, 72, 216, 88, 192, groove * .11, step * 4);
-    drawPart(6, 80, 51, 136, 48, 91, -.55 - step * .9, -step * 4, -Math.max(0, step) * 5);
-    drawPart(119, 80, 51, 136, 128, 91, .55 + step * .9, step * 4, -Math.max(0, -step) * 5);
-    ctx.restore();
+  ctx.save();
+  ctx.scale(scale, scale);
+  ctx.globalAlpha = pulse;
+  const hip = { x: step * 11, y: 22 };
+  const shoulderY = -65 + Math.abs(step) * 4;
+  const leftHip = { x: hip.x - 17, y: hip.y };
+  const rightHip = { x: hip.x + 17, y: hip.y };
+  const leftKnee = point(leftHip.x, leftHip.y, 62, Math.PI / 2 + step * .34);
+  const rightKnee = point(rightHip.x, rightHip.y, 62, Math.PI / 2 - step * .34);
+  const leftFoot = point(leftKnee.x, leftKnee.y, 66, Math.PI / 2 - step * .2);
+  const rightFoot = point(rightKnee.x, rightKnee.y, 66, Math.PI / 2 + step * .2);
+  limb(leftHip, leftKnee, leftFoot, "#ff2b8a");
+  limb(rightHip, rightKnee, rightFoot, "#00f0ff");
+
+  const torsoTilt = groove * .13;
+  ctx.save();
+  ctx.translate(hip.x, hip.y - 8);
+  ctx.rotate(torsoTilt);
+  const torso = ctx.createLinearGradient(-30, -90, 30, 15);
+  torso.addColorStop(0, "#00f0ff"); torso.addColorStop(.48, "#091a31"); torso.addColorStop(1, "#ff2b8a");
+  ctx.fillStyle = torso;
+  ctx.beginPath(); ctx.moveTo(-31, 8); ctx.lineTo(-26, -62); ctx.lineTo(26, -62); ctx.lineTo(31, 8); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#e9ffff"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = "#07111f";
+  ctx.beginPath(); ctx.moveTo(-24, -24); ctx.lineTo(24, -24); ctx.lineTo(18, 6); ctx.lineTo(-18, 6); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#ff2b8a"; ctx.stroke();
+  ctx.restore();
+
+  const leftShoulder = { x: hip.x - 29, y: shoulderY };
+  const rightShoulder = { x: hip.x + 29, y: shoulderY };
+  const leftElbow = point(leftShoulder.x, leftShoulder.y, 52, 2.35 - step * 1.08);
+  const rightElbow = point(rightShoulder.x, rightShoulder.y, 52, .79 + step * 1.08);
+  const leftHand = point(leftElbow.x, leftElbow.y, 51, 1.66 + step * .62);
+  const rightHand = point(rightElbow.x, rightElbow.y, 51, 1.48 - step * .62);
+  limb(leftShoulder, leftElbow, leftHand, "#ff2b8a");
+  limb(rightShoulder, rightElbow, rightHand, "#00f0ff");
+
+  const headX = hip.x + groove * 5;
+  ctx.fillStyle = "#07111f";
+  ctx.beginPath(); ctx.arc(headX, -113, 29, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#ff2b8a"; ctx.lineWidth = 4; ctx.stroke();
+  ctx.fillStyle = "#ffd84d";
+  ctx.fillRect(headX - 12, -116, 24, 5);
+  ctx.fillStyle = "#00f0ff";
+  ctx.fillRect(headX - 4, -96, 8, 9);
+  ctx.fillStyle = "#081222";
+  ctx.fillRect(leftFoot.x - 16, leftFoot.y - 8, 32, 18);
+  ctx.fillRect(rightFoot.x - 16, rightFoot.y - 8, 32, 18);
+  ctx.restore();
+}
+
+function drawBikiniLookOverlay(ctx: CanvasRenderingContext2D, look: typeof BIKINI_LOOKS[number], scale: number) {
+  const fill = ctx.createLinearGradient(0, -145 * scale, 0, 20 * scale);
+  fill.addColorStop(0, look.secondary);
+  fill.addColorStop(.44, look.primary);
+  fill.addColorStop(1, look.secondary);
+  const path = (points: Array<[number, number]>) => {
+    ctx.beginPath();
+    points.forEach(([x, y], index) => index === 0 ? ctx.moveTo(x * scale, y * scale) : ctx.lineTo(x * scale, y * scale));
+    ctx.closePath();
+  };
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.globalAlpha = .88;
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = look.secondary;
+  ctx.lineWidth = 1.8 * scale;
+  // A fashion overlay follows the underlying avatar's top and bottom. Each
+  // level gets a visibly different contour and an accent motif.
+  if (look.cut % 3 === 0) {
+    path([[-39, -69], [-7, -91], [0, -55], [-4, -48], [-41, -54]]); ctx.fill(); ctx.stroke();
+    path([[39, -69], [7, -91], [0, -55], [4, -48], [41, -54]]); ctx.fill(); ctx.stroke();
+  } else if (look.cut % 3 === 1) {
+    path([[-41, -59], [-7, -87], [0, -55], [-12, -45], [-43, -50]]); ctx.fill(); ctx.stroke();
+    path([[41, -59], [7, -87], [0, -55], [12, -45], [43, -50]]); ctx.fill(); ctx.stroke();
+  } else {
+    path([[-42, -54], [-5, -88], [0, -52], [-19, -44], [-45, -48]]); ctx.fill(); ctx.stroke();
+    path([[42, -54], [5, -88], [0, -52], [19, -44], [45, -48]]); ctx.fill(); ctx.stroke();
   }
-  return sheet;
+  path([[-31, 4], [0, -13], [31, 4], [22, 30], [0, 38], [-22, 30]]); ctx.fill(); ctx.stroke();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = .95;
+  ctx.strokeStyle = look.secondary;
+  ctx.lineWidth = 2.2 * scale;
+  for (let accent = 0; accent < 3; accent += 1) {
+    const offset = (-12 + accent * 12) * scale;
+    ctx.beginPath(); ctx.moveTo(offset, -74 * scale); ctx.lineTo(offset * .55, -47 * scale); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(offset, 0); ctx.lineTo(offset * .55, 28 * scale); ctx.stroke();
+  }
+  ctx.restore();
 }
 
 const CHEST_POWER_UPS: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
@@ -390,6 +465,19 @@ const PICKAXE_STYLES = [
   { de: "LILA // KLINGE", en: "LILAC // BLADE" },
   { de: "WEISS // SPITZE", en: "WHITE // SPIKE" },
   { de: "SONNE // KURVE", en: "SUN // CURVE" },
+] as const;
+
+const BIKINI_LOOKS = [
+  { name: "NEON WAVE", primary: "#00f0ff", secondary: "#1c6dff", cut: 0 },
+  { name: "CHROME PINK", primary: "#ff4ed8", secondary: "#ffe3f8", cut: 1 },
+  { name: "TOXIC LIME", primary: "#72ff4d", secondary: "#d9ff8a", cut: 2 },
+  { name: "FIREWALL RED", primary: "#ff365f", secondary: "#ffb12f", cut: 3 },
+  { name: "AZURE WRAP", primary: "#36bfff", secondary: "#7c5cff", cut: 4 },
+  { name: "VIOLET NOVA", primary: "#c65cff", secondary: "#ff3dbb", cut: 5 },
+  { name: "SOLAR GOLD", primary: "#ffb53b", secondary: "#fff2a6", cut: 6 },
+  { name: "GHOST MINT", primary: "#84fff2", secondary: "#b1a3ff", cut: 7 },
+  { name: "RIFT IRIS", primary: "#9c6bff", secondary: "#00f6ff", cut: 8 },
+  { name: "APEX WHITE", primary: "#ffffff", secondary: "#ffcf4a", cut: 9 },
 ] as const;
 
 function pickaxeBreakCount(power: number) {
@@ -1330,7 +1418,6 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fxCanvasRef = useRef<HTMLCanvasElement>(null);
   const bikiniAvatarImageRef = useRef<HTMLImageElement | null>(null);
-  const danceSpriteRef = useRef<HTMLCanvasElement | null>(null);
   const worldRef = useRef<World>(makeWorld());
   const inputRef = useRef<Record<InputKey, boolean>>({ left: false, right: false, jump: false, attack: false });
   const pressedRef = useRef<Record<InputKey, boolean>>({ left: false, right: false, jump: false, attack: false });
@@ -1397,13 +1484,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   useEffect(() => {
     const image = new Image();
     image.src = `${import.meta.env.BASE_URL}images/bikini-avatar-compact.png`;
-    image.onload = () => {
-      bikiniAvatarImageRef.current = image;
-      danceSpriteRef.current = createDanceSpriteSheet(image);
-    };
+    image.onload = () => { bikiniAvatarImageRef.current = image; };
     return () => {
       bikiniAvatarImageRef.current = null;
-      danceSpriteRef.current = null;
     };
   }, []);
 
@@ -2191,7 +2274,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     };
 
     const update = (world: World, dt: number) => {
-      if (world.status === "celebration") {
+      if (world.status === "celebration" || world.status === "bikiniShowcase") {
         world.fxTime += dt;
         world.celebrationTime = Math.max(0, world.celebrationTime - dt);
         if (world.celebrationTime === 0) {
@@ -2617,15 +2700,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           setStoredItem("skybreak-level-difficulties", JSON.stringify(updatedDifficulties));
         }
         const completionTarget = world.sector < LEVEL_COUNT ? "upgrade" : "won";
-        const bikiniCelebration = p.avatar === "bikini";
-        world.status = bikiniCelebration ? "celebration" : completionTarget;
+        const robotCelebration = p.avatar === "robot";
+        const bikiniShowcase = p.avatar === "bikini";
+        world.status = robotCelebration ? "celebration" : bikiniShowcase ? "bikiniShowcase" : completionTarget;
         world.celebrationTarget = completionTarget;
-        world.celebrationTime = bikiniCelebration ? 5 : 0;
+        world.celebrationTime = robotCelebration || bikiniShowcase ? 5 : 0;
         world.transition = 2.4;
-        world.victoryTime = !bikiniCelebration && completionTarget === "won" ? 0.01 : 0;
+        world.victoryTime = !robotCelebration && !bikiniShowcase && completionTarget === "won" ? 0.01 : 0;
         p.vx = 0;
         p.vy = 0;
-        if (!bikiniCelebration) audioRef.current?.win();
+        if (!robotCelebration && !bikiniShowcase) audioRef.current?.win();
         if (!world.cheatUsed) {
           const best = Math.max(world.score, Number(getStoredItem("neon-ascent-highscore") || 0));
           setStoredItem("neon-ascent-highscore", String(best));
@@ -3718,25 +3802,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.fillStyle = bar % 2 ? "rgba(255, 43, 138, .58)" : "rgba(0, 240, 255, .58)";
           ctx.fillRect(x - 5, view.height - 48 - height, 10, height);
         }
-        const avatar = bikiniAvatarImageRef.current;
-        const danceSprite = danceSpriteRef.current;
         const avatarHeight = Math.min(view.height * .72, 410) * pulse;
-        const avatarWidth = avatarHeight * (176 / 371);
-        const danceFrame = Math.floor(elapsed * 12) % DANCE_SPRITE_FRAMES;
         ctx.save();
         ctx.translate(view.width / 2, view.height * .53);
         ctx.shadowBlur = 28;
         ctx.shadowColor = "#ff2b8a";
-        if (danceSprite) {
-          ctx.drawImage(danceSprite, danceFrame * DANCE_SPRITE_WIDTH, 0, DANCE_SPRITE_WIDTH, DANCE_SPRITE_HEIGHT, -avatarWidth / 2, -avatarHeight / 2, avatarWidth, avatarHeight);
-        } else if (avatar?.complete && avatar.naturalWidth > 0) {
-          ctx.drawImage(avatar, -avatarWidth / 2, -avatarHeight / 2, avatarWidth, avatarHeight);
-        } else {
-          ctx.fillStyle = "#ff7eaa";
-          ctx.beginPath(); ctx.arc(0, -avatarHeight * .25, avatarWidth * .23, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = "#31e8e8";
-          roundedRect(ctx, -avatarWidth * .28, -avatarHeight * .05, avatarWidth * .56, avatarHeight * .38, 12); ctx.fill();
-        }
+        drawHologramDancer(ctx, elapsed, avatarHeight / 371);
         ctx.restore();
         ctx.globalCompositeOperation = "source-over";
         ctx.fillStyle = "#ffd84d";
@@ -3749,6 +3820,54 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.font = "700 13px ui-monospace, SFMono-Regular, Menlo, monospace";
         ctx.fillStyle = "#e8fbff";
         ctx.fillText(`${Math.ceil(world.celebrationTime)} ${isDe ? "SEK." : "SEC."}`, view.width / 2, Math.max(70, view.height * .11 + 25));
+        ctx.restore();
+      }
+
+      if (world.status === "bikiniShowcase") {
+        const look = BIKINI_LOOKS[Math.max(0, Math.min(BIKINI_LOOKS.length - 1, world.sector - 1))];
+        const elapsed = 5 - world.celebrationTime;
+        const pulse = .93 + (Math.sin(elapsed * Math.PI * 2.1) + 1) * .035;
+        const avatar = bikiniAvatarImageRef.current;
+        const avatarHeight = Math.min(view.height * .77, 438) * pulse;
+        const avatarWidth = avatarHeight * (176 / 371);
+        ctx.save();
+        ctx.setTransform(sx, 0, 0, sy, 0, 0);
+        ctx.fillStyle = "rgba(1, 5, 16, .95)";
+        ctx.fillRect(0, 0, view.width, view.height);
+        const stage = ctx.createRadialGradient(view.width / 2, view.height * .47, 8, view.width / 2, view.height * .47, Math.max(view.width, view.height) * .6);
+        stage.addColorStop(0, `${look.primary}66`);
+        stage.addColorStop(.44, `${look.secondary}25`);
+        stage.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = stage;
+        ctx.fillRect(0, 0, view.width, view.height);
+        ctx.globalCompositeOperation = "screen";
+        for (let line = 0; line < 11; line += 1) {
+          ctx.strokeStyle = line % 2 ? look.primary : look.secondary;
+          ctx.globalAlpha = .25 + (line % 3) * .1;
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(0, view.height * (.21 + line * .055)); ctx.lineTo(view.width, view.height * (.13 + line * .064)); ctx.stroke();
+        }
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = 1;
+        ctx.save();
+        ctx.translate(view.width / 2, view.height * .55);
+        ctx.shadowBlur = 26;
+        ctx.shadowColor = look.primary;
+        if (avatar?.complete && avatar.naturalWidth > 0) {
+          ctx.drawImage(avatar, -avatarWidth / 2, -avatarHeight / 2, avatarWidth, avatarHeight);
+          drawBikiniLookOverlay(ctx, look, avatarWidth / 176);
+        }
+        ctx.restore();
+        ctx.fillStyle = look.primary;
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = look.primary;
+        ctx.font = `900 ${Math.max(18, Math.min(32, view.width * .052))}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+        ctx.textAlign = "center";
+        ctx.fillText("BIKINI LOOK", view.width / 2, Math.max(46, view.height * .09));
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = look.secondary;
+        ctx.font = "800 13px ui-monospace, SFMono-Regular, Menlo, monospace";
+        ctx.fillText(`LEVEL ${world.sector.toString().padStart(2, "0")} // ${look.name}`, view.width / 2, Math.max(70, view.height * .09 + 25));
         ctx.restore();
       }
 
@@ -3879,331 +3998,3 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   };
 
   const toggleSound = () => {
-    const next = !soundEnabledRef.current;
-    soundEnabledRef.current = next;
-    setSoundEnabled(next);
-    audioRef.current ??= createAudio();
-    audioRef.current.setSoundEnabled(next);
-  };
-
-  const toggleMusic = () => {
-    const now = performance.now();
-    const musicCheat = musicToggleCheatRef.current;
-    const next = !musicEnabledRef.current;
-    if (!next) {
-      musicCheat.switchedOff = true;
-    } else if (musicCheat.switchedOff) {
-      musicCheat.cycles = now - musicCheat.lastCycle <= 5000 ? musicCheat.cycles + 1 : 1;
-      musicCheat.lastCycle = now;
-      musicCheat.switchedOff = false;
-    }
-    musicEnabledRef.current = next;
-    setMusicEnabled(next);
-    if (musicCheat.cycles >= 2 && worldRef.current.status === "playing") {
-      musicCheat.cycles = 0;
-      const world = worldRef.current;
-      avatarRef.current = "bikini";
-      world.player.avatar = "bikini";
-      world.powerUpMessage = isDe ? "CHEAT BESTÄTIGT // BIKINI-AVATAR AKTIV" : "CHEAT CONFIRMED // BIKINI AVATAR ACTIVE";
-      world.powerUpMessageTime = 3;
-      world.shake = 4;
-      audioRef.current?.powerUp();
-    }
-    if (!next) {
-      audioRef.current?.pauseMusic();
-      return;
-    }
-    audioRef.current ??= createAudio();
-    audioRef.current.setSoundEnabled(soundEnabledRef.current);
-    void audioRef.current.playMusic(worldRef.current.sector);
-  };
-
-  const toggleFrameTelemetry = () => {
-    const next = !showFrameTelemetry;
-    setShowFrameTelemetry(next);
-    setStoredItem("skybreak-show-fps", String(next));
-  };
-
-  const toggleFullscreen = async () => {
-    if (iPhoneSafari) {
-      setShowInstallHint(true);
-      return;
-    }
-
-    const shell = canvasRef.current?.closest(".game-shell") as HTMLElement | null;
-    if (!shell) return;
-
-    if (document.fullscreenElement) {
-      await document.exitFullscreen();
-      return;
-    }
-
-    if (immersiveMode) {
-      setImmersiveMode(false);
-      return;
-    }
-
-    if (document.fullscreenEnabled && shell.requestFullscreen) {
-      try {
-        await shell.requestFullscreen();
-        return;
-      } catch {
-        // Safari on iPhone can expose the API but still reject non-video elements.
-      }
-    }
-
-    setImmersiveMode(true);
-  };
-
-  const fullscreenActive = nativeFullscreen || immersiveMode;
-
-  const controlProps = (key: InputKey) => ({
-    onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => {
-      event.preventDefault();
-      event.currentTarget.setPointerCapture(event.pointerId);
-      setInput(key, true);
-    },
-    onPointerUp: () => setInput(key, false),
-    onPointerCancel: () => setInput(key, false),
-    onContextMenu: (event: React.MouseEvent<HTMLButtonElement>) => event.preventDefault(),
-  });
-
-  const overlayTitle =
-    status === "ready" ? "SKYBREAK PROTOCOL" : status === "paused" ? (isDe ? "SYSTEM PAUSIERT" : "SYSTEM PAUSED") : status === "upgrade" ? (isDe ? "LEVEL GESCHAFFT" : "LEVEL COMPLETE") : status === "won" ? (sector === LEVEL_COUNT ? (isDe ? "GIPFEL ERREICHT" : "SUMMIT REACHED") : (isDe ? "LEVEL GESCHAFFT" : "LEVEL COMPLETE")) : (isDe ? "LAUF BEENDET" : "RUN TERMINATED");
-  const overlayCopy =
-    status === "ready"
-      ? (isDe
-        ? `Zielregel: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].de}. Durchbrich 10 Cyberpunk-Level und erreiche den Sendeturm.`
-        : `Level rule: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].en}. Break through 10 cyberpunk levels and reach the transmission tower.`)
-      : status === "paused"
-        ? (isDe ? "Die Zeit steht still. Noch." : "Time stands still. For now.")
-        : status === "upgrade"
-          ? (isDe ? `Level ${sector} abgeschlossen. Wähle ein Eispickel-Upgrade für Level ${Math.min(LEVEL_COUNT, sector + 1)}.` : `Level ${sector} complete. Choose an ice-pick upgrade for level ${Math.min(LEVEL_COUNT, sector + 1)}.`)
-        : status === "won"
-          ? (isDe ? `Level ${sector} befreit · ${score.toLocaleString("de-AT")} Punkte` : `Level ${sector} liberated · ${score.toLocaleString("en-US")} points`)
-          : (isDe ? `Dein Lauf endet bei ${score.toLocaleString("de-AT")} Punkten.` : `Your run ends at ${score.toLocaleString("en-US")} points.`);
-
-  const nextPickaxePower = Math.min(10, pickaxeStats.power + 1);
-  const nextPickaxeStyle = Math.min(10, pickaxeStats.style + 1);
-  const nextStylePreview = PICKAXE_STYLES[nextPickaxeStyle - 1];
-
-  return (
-    <main className={`game-shell${immersiveMode ? " immersive-mode" : ""}`} onPointerDownCapture={ensureAudio}>
-      <header className="topbar">
-        <div className="brand">
-          <button className="brand-mark" type="button" onClick={armCheats} aria-label={isDe ? "Skybreak-Protokoll-Symbol" : "Skybreak Protocol symbol"}>SP</button>
-          <div>
-            <strong>SKYBREAK PROTOCOL</strong>
-            <span>VERTICAL ARCADE PROTOCOL</span>
-            {showFrameTelemetry && mobileDevice && status === "playing" && frameTelemetry && (
-              <output className="mobile-performance-hud" aria-label={isDe ? "Aktuelle Bildrate" : "Current frame rate"}>
-                {frameTelemetry.fps} FPS · {frameTelemetry.frameMs} MS
-              </output>
-            )}
-          </div>
-        </div>
-        <div className="hud" aria-live="polite">
-          <div><span>SCORE</span><strong>{score.toString().padStart(6, "0")}</strong></div>
-          <div><span>LEVEL</span><strong>{sector} / {LEVEL_COUNT}</strong></div>
-          <div><span>LIVES</span><strong>{"◆".repeat(Math.max(0, lives))}</strong></div>
-        </div>
-        <div className="header-actions">
-          <button className="icon-button" onClick={toggleSound} aria-pressed={soundEnabled} aria-label={soundEnabled ? (isDe ? "Soundeffekte ausschalten" : "Disable sound effects") : (isDe ? "Soundeffekte einschalten" : "Enable sound effects")}>
-            {soundEnabled ? "SFX ON" : "SFX OFF"}
-          </button>
-          <button className="icon-button" onClick={toggleMusic} aria-pressed={musicEnabled} aria-label={musicEnabled ? (isDe ? "Musik ausschalten" : "Disable music") : (isDe ? "Musik einschalten" : "Enable music")}>
-            {musicEnabled ? "MUSIC ON" : "MUSIC OFF"}
-          </button>
-          {showFrameTelemetry && frameTelemetry && <span className="performance-hud">LIVE {frameTelemetry.fps} FPS · CPU {frameTelemetry.updateMs}+{frameTelemetry.drawMs} MS</span>}
-          <button className="icon-button" onClick={toggleFrameTelemetry} aria-pressed={showFrameTelemetry} aria-label={showFrameTelemetry ? (isDe ? "FPS-Anzeige ausschalten" : "Disable FPS display") : (isDe ? "FPS-Anzeige einschalten" : "Enable FPS display")}>
-            {showFrameTelemetry ? "FPS ON" : "FPS OFF"}
-          </button>
-          <button className="icon-button" onClick={toggleFullscreen} aria-label={iPhoneSafari ? (isDe ? "App-Modus erklären" : "Explain app mode") : fullscreenActive ? (isDe ? "Vollbild beenden" : "Exit fullscreen") : (isDe ? "Vollbildmodus starten" : "Enter fullscreen")}>{iPhoneSafari ? (isDe ? "APP-MODUS" : "APP MODE") : fullscreenActive ? "EXIT" : "FULLSCREEN"}</button>
-          <button className="icon-button" onClick={togglePause} aria-label={isDe ? "Spiel pausieren" : "Pause game"}>PAUSE</button>
-        </div>
-      </header>
-
-      <section className="game-frame" aria-label={isDe ? "Skybreak Protocol Spielfeld" : "Skybreak Protocol game field"}>
-        {availableUpdate && (
-          <aside className="update-notice" role="status">
-            <span>{isDe ? `${availableUpdate.prerelease ? "Beta" : "Final"} ${availableUpdate.version} verfügbar` : `${availableUpdate.prerelease ? "Beta" : "Final"} ${availableUpdate.version} available`}</span>
-            <a href={availableUpdate.url} target="_blank" rel="noopener">{isDe ? "Ansehen" : "View"} ↗</a>
-            <button type="button" onClick={() => setAvailableUpdate(null)} aria-label={isDe ? "Update-Hinweis schließen" : "Dismiss update notice"}>×</button>
-          </aside>
-        )}
-        <canvas
-          key={quality === "ultra" ? "webgpu" : "webgl"}
-          ref={fxCanvasRef}
-          className={`fx-canvas${quality === "ultra" && !(/Macintosh|Mac OS X/i.test(navigator.userAgent) && window.matchMedia("(pointer: fine)").matches) ? " full-scene-fx" : ""}`}
-          aria-hidden="true"
-        />
-        <canvas ref={canvasRef} aria-label={isDe ? "Spielansicht: Klettere durch die Cyberpunk-Megacity" : "Game view: climb through the cyberpunk megacity"} />
-        {status !== "playing" && status !== "celebration" && (
-          <div className="game-overlay">
-            {status === "ready" && (
-              <>
-                <img className="game-logo" src={iconSrc} alt="Skybreak Protocol emblem" />
-                <a className="changelog-link" href={`${CHANGELOG_BASE_URL}/${APP_VERSION}${isDe ? "" : ".en"}.md`} target="_blank" rel="noopener">CHANGELOG ↗</a>
-                <a className="language-link" href={languageHref} lang={isDe ? "en" : "de"}>{isDe ? "ENGLISH" : "DEUTSCH"}</a>
-              </>
-            )}
-            <p className="eyebrow">{status === "ready" ? `NIGHT CITY // 03:17 // ${APP_BUILD_CHANNEL === "dev" ? "LOCAL TEST // " : APP_BUILD_CHANNEL === "beta" ? "BETA // " : "FINAL // "}v${APP_VERSION}` : status === "upgrade" ? `PICKAXE CORE // LEVEL ${sector}` : "NEURAL LINK STATUS"}</p>
-            <h1 className={status === "upgrade" ? "upgrade-title" : undefined}>{overlayTitle}</h1>
-            <p>{overlayCopy}</p>
-            {status === "upgrade" ? (
-              <div className="transition-panel" style={{ "--next-accent": LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].accent, "--next-secondary": LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].secondary } as React.CSSProperties}>
-                <div className="level-transition-card">
-                  <span>{isDe ? "NÄCHSTER SEKTOR" : "NEXT SECTOR"}</span>
-                  <strong>LEVEL {Math.min(LEVEL_COUNT, sector + 1).toString().padStart(2, "0")}</strong>
-                  <b>{LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].name}</b>
-                  <small>{isDe ? `${LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].platform.replaceAll("-", " ")} // WÄCHTERSIGNAL ERFASST` : `${LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].platform.replaceAll("-", " ")} // GUARDIAN SIGNAL DETECTED`}</small>
-                </div>
-                <div className="upgrade-grid">
-                  <button onClick={() => applyPickaxeUpgrade("power")}>
-                    <strong>{isDe ? "KRAFT" : "POWER"} {nextPickaxePower}</strong>
-                    <span>{isDe
-                      ? `REICHWEITE +8 // ${pickaxeBreakCount(nextPickaxePower)} PLATTFORM${pickaxeBreakCount(nextPickaxePower) === 1 ? "" : "EN"} PRO SCHLAG`
-                      : `RANGE +8 // ${pickaxeBreakCount(nextPickaxePower)} PLATFORM${pickaxeBreakCount(nextPickaxePower) === 1 ? "" : "S"} PER STRIKE`}</span>
-                  </button>
-                  <button onClick={() => applyPickaxeUpgrade("style")}>
-                    <strong>{isDe ? "DESIGN" : "STYLE"} {nextPickaxeStyle}</strong>
-                    <span>{isDe
-                      ? `${nextStylePreview.de} // NEUE FARBE, FORM UND STÄRKERES LEUCHTEN`
-                      : `${nextStylePreview.en} // NEW COLOR, SHAPE, AND STRONGER GLOW`}</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {status !== "paused" && (
-                  <label className="start-level-picker">
-                    <span>{isDe ? "STARTLEVEL" : "START LEVEL"}</span>
-                    <select value={selectedStartLevel} onChange={(event) => chooseStartLevel(Number(event.target.value))}>
-                      {Array.from({ length: unlockedLevel }, (_, index) => index + 1).map((level) => (
-                        <option key={level} value={level}>LEVEL {level.toString().padStart(2, "0")} // {LEVEL_THEMES[level - 1].name}</option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                <button className="primary-button" onClick={status === "paused" ? togglePause : restart}>
-                  {status === "paused" ? (isDe ? "WEITER" : "RESUME") : status === "ready" ? (isDe ? "AUFSTIEG STARTEN" : "START ASCENT") : (isDe ? "AUSGEWÄHLTES LEVEL STARTEN" : "START SELECTED LEVEL")}
-                </button>
-              </>
-            )}
-            {status === "ready" && (
-              <>
-                <div className="mission-grid">
-                  <span><b>01</b> {isDe ? "Ebenen von unten durchbrechen" : "Break levels from below"}</span>
-                  <span><b>02</b> {isDe ? "Drohnen ausschalten" : "Disable the drones"}</span>
-                  <span><b>03</b> {isDe ? "Sendeturm erreichen" : "Reach the transmission tower"}</span>
-                </div>
-                <div className="level-map" aria-label={isDe ? "Levelkarte" : "Level map"}>
-                  {LEVEL_THEMES.map((theme, index) => {
-                    const level = index + 1;
-                    return <span key={theme.name} className={`${level === selectedStartLevel ? "selected" : ""}${level > unlockedLevel ? " locked" : ""}`} style={{ "--map-accent": theme.accent } as React.CSSProperties}>{level.toString().padStart(2, "0")}</span>;
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-        <div className={`sector-tag${worldRef.current.immortalSector === sector ? " cheat-active" : ""}`}>LEVEL {sector.toString().padStart(2, "0")} // {LEVEL_THEMES[sector - 1].name} // {isDe ? LEVEL_GAMEPLAY[sector - 1].de : LEVEL_GAMEPLAY[sector - 1].en} // PICK P{pickaxeStats.power} S{pickaxeStats.style}{worldRef.current.immortalSector === sector ? " // IMMORTAL" : ""} // v{APP_VERSION}</div>
-      </section>
-
-      <section className="control-panel">
-        <div className="desktop-help">
-          <span><kbd>{displayKey(keyBindings.left)}</kbd><kbd>{displayKey(keyBindings.right)}</kbd> {isDe ? "Bewegen" : "Move"}</span>
-          <span><kbd>{displayKey(keyBindings.jump)}</kbd> {isDe ? "Springen" : "Jump"}</span>
-          <span><kbd>{displayKey(keyBindings.attack)}</kbd> {isDe ? "Eispickel" : "Ice pick"}</span>
-          <span><kbd>P</kbd> Pause</span>
-        </div>
-        <div className="touch-controls" aria-label={isDe ? "Touch-Steuerung" : "Touch controls"}>
-          <div className="touch-group">
-            <button {...controlProps("left")} aria-label={isDe ? "Nach links" : "Move left"}>←</button>
-            <button {...controlProps("right")} aria-label={isDe ? "Nach rechts" : "Move right"}>→</button>
-          </div>
-          <div className="touch-group">
-            <button className="jump" {...controlProps("jump")} aria-label={isDe ? "Springen" : "Jump"}>JUMP</button>
-            <button className="attack" {...controlProps("attack")} aria-label={isDe ? "Eispickel einsetzen" : "Use ice pick"}>PICK</button>
-          </div>
-        </div>
-        <div className="mobile-actions">
-          <button onClick={toggleSound} aria-pressed={soundEnabled}>{soundEnabled ? (isDe ? "SFX AUS" : "SFX OFF") : (isDe ? "SFX AN" : "SFX ON")}</button>
-          <button onClick={toggleMusic} aria-pressed={musicEnabled}>{musicEnabled ? (isDe ? "MUSIK AUS" : "MUSIC OFF") : (isDe ? "MUSIK AN" : "MUSIC ON")}</button>
-          <button onClick={toggleFrameTelemetry} aria-pressed={showFrameTelemetry}>{showFrameTelemetry ? "FPS AUS" : "FPS AN"}</button>
-          <button onClick={toggleFullscreen}>{iPhoneSafari ? (isDe ? "APP-MODUS" : "APP MODE") : fullscreenActive ? (isDe ? "BEENDEN" : "EXIT") : (isDe ? "VOLLBILD" : "FULLSCREEN")}</button>
-          <button onClick={togglePause}>PAUSE</button>
-        </div>
-        <label className="quality-picker">
-          <span>{isDe ? "GRAFIK" : "GRAPHICS"}</span>
-          <select value={quality} onChange={(event) => chooseQuality(event.target.value as Quality)}>
-            <option value="low">{isDe ? "Niedrig" : "Low"}</option>
-            <option value="medium">{isDe ? "Mittel" : "Medium"}</option>
-            <option value="high">{isDe ? "Hoch" : "High"}</option>
-            <option value="ultra">Ultra</option>
-          </select>
-        </label>
-        <label className="quality-picker">
-          <span>{isDe ? "AUFLÖSUNG" : "RESOLUTION"}</span>
-          <select value={renderResolution} onChange={(event) => chooseRenderResolution(event.target.value as RenderResolution)}>
-            <option value="720p">720p</option>
-            <option value="1080p">1080p</option>
-            <option value="4k">4K</option>
-          </select>
-        </label>
-        {quality === "ultra" && mobileDevice && (
-          <p className="mobile-ultra-warning" role="alert">
-            {isDe
-              ? "ULTRA KANN DAS HANDY SEHR ERWÄRMEN. NICHT BEI HITZE ODER DIREKTER SONNE NUTZEN."
-              : "ULTRA CAN MAKE THE PHONE VERY WARM. DO NOT USE IN HOT WEATHER OR DIRECT SUNLIGHT."}
-          </p>
-        )}
-        {quality === "ultra" && mobileDevice && (
-          <label className="mobile-ultra-picker">
-            <span>MOBILE ULTRA</span>
-            <select value={mobileUltra120 ? "120" : "60"} onChange={(event) => chooseMobileUltra120(event.target.value === "120")}>
-              <option value="60">60 FPS</option>
-              <option value="120">{isDe ? "Bis 120 FPS" : "Up to 120 FPS"}</option>
-            </select>
-            <small>{isDe ? "120 FPS erhöht Wärme und Akkuverbrauch" : "120 FPS increases heat and battery use"}</small>
-          </label>
-        )}
-        <label className="difficulty-picker">
-          <span>{isDe ? `LEVEL ${sector} SCHWIERIGKEIT` : `LEVEL ${sector} DIFFICULTY`}</span>
-          <select value={levelDifficulties[sector - 1]} onChange={(event) => chooseDifficulty(event.target.value as Difficulty)}>
-            <option value="easy">{isDe ? "Leicht" : "Easy"}</option>
-            <option value="medium">{isDe ? "Mittel" : "Medium"}</option>
-            <option value="hard">{isDe ? "Schwer" : "Hard"}</option>
-          </select>
-          <small>{LEVEL_THEMES[sector - 1].name}</small>
-        </label>
-        <div className="run-record">
-          <span>{renderer} · {quality.toUpperCase()}{quality === "ultra" ? ` · ${ultraFps} FPS` : quality === "high" && mobileDevice ? " · 60 FPS" : ""}{thermalProtection && (quality === "ultra" || (quality === "high" && mobileDevice)) ? ` · ${isDe ? "WÄRMESCHUTZ" : "THERMAL SAFE"}` : ""}{desktopUltraScale < 1 ? ` · ${isDe ? "LEISTUNGSSCHUTZ" : "PERFORMANCE SAFE"} ${Math.round(desktopUltraScale * 100)}%` : ""} · LOCAL RECORD</span>
-          <strong>{highScore.toString().padStart(6, "0")}</strong>
-        </div>
-        {!mobileDevice && (
-          <div className="key-binding-panel">
-            <span>{isDe ? "TASTENBELEGUNG" : "KEY BINDINGS"}</span>
-            {(["left", "right", "jump", "attack"] as BindableAction[]).map((action) => (
-              <button key={action} type="button" className={bindingCapture === action ? "listening" : ""} onClick={() => beginKeyCapture(action)}>
-                <small>{action === "left" ? (isDe ? "LINKS" : "LEFT") : action === "right" ? (isDe ? "RECHTS" : "RIGHT") : action === "jump" ? (isDe ? "SPRINGEN" : "JUMP") : (isDe ? "HÄMMERN" : "PICK")}</small>
-                <strong>{bindingCapture === action ? (isDe ? "TASTE DRÜCKEN" : "PRESS KEY") : displayKey(keyBindings[action])}</strong>
-              </button>
-            ))}
-            <button type="button" className="reset-keys" onClick={resetKeyBindings}>{isDe ? "STANDARD" : "RESET"}</button>
-          </div>
-        )}
-      </section>
-      {showInstallHint && (
-        <div className="install-hint" role="dialog" aria-modal="true" aria-labelledby="install-hint-title">
-          <div className="install-hint-card">
-            <span>IPHONE // APP MODE</span>
-            <h2 id="install-hint-title">{isDe ? "ECHTES VOLLBILD" : "TRUE FULLSCREEN"}</h2>
-            <p>{isDe ? "Tippe in Safari auf Teilen und dann auf „Zum Home-Bildschirm“. Starte Skybreak anschließend über das App-Symbol." : "In Safari, tap Share and then “Add to Home Screen”. Launch Skybreak from its app icon afterwards."}</p>
-            <button onClick={() => setShowInstallHint(false)}>{isDe ? "VERSTANDEN" : "GOT IT"}</button>
-          </div>
-        </div>
-      )}
-    </main>
-  );
-}
