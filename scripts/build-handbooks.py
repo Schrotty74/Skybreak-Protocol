@@ -125,7 +125,7 @@ TEXT = {
         "settings": "EINSTELLUNGEN, AUDIO UND OFFLINE-MODUS",
         "settings_cards": [
             ("SCHWIERIGKEIT", "Leicht ist der Einstiegsmodus: 8 Leben, keine normalen Gegner, ein Pflichtziel, stabile Plattformen sowie kein Wind und keine Umweltgefahren. Der Wächter hat 1 Trefferpunkt und schießt langsamer. Mittel ist ausgewogen; Schwer erhöht Gegner, Gefahren und Punkte."),
-            ("GRAFIK", "Auf einem iPhone 17 Pro erreicht Ultra bei 1080p 60 FPS. 4K Ultra ist kein 60-FPS-Mobilmodus. Ultra kann das Gerät dennoch erwärmen. Bei Hitze, Sonne oder Erwärmung Mittel oder Niedrig wählen."),
+            ("GRAFIK", "Auf einem iPhone 17 Pro erreicht Ultra bei 1080p 60 FPS. 4K Ultra ist kein 60-FPS-Mobilmodus. Ultra kann das Gerät dennoch erwärmen. Zerstörte Blöcke explodieren in Ultra passend zur Welt; Hoch nutzt weniger Fragmente. Bei Hitze, Sonne oder Erwärmung Mittel oder Niedrig wählen."),
             ("MOBILE ULTRA", "60 FPS ist der sichere Standard. FPS AN/AUS schaltet die lokale Anzeige. Bis 120 FPS erhöht Wärme und Akkuverbrauch; der adaptive Wärmeschutz kann Effekte reduzieren."),
             ("AUDIO", "Jedes Level besitzt einen eigenen Track. MUSIC und SFX lassen sich vollständig getrennt schalten."),
             ("OFFLINE", "Das Release-ZIP entpacken und den Starter für macOS, Windows oder Linux öffnen. Alle zehn Musikstücke sind enthalten."),
@@ -226,7 +226,7 @@ TEXT = {
         "settings": "SETTINGS, AUDIO, AND OFFLINE MODE",
         "settings_cards": [
             ("DIFFICULTY", "Easy is the onboarding mode: 8 lives, no regular enemies, one required objective, stable platforms, and no drafts or environmental hazards. The guardian has 1 hit point and fires more slowly. Medium is balanced; Hard increases enemies, hazards, and points."),
-            ("GRAPHICS", "On an iPhone 17 Pro, Ultra reaches 60 FPS at 1080p. 4K Ultra is not a 60 FPS mobile mode. Ultra can still warm the device. In heat, sunlight, or when warm, choose Medium or Low."),
+            ("GRAPHICS", "On an iPhone 17 Pro, Ultra reaches 60 FPS at 1080p. 4K Ultra is not a 60 FPS mobile mode. Ultra can still warm the device. Destroyed blocks use world-specific explosions in Ultra; High uses fewer fragments. In heat, sunlight, or when warm, choose Medium or Low."),
             ("MOBILE ULTRA", "60 FPS is the safer default. FPS ON/OFF toggles the local display. Up to 120 FPS increases heat and battery use; adaptive thermal protection can reduce effects."),
             ("AUDIO", "Every level has its own track. MUSIC and SFX are completely independent."),
             ("OFFLINE", "Extract the release ZIP and open the starter for macOS, Windows, or Linux. All ten music tracks are included."),

@@ -113,7 +113,12 @@ type TileMode = "stable" | "fragile" | "phase" | "rift" | "moving" | "ice" | "br
 type Tile = { x: number; y: number; alive: boolean; cracked: boolean; mode: TileMode; phaseOffset: number; baseX: number; travel: number; speed: number; previousX: number; temporaryLife?: number };
 type Objective = { x: number; y: number; kind: "cell" | "switch"; active: boolean };
 type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean; kind: number; attackTimer: number; frozen: number; guardian?: boolean; integrity?: number };
-type Particle = { x: number; y: number; vx: number; vy: number; life: number; color: string; hazard?: "fall" | "laser" | "pulse" | "boss" };
+type BlockExplosionStyle = "cryo-shard" | "chrome-sliver" | "toxic-splinter" | "fire-spark" | "sea-droplet" | "plasma-crystal" | "solar-ray" | "ghost-fragment" | "rift-diamond" | "apex-star";
+type Particle = {
+  x: number; y: number; vx: number; vy: number; life: number; color: string;
+  hazard?: "fall" | "laser" | "pulse" | "boss";
+  blockExplosion?: BlockExplosionStyle; size?: number; rotation?: number; spin?: number;
+};
 type Chest = { x: number; y: number; opened: boolean; powerUp: PowerUpKind };
 type Player = {
   x: number;
@@ -440,6 +445,11 @@ const BIKINI_LOOKS = [
   { name: "RIFT IRIS", primary: "#9c6bff", secondary: "#00f6ff", cut: 8 },
   { name: "APEX WHITE", primary: "#ffffff", secondary: "#ffcf4a", cut: 9 },
 ] as const;
+
+const BLOCK_EXPLOSION_STYLES: BlockExplosionStyle[] = [
+  "cryo-shard", "chrome-sliver", "toxic-splinter", "fire-spark", "sea-droplet",
+  "plasma-crystal", "solar-ray", "ghost-fragment", "rift-diamond", "apex-star",
+];
 
 function pickaxeBreakCount(power: number) {
   return Math.min(5, 1 + Math.floor((Math.min(10, power) - 1) / 2));
@@ -2181,6 +2191,55 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       }
     };
 
+    const explodeDestroyedBlock = (world: World, tile: Tile, fallbackColor: string, fallbackAmount: number) => {
+      const quality = qualityRef.current;
+      const ultra = quality === "ultra" && !ultraFallbackRef.current;
+      if (quality !== "high" && !ultra) {
+        burst(world, tile.x + TILE / 2, tile.y + 12, fallbackColor, fallbackAmount);
+        return;
+      }
+      const theme = LEVEL_THEMES[Math.max(0, Math.min(LEVEL_THEMES.length - 1, world.sector - 1))];
+      const style = BLOCK_EXPLOSION_STYLES[theme.motif];
+      const count = ultra ? 20 : 10;
+      const originX = tile.x + TILE / 2;
+      const originY = tile.y + 12;
+      for (let index = 0; index < count; index += 1) {
+        const angle = (Math.PI * 2 * index) / count + (Math.random() - .5) * .38;
+        const speed = (ultra ? 145 : 108) + Math.random() * (ultra ? 210 : 130);
+        const size = (ultra ? 5 : 3.5) + Math.random() * (ultra ? 9 : 5);
+        world.particles.push({
+          x: originX + (Math.random() - .5) * 12,
+          y: originY + (Math.random() - .5) * 8,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - (ultra ? 98 : 68),
+          life: (ultra ? .56 : .38) + Math.random() * (ultra ? .36 : .24),
+          color: index % 3 === 0 ? theme.warning : index % 2 ? theme.accent : theme.secondary,
+          blockExplosion: style,
+          size,
+          rotation: Math.random() * Math.PI * 2,
+          spin: (Math.random() - .5) * (ultra ? 16 : 10),
+        });
+      }
+      // Ultra gets a compact bright core, while High uses just the material fragments.
+      if (ultra) {
+        for (let index = 0; index < 4; index += 1) {
+          const angle = index * Math.PI / 2 + Math.random() * .35;
+          world.particles.push({
+            x: originX,
+            y: originY,
+            vx: Math.cos(angle) * (230 + Math.random() * 75),
+            vy: Math.sin(angle) * (230 + Math.random() * 75),
+            life: .24 + Math.random() * .12,
+            color: theme.warning,
+            blockExplosion: "solar-ray",
+            size: 14 + Math.random() * 7,
+            rotation: angle,
+            spin: 0,
+          });
+        }
+      }
+    };
+
     const hurt = (world: World) => {
       const p = world.player;
       // On a very shallow desktop fullscreen canvas, `view.height - 130` can
@@ -2348,7 +2407,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           world.shake = 9;
           p.vy *= 0.78;
           world.score += Math.round(100 * difficulty.score);
-          burst(world, tile.x + TILE / 2, tile.y + 12, themeColor(world.sector, "accent"), 12);
+          explodeDestroyedBlock(world, tile, themeColor(world.sector, "accent"), 12);
           audioRef.current?.smash();
           syncHud(world);
         }
@@ -2488,7 +2547,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             tile.alive = false;
             world.shake = Math.max(world.shake, 6 + effectivePower * 0.45);
             world.score += Math.round(75 * difficulty.score);
-            burst(world, tile.x + TILE / 2, tile.y + 12, themeColor(world.sector, "secondary"), 7 + effectivePower);
+            explodeDestroyedBlock(world, tile, themeColor(world.sector, "secondary"), 7 + effectivePower);
             audioRef.current?.smash();
             syncHud(world);
           }
@@ -2616,6 +2675,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         if (particle.hazard !== "laser") particle.vy += 560 * dt;
         particle.x += particle.vx * dt;
         particle.y += particle.vy * dt;
+        if (particle.spin) particle.rotation = (particle.rotation || 0) + particle.spin * dt;
         if (
           particle.color === "#ff2b8a" &&
           particle.life > 1 &&
@@ -3422,7 +3482,49 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.fillStyle = particle.color;
         ctx.shadowBlur = ultraActive ? 0 : 9;
         ctx.shadowColor = particle.color;
-        if (particle.hazard === "laser") {
+        if (particle.blockExplosion) {
+          const size = particle.size || 5;
+          ctx.save();
+          ctx.translate(particle.x, particle.y);
+          ctx.rotate(particle.rotation || 0);
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = particle.color;
+          ctx.strokeStyle = particle.color;
+          ctx.lineWidth = ultraActive ? 1.2 : 1;
+          switch (particle.blockExplosion) {
+            case "cryo-shard":
+            case "plasma-crystal":
+              ctx.beginPath(); ctx.moveTo(0, -size); ctx.lineTo(size * .62, size); ctx.lineTo(-size * .62, size); ctx.closePath(); ctx.fill();
+              break;
+            case "chrome-sliver":
+              ctx.fillRect(-size * .24, -size, size * .48, size * 2.3);
+              ctx.globalAlpha *= .52; ctx.fillStyle = "#ffffff"; ctx.fillRect(-size * .1, -size, size * .2, size * 2.3);
+              break;
+            case "toxic-splinter":
+              ctx.beginPath(); ctx.arc(0, 0, size * .6, 0, Math.PI * 2); ctx.fill();
+              ctx.globalAlpha *= .44; ctx.beginPath(); ctx.arc(size * .5, -size * .35, size * .35, 0, Math.PI * 2); ctx.fill();
+              break;
+            case "fire-spark":
+              ctx.beginPath(); ctx.moveTo(-size * .25, size); ctx.lineTo(0, -size * 1.35); ctx.lineTo(size * .25, size); ctx.closePath(); ctx.fill();
+              break;
+            case "sea-droplet":
+              ctx.beginPath(); ctx.moveTo(0, -size); ctx.quadraticCurveTo(size, 0, 0, size); ctx.quadraticCurveTo(-size, 0, 0, -size); ctx.fill();
+              break;
+            case "solar-ray":
+              ctx.fillRect(-size * .16, -size * 1.65, size * .32, size * 3.3);
+              break;
+            case "ghost-fragment":
+              ctx.globalAlpha *= .68; ctx.strokeRect(-size * .72, -size * .72, size * 1.44, size * 1.44);
+              break;
+            case "rift-diamond":
+              ctx.beginPath(); ctx.moveTo(0, -size); ctx.lineTo(size, 0); ctx.lineTo(0, size); ctx.lineTo(-size, 0); ctx.closePath(); ctx.fill();
+              break;
+            case "apex-star":
+              ctx.beginPath(); ctx.moveTo(0, -size); ctx.lineTo(size * .3, -size * .3); ctx.lineTo(size, 0); ctx.lineTo(size * .3, size * .3); ctx.lineTo(0, size); ctx.lineTo(-size * .3, size * .3); ctx.lineTo(-size, 0); ctx.lineTo(-size * .3, -size * .3); ctx.closePath(); ctx.fill();
+              break;
+          }
+          ctx.restore();
+        } else if (particle.hazard === "laser") {
           const length = 92;
           ctx.fillStyle = "rgba(255,43,138,.28)";
           ctx.fillRect(particle.x - length / 2, particle.y - 6, length, 12);
