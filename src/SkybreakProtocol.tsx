@@ -1237,6 +1237,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [renderer, setRenderer] = useState("CANVAS 2D");
   const [ultraFps, setUltraFps] = useState(60);
   const [frameTelemetry, setFrameTelemetry] = useState<{ fps: number; frameMs: number; updateMs: number; drawMs: number } | null>(null);
+  const [showFrameTelemetry, setShowFrameTelemetry] = useState(true);
   const [mobileUltra120, setMobileUltra120] = useState(false);
   const [mobileDevice, setMobileDevice] = useState(false);
   const [thermalProtection, setThermalProtection] = useState(false);
@@ -1425,6 +1426,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     renderResolutionRef.current = initialResolution;
     setRenderResolution(initialResolution);
     setMobileDevice(coarsePointer);
+    setShowFrameTelemetry(getStoredItem("skybreak-show-fps") !== "false");
     const savedMobileUltra120 = getStoredItem("skybreak-mobile-ultra-120") === "true";
     mobileUltra120Ref.current = savedMobileUltra120;
     setMobileUltra120(savedMobileUltra120);
@@ -3311,6 +3313,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     void audioRef.current.playMusic(worldRef.current.sector);
   };
 
+  const toggleFrameTelemetry = () => {
+    const next = !showFrameTelemetry;
+    setShowFrameTelemetry(next);
+    setStoredItem("skybreak-show-fps", String(next));
+  };
+
   const toggleFullscreen = async () => {
     if (iPhoneSafari) {
       setShowInstallHint(true);
@@ -3376,6 +3384,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <div>
             <strong>SKYBREAK PROTOCOL</strong>
             <span>VERTICAL ARCADE PROTOCOL</span>
+            {showFrameTelemetry && mobileDevice && status === "playing" && frameTelemetry && (
+              <output className="mobile-performance-hud" aria-label={isDe ? "Aktuelle Bildrate" : "Current frame rate"}>
+                {frameTelemetry.fps} FPS · {frameTelemetry.frameMs} MS
+              </output>
+            )}
           </div>
         </div>
         <div className="hud" aria-live="polite">
@@ -3390,7 +3403,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <button className="icon-button" onClick={toggleMusic} aria-pressed={musicEnabled} aria-label={musicEnabled ? (isDe ? "Musik ausschalten" : "Disable music") : (isDe ? "Musik einschalten" : "Enable music")}>
             {musicEnabled ? "MUSIC ON" : "MUSIC OFF"}
           </button>
-          {frameTelemetry && <span className="performance-hud">LIVE {frameTelemetry.fps} FPS · CPU {frameTelemetry.updateMs}+{frameTelemetry.drawMs} MS</span>}
+          {showFrameTelemetry && frameTelemetry && <span className="performance-hud">LIVE {frameTelemetry.fps} FPS · CPU {frameTelemetry.updateMs}+{frameTelemetry.drawMs} MS</span>}
+          <button className="icon-button" onClick={toggleFrameTelemetry} aria-pressed={showFrameTelemetry} aria-label={showFrameTelemetry ? (isDe ? "FPS-Anzeige ausschalten" : "Disable FPS display") : (isDe ? "FPS-Anzeige einschalten" : "Enable FPS display")}>
+            {showFrameTelemetry ? "FPS ON" : "FPS OFF"}
+          </button>
           <button className="icon-button" onClick={toggleFullscreen} aria-label={iPhoneSafari ? (isDe ? "App-Modus erklären" : "Explain app mode") : fullscreenActive ? (isDe ? "Vollbild beenden" : "Exit fullscreen") : (isDe ? "Vollbildmodus starten" : "Enter fullscreen")}>{iPhoneSafari ? (isDe ? "APP-MODUS" : "APP MODE") : fullscreenActive ? "EXIT" : "FULLSCREEN"}</button>
           <button className="icon-button" onClick={togglePause} aria-label={isDe ? "Spiel pausieren" : "Pause game"}>PAUSE</button>
         </div>
@@ -3411,11 +3427,6 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           aria-hidden="true"
         />
         <canvas ref={canvasRef} aria-label={isDe ? "Spielansicht: Klettere durch die Cyberpunk-Megacity" : "Game view: climb through the cyberpunk megacity"} />
-        {mobileDevice && status === "playing" && frameTelemetry && (
-          <output className="mobile-performance-hud" aria-label={isDe ? "Aktuelle Bildrate" : "Current frame rate"}>
-            {frameTelemetry.fps} FPS · {frameTelemetry.frameMs} MS
-          </output>
-        )}
         {status !== "playing" && (
           <div className="game-overlay">
             {status === "ready" && (
@@ -3504,6 +3515,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         <div className="mobile-actions">
           <button onClick={toggleSound} aria-pressed={soundEnabled}>{soundEnabled ? (isDe ? "SFX AUS" : "SFX OFF") : (isDe ? "SFX AN" : "SFX ON")}</button>
           <button onClick={toggleMusic} aria-pressed={musicEnabled}>{musicEnabled ? (isDe ? "MUSIK AUS" : "MUSIC OFF") : (isDe ? "MUSIK AN" : "MUSIC ON")}</button>
+          <button onClick={toggleFrameTelemetry} aria-pressed={showFrameTelemetry}>{showFrameTelemetry ? "FPS AUS" : "FPS AN"}</button>
           <button onClick={toggleFullscreen}>{iPhoneSafari ? (isDe ? "APP-MODUS" : "APP MODE") : fullscreenActive ? (isDe ? "BEENDEN" : "EXIT") : (isDe ? "VOLLBILD" : "FULLSCREEN")}</button>
           <button onClick={togglePause}>PAUSE</button>
         </div>
