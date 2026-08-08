@@ -130,6 +130,7 @@ type Player = {
   shield: number;
   overdrive: number;
   damage: number;
+  avatar: "robot" | "bikini";
 };
 
 type World = {
@@ -264,6 +265,7 @@ function makeWorld(): World {
       shield: 0,
       overdrive: 0,
       damage: 0,
+      avatar: "robot",
     },
     particles: [],
     // Keep the ready screen aligned to the left world edge. A non-zero
@@ -1282,6 +1284,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const mobileUltra120Ref = useRef(false);
   const ultraFallbackRef = useRef(false);
   const pickaxeLoadoutRef = useRef({ power: 1, style: 1 });
+  const avatarRef = useRef<Player["avatar"]>("robot");
+  const musicToggleCheatRef = useRef({ toggles: 0, lastToggle: 0 });
   const keyBindingsRef = useRef<KeyBindings>({ ...DEFAULT_KEY_BINDINGS });
   const bindingCaptureRef = useRef<BindableAction | null>(null);
   const unlockedLevelRef = useRef(1);
@@ -1341,6 +1345,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     placeWorldAtLevel(next, selectedStartLevelRef.current);
     next.player.pickaxePower = pickaxeLoadoutRef.current.power;
     next.player.pickaxeStyle = pickaxeLoadoutRef.current.style;
+    next.player.avatar = avatarRef.current;
     next.status = "playing";
     worldRef.current = next;
     pressedRef.current = { left: false, right: false, jump: false, attack: false };
@@ -3343,6 +3348,40 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         metal.addColorStop(0.32, "#152b40");
         metal.addColorStop(1, "#030914");
 
+        if (p.avatar === "bikini") {
+          // Cosmetic cheat: clearly adult arcade heroine with a stylised bikini outfit.
+          ctx.strokeStyle = "#d9a48e";
+          ctx.lineCap = "round";
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.moveTo(-7, 18); ctx.lineTo(-10, 33);
+          ctx.moveTo(7, 18); ctx.lineTo(11, 33);
+          ctx.moveTo(-12, -2); ctx.lineTo(-20, 12);
+          ctx.moveTo(12, -2); ctx.lineTo(20, 10);
+          ctx.stroke();
+          ctx.fillStyle = "#f2bea4";
+          ctx.beginPath(); ctx.ellipse(-10, 35, 5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(11, 35, 5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#24122e";
+          ctx.beginPath(); ctx.ellipse(0, -19, 13, 12, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#f2bea4";
+          ctx.beginPath(); ctx.ellipse(0, -18, 9, 10, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#ff2b8a";
+          ctx.fillRect(-5, -19, 3, 2); ctx.fillRect(3, -19, 3, 2);
+          ctx.fillStyle = "#110916";
+          ctx.beginPath(); ctx.arc(0, -14, 2, 0, Math.PI); ctx.strokeStyle = "#110916"; ctx.lineWidth = 1; ctx.stroke();
+          ctx.fillStyle = "#ff2b8a";
+          ctx.strokeStyle = "#ff80b8";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(-10, -5); ctx.quadraticCurveTo(0, -11, 10, -5); ctx.lineTo(7, 4); ctx.lineTo(-7, 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = "#f2bea4";
+          ctx.fillRect(-6, 4, 12, 12);
+          ctx.fillStyle = "#25102f";
+          ctx.beginPath(); ctx.moveTo(-8, 13); ctx.lineTo(8, 13); ctx.lineTo(5, 21); ctx.lineTo(-5, 21); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = "#ff80b8"; ctx.stroke();
+          ctx.fillStyle = "#ff2b8a";
+          ctx.fillRect(-6, 14, 12, 5);
+        } else {
         // Separate mechanical limbs, torso and head make the character read as a robot.
         ctx.strokeStyle = "#00f0ff";
         ctx.lineCap = "round";
@@ -3424,6 +3463,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.moveTo(0, -25); ctx.lineTo(3, -31); ctx.stroke();
         ctx.fillStyle = pickaxeStyleColor;
         ctx.beginPath(); ctx.arc(3, -32, 2, 0, Math.PI * 2); ctx.fill();
+        }
 
         const idlePlaying = p.idleTime > 0.75;
         const attackProgress = p.attack > 0 ? 1 - p.attack / 0.22 : 0;
@@ -3691,9 +3731,23 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   };
 
   const toggleMusic = () => {
+    const now = performance.now();
+    const musicCheat = musicToggleCheatRef.current;
+    musicCheat.toggles = now - musicCheat.lastToggle <= 1200 ? musicCheat.toggles + 1 : 1;
+    musicCheat.lastToggle = now;
     const next = !musicEnabledRef.current;
     musicEnabledRef.current = next;
     setMusicEnabled(next);
+    if (musicCheat.toggles >= 4 && worldRef.current.status === "playing") {
+      musicCheat.toggles = 0;
+      const world = worldRef.current;
+      avatarRef.current = "bikini";
+      world.player.avatar = "bikini";
+      world.powerUpMessage = isDe ? "CHEAT // BIKINI-AVATAR AKTIV" : "CHEAT // BIKINI AVATAR ACTIVE";
+      world.powerUpMessageTime = 2.5;
+      world.shake = 4;
+      audioRef.current?.powerUp();
+    }
     if (!next) {
       audioRef.current?.pauseMusic();
       return;
