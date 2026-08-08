@@ -109,9 +109,11 @@ const MOVE_SPEED = 255;
 const JUMP_SPEED = 610;
 const WORLD_TOP = FLOOR_BASE_Y - (LEVEL_FLOORS - 1) * FLOOR_SPACING - PLAYER_H + 13;
 
-type Tile = { x: number; y: number; alive: boolean; cracked: boolean };
-type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean; kind: number; attackTimer: number; guardian?: boolean; integrity?: number };
-type Particle = { x: number; y: number; vx: number; vy: number; life: number; color: string };
+type TileMode = "stable" | "fragile" | "phase" | "rift" | "moving" | "ice" | "bridge";
+type Tile = { x: number; y: number; alive: boolean; cracked: boolean; mode: TileMode; phaseOffset: number; baseX: number; travel: number; speed: number; previousX: number; temporaryLife?: number };
+type Objective = { x: number; y: number; kind: "cell" | "switch"; active: boolean };
+type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean; kind: number; attackTimer: number; frozen: number; guardian?: boolean; integrity?: number };
+type Particle = { x: number; y: number; vx: number; vy: number; life: number; color: string; hazard?: "fall" | "laser" | "pulse" | "boss" };
 type Chest = { x: number; y: number; opened: boolean; powerUp: PowerUpKind };
 type Player = {
   x: number;
@@ -135,6 +137,7 @@ type World = {
   tiles: Tile[];
   enemies: Enemy[];
   chests: Chest[];
+  objectives: Objective[];
   roamingChest: Chest | null;
   roamingChestTimer: number;
   roamingChestMoves: number;
@@ -158,12 +161,32 @@ type World = {
   cheatUsed: boolean;
   transition: number;
   victoryTime: number;
+  mechanicCooldown: number;
+  bridgeCooldown: number;
 };
 
-function buildLevel(): Pick<World, "tiles" | "enemies" | "chests"> {
+const LEVEL_GAMEPLAY = [
+  { de: "AUFSTIEG", en: "ASCENT", hazard: "fall", drift: 0 },
+  { de: "BRUCHZONEN", en: "FRACTURE ZONES", hazard: "fall", drift: 0 },
+  { de: "TOXINWIND", en: "TOXIC DRAFT", hazard: "fall", drift: 46 },
+  { de: "FIREWALL-LASER", en: "FIREWALL LASERS", hazard: "laser", drift: 0 },
+  { de: "DATENSTRÖMUNG", en: "DATA CURRENT", hazard: "fall", drift: -42 },
+  { de: "REAKTOR-PHASEN", en: "REACTOR PHASES", hazard: "pulse", drift: 0 },
+  { de: "SOLARSTURM", en: "SOLAR STORM", hazard: "laser", drift: 28 },
+  { de: "GEIST-PHASEN", en: "GHOST PHASES", hazard: "pulse", drift: -26 },
+  { de: "RIFT-SPRUNG", en: "RIFT JUMP", hazard: "pulse", drift: 0 },
+  { de: "APEX-ANSTIEG", en: "APEX ASCENT", hazard: "laser", drift: 18 },
+] as const;
+
+function tileIsActive(tile: Tile, time: number) {
+  return tile.alive && (tile.mode !== "phase" || Math.sin(time * 2.6 + tile.phaseOffset) > -0.38);
+}
+
+function buildLevel(sector = 1): Pick<World, "tiles" | "enemies" | "chests" | "objectives"> {
   const tiles: Tile[] = [];
   const enemies: Enemy[] = [];
   const chests: Chest[] = [];
+  const objectives: Objective[] = [];
   const chestSpawns = new Map(buildChestSpawns(LEVEL_FLOORS).map((spawn) => [spawn.row, spawn.powerUp]));
 
   for (let row = 0; row < LEVEL_FLOORS; row++) {
@@ -174,10 +197,25 @@ function buildLevel(): Pick<World, "tiles" | "enemies" | "chests"> {
       const safeEdge = col === 0 || col === 14;
       const gap = !safeEdge && (col === gapStart || (row % 7 === 4 && col === gapStart + 1));
       if (!gap) {
-        const tile = { x: col * TILE, y, alive: true, cracked: row > 0 };
+        const mode: TileMode = sector === 9 && row > 3 && row % 4 === 1 && col % 5 === 2
+          ? "rift"
+          : ([6, 8].includes(sector) && row > 2 && (row + col) % 7 === 0
+            ? "phase"
+            : ([1, 5, 10].includes(sector) && row > 2 && (row + col) % 9 === 0
+              ? "moving"
+              : ([3, 7].includes(sector) && row > 1 && (row + col) % 8 === 0
+                ? "ice"
+                : ([2, 4, 7].includes(sector) && row > 1 && (row + col) % 6 === 0 ? "fragile" : "stable"))));
+        const baseX = col * TILE;
+        const tile = { x: baseX, y, alive: true, cracked: row > 0 || mode === "fragile", mode, phaseOffset: row * 0.73 + col * 0.41, baseX, travel: mode === "moving" ? 46 + (row % 3) * 12 : 0, speed: 0.9 + (col % 3) * 0.18, previousX: baseX };
         tiles.push(tile);
         rowTiles.push(tile);
       }
+    }
+    if (row === 4 || row === 9) {
+      const objectiveKind: Objective["kind"] = sector % 2 === 0 ? "switch" : "cell";
+      const support = rowTiles[Math.min(rowTiles.length - 2, 2 + ((sector * 3 + row) % Math.max(1, rowTiles.length - 3)))];
+      if (support) objectives.push({ x: support.x + 20, y: y - 28, kind: objectiveKind, active: true });
     }
     const powerUp = chestSpawns.get(row);
     if (powerUp) {
@@ -189,7 +227,7 @@ function buildLevel(): Pick<World, "tiles" | "enemies" | "chests"> {
     }
     const enemyStep = Math.max(2, 5 - Math.floor(row / 11));
     if (row === LEVEL_FLOORS - 2) {
-      enemies.push({ x: VIEW_W / 2 - 28, y: y - 56, vx: 46, vy: 0, alive: true, grounded: true, kind: 0, attackTimer: 1.8, guardian: true, integrity: 3 });
+      enemies.push({ x: VIEW_W / 2 - 28, y: y - 56, vx: 46, vy: 0, alive: true, grounded: true, kind: 0, attackTimer: 1.8, frozen: 0, guardian: true, integrity: 3 });
     } else if (row > 2 && row % enemyStep === 1) {
       enemies.push({
         x: ((row * 137) % 720) + 110,
@@ -198,16 +236,17 @@ function buildLevel(): Pick<World, "tiles" | "enemies" | "chests"> {
         vy: 0,
         alive: true,
         grounded: true,
-        kind: row % 3,
+        kind: (row + sector) % 6,
         attackTimer: 1 + (row % 3) * 0.35,
+        frozen: 0,
       });
     }
   }
-  return { tiles, enemies, chests };
+  return { tiles, enemies, chests, objectives };
 }
 
 function makeWorld(): World {
-  const level = buildLevel();
+  const level = buildLevel(1);
   return {
     ...level,
     player: {
@@ -246,6 +285,8 @@ function makeWorld(): World {
     cheatUsed: false,
     transition: 0,
     victoryTime: 0,
+    mechanicCooldown: 0,
+    bridgeCooldown: 0,
     roamingChest: null,
     roamingChestTimer: 0,
     roamingChestMoves: 0,
@@ -256,9 +297,16 @@ function makeWorld(): World {
 
 function placeWorldAtLevel(world: World, level: number) {
   const targetLevel = Math.min(LEVEL_COUNT, Math.max(1, Math.round(level)));
+  const levelData = buildLevel(targetLevel);
+  world.tiles = levelData.tiles;
+  world.enemies = levelData.enemies;
+  world.chests = levelData.chests;
+  world.objectives = levelData.objectives;
   world.sector = targetLevel;
   world.highestSector = targetLevel;
   world.roamingChestSector = targetLevel;
+  world.mechanicCooldown = 0;
+  world.bridgeCooldown = 0;
 }
 
 function levelProgress(playerY: number): number {
@@ -2062,6 +2110,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       if (world.status !== "playing") return;
       const difficultyLevel = difficultiesRef.current[Math.max(0, world.sector - 1)] || "medium";
       const difficulty = DIFFICULTY_SETTINGS[difficultyLevel];
+      const levelRule = LEVEL_GAMEPLAY[world.sector - 1];
       const levelPressure = 1 + (world.sector - 1) * 0.075;
       world.fxTime += dt;
       world.transition = Math.max(0, world.transition - dt);
@@ -2073,6 +2122,17 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       p.attack = Math.max(0, p.attack - dt);
       p.overdrive = Math.max(0, p.overdrive - dt);
       world.powerUpMessageTime = Math.max(0, world.powerUpMessageTime - dt);
+      world.mechanicCooldown = Math.max(0, world.mechanicCooldown - dt);
+      world.bridgeCooldown = Math.max(0, world.bridgeCooldown - dt);
+
+      for (const tile of world.tiles) {
+        tile.previousX = tile.x;
+        if (tile.mode === "moving") tile.x = tile.baseX + Math.sin(world.fxTime * tile.speed + tile.phaseOffset) * tile.travel;
+        if (tile.temporaryLife !== undefined) {
+          tile.temporaryLife -= dt;
+          if (tile.temporaryLife <= 0) tile.alive = false;
+        }
+      }
 
       if (world.roamingChestSector !== world.sector) {
         world.roamingChest = null;
@@ -2106,7 +2166,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         }
       }
 
-      p.vx = input.left ? -MOVE_SPEED : input.right ? MOVE_SPEED : p.vx * Math.pow(0.002, dt);
+      const standingTile = world.tiles.find((tile) => tileIsActive(tile, world.fxTime)
+        && p.x + PLAYER_W - 7 > tile.x && p.x + 7 < tile.x + TILE && Math.abs(p.y + PLAYER_H - tile.y) < 5);
+      if (standingTile?.mode === "moving") p.x += standingTile.x - standingTile.previousX;
+      const glide = standingTile?.mode === "ice" ? 0.08 : 0.002;
+      p.vx = input.left ? -MOVE_SPEED : input.right ? MOVE_SPEED : p.vx * Math.pow(glide, dt);
+      if (levelRule.drift && !input.left && !input.right) p.vx += levelRule.drift * dt;
       if (p.vx) p.facing = Math.sign(p.vx);
       const activelyMoving = input.left || input.right || !p.grounded || Math.abs(p.vx) > 18;
       p.idleTime = activelyMoving || input.attack || input.jump ? 0 : p.idleTime + dt;
@@ -2129,7 +2194,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       p.grounded = false;
 
       for (const tile of world.tiles) {
-        if (!tile.alive) continue;
+        if (!tileIsActive(tile, world.fxTime)) continue;
         const intersectsX = p.x + PLAYER_W - 7 > tile.x && p.x + 7 < tile.x + TILE;
         if (!intersectsX) continue;
 
@@ -2147,6 +2212,37 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           burst(world, tile.x + TILE / 2, tile.y + 12, themeColor(world.sector, "accent"), 12);
           audioRef.current?.smash();
           syncHud(world);
+        }
+      }
+
+      for (const objective of world.objectives) {
+        if (!objective.active || objective.kind !== "cell") continue;
+        if (p.x + PLAYER_W > objective.x && p.x < objective.x + 22 && p.y + PLAYER_H > objective.y && p.y < objective.y + 26) {
+          objective.active = false;
+          world.score += Math.round(350 * difficulty.score);
+          world.powerUpMessage = isDe ? "ENERGIEZELLE GESICHERT" : "ENERGY CELL SECURED";
+          world.powerUpMessageTime = 1.3;
+          burst(world, objective.x + 11, objective.y + 13, themeColor(world.sector, "warning"), 16);
+          audioRef.current?.powerUp();
+          syncHud(world);
+        }
+      }
+
+      if (p.grounded && world.mechanicCooldown <= 0) {
+        const riftTiles = world.tiles.filter((tile) => tile.mode === "rift" && tileIsActive(tile, world.fxTime));
+        const standingRift = riftTiles.find((tile) => p.x + PLAYER_W - 7 > tile.x && p.x + 7 < tile.x + TILE && Math.abs(p.y + PLAYER_H - tile.y) < 5);
+        if (standingRift && riftTiles.length > 1) {
+          const from = riftTiles.indexOf(standingRift);
+          const destination = riftTiles[(from + 2) % riftTiles.length];
+          p.x = destination.x + (TILE - PLAYER_W) / 2;
+          p.y = destination.y - PLAYER_H - 3;
+          p.vy = -165;
+          p.grounded = false;
+          world.mechanicCooldown = 1.1;
+          world.powerUpMessage = isDe ? "RIFT-SPRUNG" : "RIFT JUMP";
+          world.powerUpMessageTime = 1;
+          burst(world, standingRift.x + TILE / 2, standingRift.y + 12, themeColor(world.sector, "secondary"), 14);
+          burst(world, destination.x + TILE / 2, destination.y + 12, themeColor(world.sector, "accent"), 14);
         }
       }
 
@@ -2190,6 +2286,18 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
       if (p.attack > 0) {
         const attackX = p.x + (p.facing > 0 ? PLAYER_W - 2 : -28);
+        for (const objective of world.objectives) {
+          if (!objective.active || objective.kind !== "switch") continue;
+          if (Math.abs(objective.x - attackX) < 58 && Math.abs(objective.y - p.y) < 64) {
+            objective.active = false;
+            world.score += Math.round(350 * difficulty.score);
+            world.powerUpMessage = isDe ? "ZUGANGSSCHALTER AKTIV" : "ACCESS SWITCH ACTIVE";
+            world.powerUpMessageTime = 1.3;
+            burst(world, objective.x + 11, objective.y + 13, themeColor(world.sector, "accent"), 16);
+            audioRef.current?.powerUp();
+            syncHud(world);
+          }
+        }
         for (const enemy of world.enemies) {
           if (!enemy.alive) continue;
           if (Math.abs(enemy.x - attackX) < (enemy.guardian ? 62 : 48) && Math.abs(enemy.y - p.y) < (enemy.guardian ? 64 : 50)) {
@@ -2202,6 +2310,18 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
               world.powerUpMessageTime = 1.4;
               world.shake = Math.max(world.shake, 11);
               burst(world, enemy.x + 18, enemy.y + 16, themeColor(world.sector, "warning"), 24);
+            } else if (enemy.kind === 4 && (enemy.integrity ?? 2) > 1) {
+              enemy.integrity = (enemy.integrity ?? 2) - 1;
+              enemy.frozen = 0.5;
+              world.powerUpMessage = isDe ? "SCHILD GEBROCHEN" : "SHIELD BROKEN";
+              world.powerUpMessageTime = 0.8;
+              burst(world, enemy.x + 18, enemy.y + 16, themeColor(world.sector, "warning"), 12);
+            } else if (p.pickaxeStyle % 3 === 0 && enemy.frozen <= 0) {
+              enemy.frozen = 1.7;
+              enemy.vx = p.facing * 180;
+              world.powerUpMessage = isDe ? "KRIO-FROST" : "CRYO FREEZE";
+              world.powerUpMessageTime = 0.6;
+              burst(world, enemy.x + 18, enemy.y + 16, "#72ffef", 12);
             } else {
               enemy.alive = false;
               world.score += Math.round(250 * difficulty.score);
@@ -2233,6 +2353,20 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             audioRef.current?.smash();
             syncHud(world);
           }
+          const frozenProjectiles = world.particles.filter((particle) => particle.hazard && Math.abs(particle.x - attackX) < reach && Math.abs(particle.y - (p.y + 20)) < 52);
+          for (const particle of frozenProjectiles) {
+            particle.life = 0;
+            burst(world, particle.x, particle.y, "#72ffef", 5);
+          }
+          if (!p.grounded && effectivePower >= 4 && world.bridgeCooldown <= 0) {
+            const bridgeX = Math.max(0, Math.min(VIEW_W - TILE, p.x + p.facing * 48));
+            const bridgeY = Math.min(FLOOR_BASE_Y - 30, p.y + PLAYER_H + 34);
+            world.tiles.push({ x: bridgeX, y: bridgeY, alive: true, cracked: false, mode: "bridge", phaseOffset: 0, baseX: bridgeX, travel: 0, speed: 0, previousX: bridgeX, temporaryLife: 4.2 });
+            world.bridgeCooldown = 4.5;
+            world.powerUpMessage = isDe ? "EISBRÜCKE // 4 SEKUNDEN" : "ICE BRIDGE // 4 SECONDS";
+            world.powerUpMessageTime = 1;
+            burst(world, bridgeX + TILE / 2, bridgeY + 12, "#72ffef", 14);
+          }
         }
       }
 
@@ -2240,24 +2374,28 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         if (!enemy.alive) continue;
         const enemyOldY = enemy.y;
         const enemyArchetype = (enemy.kind + world.sector - 1) % 3;
+        enemy.frozen = Math.max(0, enemy.frozen - dt);
+        if (enemy.frozen > 0) continue;
         enemy.attackTimer -= dt;
         if (enemy.guardian && enemy.attackTimer <= 0) {
           const bossMode = world.sector - 1;
+          const bossPhase = 3 - (enemy.integrity ?? 3);
           const shotCounts = [1, 1, 2, 1, 2, 2, 1, 2, 1, 3];
           const shotSpeeds = [70, 92, 62, 156, 86, 122, 74, 118, 174, 102];
           const shotArcs = [115, 92, -42, 62, -108, 138, -78, 24, 172, -18];
-          enemy.attackTimer = 2.45 - Math.min(0.72, world.sector * 0.05);
-          const shotCount = shotCounts[bossMode];
+          enemy.attackTimer = Math.max(1.15, 2.45 - Math.min(0.72, world.sector * 0.05) - bossPhase * 0.24);
+          const shotCount = Math.min(4, shotCounts[bossMode] + (bossPhase === 2 ? 1 : 0));
           for (let shot = 0; shot < shotCount; shot += 1) {
             const aimed = bossMode === 1 || bossMode === 5 || bossMode === 8;
             const direction = aimed ? Math.sign(p.x - enemy.x) || 1 : shotCount === 1 ? (bossMode % 2 === 0 ? -1 : 1) : shot - (shotCount - 1) / 2;
             world.particles.push({
               x: enemy.x + 19,
               y: enemy.y + 8,
-              vx: direction * (shotSpeeds[bossMode] + world.sector * 6),
+              vx: direction * (shotSpeeds[bossMode] + world.sector * 6 + bossPhase * 18),
               vy: shotArcs[bossMode] + shot * 34,
               life: 3.2,
               color: "#ff2b8a",
+              hazard: "boss",
             });
           }
           world.powerUpMessage = isDe ? "WÄCHTER-ANGRIFF" : "GUARDIAN ATTACK";
@@ -2269,8 +2407,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         } else if (!enemy.guardian && enemyArchetype === 2 && enemy.attackTimer <= 0) {
           enemy.vx = -enemy.vx;
           enemy.attackTimer = 1.1;
+        } else if (!enemy.guardian && enemy.kind === 3 && enemy.attackTimer <= 0) {
+          enemy.attackTimer = 1.7;
+          world.particles.push({ x: enemy.x + 19, y: enemy.y + 5, vx: (Math.sign(p.x - enemy.x) || 1) * 120, vy: 45, life: 3, color: "#ff2b8a", hazard: "boss" });
         }
-        enemy.vy += GRAVITY * (enemyArchetype === 2 ? 0.4 : 0.78) * dt;
+        enemy.vy += GRAVITY * (enemy.kind === 5 ? 0.24 : enemyArchetype === 2 ? 0.4 : 0.78) * dt;
         enemy.x += enemy.vx * difficulty.enemy * levelPressure * (enemyArchetype === 2 ? 1.18 : 1) * dt;
         enemy.y += enemy.vy * dt;
         if (enemy.x < 18) {
@@ -2282,7 +2423,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         }
         enemy.grounded = false;
         for (const tile of world.tiles) {
-          if (!tile.alive) continue;
+          if (!tileIsActive(tile, world.fxTime)) continue;
           const horizontal = enemy.x + 34 > tile.x && enemy.x + 4 < tile.x + TILE;
           if (!horizontal) continue;
           const oldBottom = enemyOldY + 32;
@@ -2317,20 +2458,23 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
       world.hazardTimer -= dt;
       if (world.hazardTimer <= 0 && world.cameraY < -400) {
-        world.hazardTimer = (2.3 + Math.random() * 2.2) / (difficulty.hazards * levelPressure);
+        world.hazardTimer = (levelRule.hazard === "laser" ? 1.7 : 2.3 + Math.random() * 2.2) / (difficulty.hazards * levelPressure);
+        const hazardY = world.cameraY + 70 + Math.random() * Math.max(90, view.height - 150);
+        const laserFromLeft = Math.random() > 0.5;
         world.particles.push({
-          x: 50 + Math.random() * 860,
-          y: world.cameraY - 30,
-          vx: (Math.random() - 0.5) * 35,
-          vy: 360 * difficulty.hazardSpeed * levelPressure,
-          life: 4,
+          x: levelRule.hazard === "laser" ? (laserFromLeft ? -24 : VIEW_W + 24) : 50 + Math.random() * 860,
+          y: levelRule.hazard === "laser" ? hazardY : levelRule.hazard === "pulse" ? world.cameraY + 35 : world.cameraY - 30,
+          vx: levelRule.hazard === "laser" ? (laserFromLeft ? 260 : -260) * difficulty.hazardSpeed * levelPressure : (Math.random() - 0.5) * 35,
+          vy: levelRule.hazard === "pulse" ? 210 * difficulty.hazardSpeed * levelPressure : 360 * difficulty.hazardSpeed * levelPressure,
+          life: levelRule.hazard === "laser" ? 4.2 : 4,
           color: "#ff2b8a",
+          hazard: levelRule.hazard,
         });
       }
 
       for (const particle of world.particles) {
         particle.life -= dt;
-        particle.vy += 560 * dt;
+        if (particle.hazard !== "laser") particle.vy += 560 * dt;
         particle.x += particle.vx * dt;
         particle.y += particle.vy * dt;
         if (
@@ -2359,7 +2503,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       world.cameraY += (targetCamera - world.cameraY) * Math.min(1, dt * 4.5);
       if (p.y > world.cameraY + view.height + 130) hurt(world);
       const guardianAlive = world.enemies.some((enemy) => enemy.alive && enemy.guardian);
-      if (p.y < WORLD_TOP && !guardianAlive) {
+      const objectivesRemaining = world.objectives.some((objective) => objective.active);
+      if (p.y < WORLD_TOP && !guardianAlive && !objectivesRemaining) {
         world.score += 5000;
         audioRef.current?.win();
         const nextLevel = Math.min(LEVEL_COUNT, world.sector + 1);
@@ -2388,10 +2533,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           setHighScore(best);
         }
         syncHud(world);
-      } else if (p.y < WORLD_TOP && guardianAlive) {
+      } else if (p.y < WORLD_TOP && (guardianAlive || objectivesRemaining)) {
         p.y = WORLD_TOP + 48;
         p.vy = 120;
-        world.powerUpMessage = isDe ? "WÄCHTER ZUERST AUSSCHALTEN" : "DISABLE THE GUARDIAN FIRST";
+        world.powerUpMessage = guardianAlive
+          ? (isDe ? "WÄCHTER ZUERST AUSSCHALTEN" : "DISABLE THE GUARDIAN FIRST")
+          : (isDe ? "LEVEL-ZIELE ZUERST ABSCHLIESSEN" : "COMPLETE LEVEL OBJECTIVES FIRST");
         world.powerUpMessageTime = 1.5;
       }
     };
@@ -2816,7 +2963,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       };
       for (const tile of world.tiles) {
         if (!tile.alive || tile.y < world.cameraY - 80 || tile.y > world.cameraY + view.height + 50) continue;
-        const glow = tile.cracked ? theme.accent : theme.warning;
+        const phaseActive = tileIsActive(tile, world.fxTime);
+        const glow = tile.mode === "rift" ? theme.secondary : tile.mode === "phase" ? theme.warning : tile.cracked ? theme.accent : theme.warning;
+        ctx.globalAlpha = phaseActive ? 1 : 0.18;
         if (spriteCacheEnabled) {
           ctx.drawImage(getPlatformSurface(tile.cracked, glow), tile.x, tile.y, TILE, 40);
         } else {
@@ -2864,6 +3013,49 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.strokeStyle = "rgba(177,247,255,.75)";
           ctx.beginPath(); ctx.moveTo(tile.x + 31, tile.y + 2); ctx.lineTo(tile.x + 26, tile.y + 10); ctx.lineTo(tile.x + 35, tile.y + 16); ctx.lineTo(tile.x + 29, tile.y + 23); ctx.stroke();
         }
+        if (tile.mode === "rift") {
+          ctx.globalAlpha = 0.9;
+          ctx.strokeStyle = theme.secondary;
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(tile.x + TILE / 2, tile.y + 12, 9 + Math.sin(world.fxTime * 5 + tile.phaseOffset) * 2, 0, Math.PI * 2); ctx.stroke();
+        }
+        if (tile.mode === "moving") {
+          ctx.globalAlpha = 0.8;
+          ctx.strokeStyle = theme.warning;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath(); ctx.moveTo(tile.baseX + TILE / 2, tile.y + 31); ctx.lineTo(tile.x + TILE / 2, tile.y + 31); ctx.stroke();
+          ctx.setLineDash([]);
+        } else if (tile.mode === "ice") {
+          ctx.globalAlpha = 0.75;
+          ctx.fillStyle = "#d9fbff";
+          ctx.fillRect(tile.x + 12, tile.y + 4, TILE - 26, 2);
+        } else if (tile.mode === "bridge") {
+          ctx.globalAlpha = Math.max(0.15, Math.min(1, (tile.temporaryLife ?? 0) / 1.2));
+          ctx.strokeStyle = "#72ffef";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(tile.x + 6, tile.y + 4, TILE - 12, 16);
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      for (const objective of world.objectives) {
+        if (!objective.active || objective.y < world.cameraY - 70 || objective.y > world.cameraY + view.height + 60) continue;
+        ctx.save();
+        const pulse = 0.7 + Math.sin(world.fxTime * 4 + objective.x * 0.02) * 0.3;
+        ctx.translate(objective.x, objective.y);
+        ctx.shadowBlur = ultraActive ? 0 : 16;
+        ctx.shadowColor = objective.kind === "cell" ? theme.warning : theme.accent;
+        ctx.strokeStyle = objective.kind === "cell" ? theme.warning : theme.accent;
+        ctx.fillStyle = "#07121f";
+        ctx.lineWidth = 2;
+        if (objective.kind === "cell") {
+          ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(21, 8); ctx.lineTo(18, 25); ctx.lineTo(4, 25); ctx.lineTo(1, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.globalAlpha = pulse; ctx.fillStyle = theme.warning; ctx.fillRect(8, 7, 6, 12);
+        } else {
+          roundedRect(ctx, 0, 6, 22, 18, 4); ctx.fill(); ctx.stroke();
+          ctx.globalAlpha = pulse; ctx.fillStyle = theme.accent; ctx.fillRect(7, 11, 8, 8);
+        }
+        ctx.restore();
       }
 
       const visibleChests = difficultiesRef.current[world.sector - 1] === "easy" ? [...world.chests] : [];
@@ -3037,6 +3229,21 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.beginPath();
         ctx.arc(0, 0, 24 + (enemyVariant % 4) * 2 + Math.sin(world.fxTime * (4 + enemyVariant % 3)) * 2, 0, Math.PI * 2);
         ctx.stroke();
+        if (!enemy.guardian && enemy.kind === 4 && (enemy.integrity ?? 2) > 1) {
+          ctx.globalAlpha = 0.9;
+          ctx.strokeStyle = theme.warning;
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.stroke();
+        } else if (!enemy.guardian && enemy.kind === 3) {
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = theme.warning;
+          ctx.fillRect(enemy.vx > 0 ? 18 : -28, -3, 10, 5);
+        } else if (!enemy.guardian && enemy.kind === 5) {
+          ctx.globalAlpha = 0.65;
+          ctx.strokeStyle = theme.secondary;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath(); ctx.ellipse(0, 18, 24, 7, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+        }
         if (enemy.guardian) {
           ctx.globalAlpha = 1;
           ctx.strokeStyle = enemySecondary;
@@ -3531,7 +3738,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     status === "ready" ? "SKYBREAK PROTOCOL" : status === "paused" ? (isDe ? "SYSTEM PAUSIERT" : "SYSTEM PAUSED") : status === "upgrade" ? (isDe ? "LEVEL GESCHAFFT" : "LEVEL COMPLETE") : status === "won" ? (sector === LEVEL_COUNT ? (isDe ? "GIPFEL ERREICHT" : "SUMMIT REACHED") : (isDe ? "LEVEL GESCHAFFT" : "LEVEL COMPLETE")) : (isDe ? "LAUF BEENDET" : "RUN TERMINATED");
   const overlayCopy =
     status === "ready"
-      ? (isDe ? "Durchbrich 10 Cyberpunk-Level und erreiche den Sendeturm." : "Break through 10 cyberpunk levels and reach the transmission tower.")
+      ? (isDe
+        ? `Zielregel: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].de}. Durchbrich 10 Cyberpunk-Level und erreiche den Sendeturm.`
+        : `Level rule: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].en}. Break through 10 cyberpunk levels and reach the transmission tower.`)
       : status === "paused"
         ? (isDe ? "Die Zeit steht still. Noch." : "Time stands still. For now.")
         : status === "upgrade"
@@ -3664,7 +3873,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             )}
           </div>
         )}
-        <div className={`sector-tag${worldRef.current.immortalSector === sector ? " cheat-active" : ""}`}>LEVEL {sector.toString().padStart(2, "0")} // {LEVEL_THEMES[sector - 1].name} // PICK P{pickaxeStats.power} S{pickaxeStats.style}{worldRef.current.immortalSector === sector ? " // IMMORTAL" : ""} // v{APP_VERSION}</div>
+        <div className={`sector-tag${worldRef.current.immortalSector === sector ? " cheat-active" : ""}`}>LEVEL {sector.toString().padStart(2, "0")} // {LEVEL_THEMES[sector - 1].name} // {isDe ? LEVEL_GAMEPLAY[sector - 1].de : LEVEL_GAMEPLAY[sector - 1].en} // PICK P{pickaxeStats.power} S{pickaxeStats.style}{worldRef.current.immortalSector === sector ? " // IMMORTAL" : ""} // v{APP_VERSION}</div>
       </section>
 
       <section className="control-panel">

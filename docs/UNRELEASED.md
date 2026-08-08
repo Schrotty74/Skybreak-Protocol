@@ -7,6 +7,7 @@
 - Normale Gegner und Wächter besitzen je Level eine eigene Silhouette, Sensorform, Bewegungsakzente und Farbwelt.
 - Der Eispickel erhält pro Level ein klar anderes Werkzeugmodell und die jeweilige Level-Farbwelt: Klinge, Doppelklinge, Gabel, Axt, Dreizack, Sichel, Hammer, Halbmond, Rift-Prisma oder Gipfelspeer. Style-Upgrades bleiben als eigener Kern- und Leuchtakzent sichtbar.
 - Jede Welt kombiniert nun drei klar erkennbare Gegner-Archetypen: Patrouille (ein Sensor), Sprungangriff (zwei Sensoren und lange Beine) und Richtungswechsel (Rundsensor mit Energiering). Jeder der zehn Wächter hat ein eigenes Schussmuster mit Richtung, Tempo, Anzahl und Flugbahn.
+- Die Level unterscheiden sich nun auch spielerisch: Bruchzonen, bewegliche und vereiste Plattformen, seitliche Strömungen, horizontale Laser, vertikale Energiepulse, zeitweise phasenverschobene Plattformen und Rift-Sprungfelder. Energiezellen und Zugangsschalter müssen vor dem Ziel erreicht werden. Schild-, Schützen- und Schwebegner ergänzen die bisherigen Gegnerrollen. Der Eispickel kann Schalter aktivieren, Projektile auflösen, Schildgegner knacken, Kryo-Frost auslösen und ab Kraftstufe 4 zeitweise Eisbrücken erzeugen. Die Wächter beschleunigen ihre Angriffe in der letzten Integritätsphase.
 
 ## Geplant: Grafik und Präsentation
 

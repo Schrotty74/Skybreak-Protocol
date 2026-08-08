@@ -1,24 +1,30 @@
 # Nächste Schritte – Skybreak Protocol
 
-**Stand:** 1. August 2026  
+**Stand:** 8. August 2026
 **Ausgangsstand:** `1.0.0-beta.7`
 
 Diese Datei bei jeder größeren Änderung aktualisieren. Sie enthält nur tatsächlich bekannte, noch offene Punkte.
 
-## Priorität 1 – Musik bei Levelwechsel
+## Priorität 1 – Gameplay-Variation auf echten Geräten abnehmen
 
-- **Fehlerbericht:** Beim Start eines neuen Levels ist der Track des vorherigen Levels noch hörbar, sodass zwei Musikstücke gleichzeitig laufen.
-- **Betroffener Bereich:** `createAudio()` in `src/SkybreakProtocol.tsx`, insbesondere `playMusic()` und die Übergabe nach einem Levelabschluss.
-- **Ziel:** Vor oder während des Starts des neuen Tracks den bisherigen Track zuverlässig pausieren, von der Audioquelle lösen und aus der aktiven Verwaltung entfernen. Zu jedem Zeitpunkt darf höchstens ein Level-Track hörbar sein.
-- **Manuell prüfen:** Levelwechsel, Neustart, Pause/Fortsetzen, Musik aus/ein, Wechsel zum Startbildschirm sowie mehrfach schnelle Übergänge. Der Fehler ist als Nutzerbericht erfasst; ein reproduzierbarer automatisierter Test ist derzeit nicht vorhanden.
+- Die neuen Level-Regeln wurden kompiliert, aber noch nicht als kompletter Lauf in einem echten Browser oder auf einem Mobilgerät gespielt.
+- Manuell prüfen: Bruchzonen (Level 2/4/7), bewegliche Plattformen (1/5/10), Eisplattformen (3/7), Strömungen (3/5/7/8/10), Seitenlaser (4/7/10), Phasenplattformen (6/8), Rift-Sprünge (9), Energiezellen/Schalter sowie Boss-Angriffe nach jedem Integritätstreffer.
+- Eispickel prüfen: Schalteraktivierung, Projektil-Auflösung, Schildgegner, Kryo-Frost bei passenden Style-Stufen und die temporäre Eisbrücke ab Kraftstufe 4.
+- Dabei besonders auf unfaire Spawnpunkte, erreichbare Rifts, Kollisionen bei unsichtbaren Phasenplattformen und Wärmeentwicklung auf Mobilgeräten achten.
 
-## Priorität 2 – Dokumentation vor dem nächsten Release abgleichen
+## Priorität 2 – Musikwechsel auf echtem Gerät prüfen
+
+- Der Quellcode verwaltet beim Wechsel nun aktive Musikobjekte zentral und löst vorherige Tracks nach der Überblendung.
+- Der frühere Fehlerbericht mit gleichzeitig hörbaren Level-Tracks ist damit im Quellcode adressiert, aber noch nicht durch den vollständigen manuellen Ablauf bestätigt.
+- Manuell prüfen: Levelwechsel, Neustart, Pause/Fortsetzen, Musik aus/ein, Wechsel zum Startbildschirm sowie mehrfach schnelle Übergänge.
+
+## Priorität 3 – Dokumentation vor dem nächsten Release abgleichen
 
 - `src/SkybreakProtocol.tsx` speichert zusätzlich die Renderauflösung unter `skybreak-render-resolution`.
 - [`DATENSCHUTZ.md`](DATENSCHUTZ.md) und [`PRIVACY.md`](PRIVACY.md) nennen derzeit sechs gespeicherte Werte und führen diesen Schlüssel nicht auf.
 - Vor dem nächsten öffentlichen Release prüfen und die Datenschutzberichte nur dann ergänzen, wenn der aktuelle Quellcode weiterhin maßgeblich ist. Keine Speicher- oder Netzwerkbehauptungen ohne Quellcodeprüfung ändern.
 
-## Priorität 3 – Mobile FPS-Anzeige auf echtem Gerät abnehmen
+## Priorität 4 – Mobile FPS-Anzeige auf echtem Gerät abnehmen
 
 - Die Anzeige wurde aus dem Spielfeld in den schwarzen Kopfbereich unter „Skybreak Protocol“ verschoben und größer in Gelb gestaltet.
 - Auf einem echten Mobilgerät im aktiven Spiel prüfen, ob sie bei unterschiedlichen Bildschirmbreiten lesbar bleibt und weder Score noch Lives verdeckt.
