@@ -6,42 +6,21 @@ import { applyPowerUp, buildChestSpawns, ROAMING_CHEST_RULES, type PowerUpKind, 
 import { detectCheat, type CheatId } from "./cheats";
 import { actionForCode, DEFAULT_KEY_BINDINGS, displayKey, normalizeKeyBindings, rebindKey, type BindableAction, type KeyBindings } from "./keyBindings";
 import { getStoredItem, setStoredItem } from "./storage";
+import { createAudio } from "./gameAudio";
+import { drawLevelBackgroundAnimation } from "./game/renderBackground";
+import { drawHologramDancer } from "./game/renderEntities";
+import { startWebGlEffects, startWebGpuEffects, startWebGpuUltraRenderer, type EffectCleanup } from "./game/webgpuEffects";
+import { BLOCK_EXPLOSION_STYLES, type BlockExplosionStyle, LEVEL_BACKDROP_FILES, LEVEL_COUNT, LEVEL_GAMEPLAY, LEVEL_THEMES } from "./levelData";
 
-type GameStatus = "ready" | "playing" | "paused" | "celebration" | "bikiniShowcase" | "upgrade" | "gameover" | "won";
+type GameStatus = "ready" | "playing" | "paused" | "chestChoice" | "celebration" | "bikiniShowcase" | "upgrade" | "gameover" | "won";
 type InputKey = BindableAction;
 type Quality = "low" | "medium" | "high" | "ultra";
 type RenderResolution = "720p" | "1080p" | "4k";
 type Difficulty = "easy" | "medium" | "hard";
 
-const LEVEL_COUNT = 10;
 const APP_VERSION = __APP_VERSION__;
 const APP_BUILD_CHANNEL = __APP_BUILD_CHANNEL__;
 const CHANGELOG_BASE_URL = "https://github.com/Schrotty74/Skybreak-Protocol/blob/main/docs/releases";
-const LEVEL_THEMES = [
-  { name: "Neon Undercity", top: "#051d35", mid: "#18072f", bottom: "#02040d", accent: "#00f0ff", secondary: "#ff2b8a", warning: "#ffd84d", motif: 0, platform: "cryo-steel" },
-  { name: "Chrome Bazaar", top: "#24113f", mid: "#35102d", bottom: "#08040f", accent: "#ff5bd6", secondary: "#39f5c8", warning: "#ffe66d", motif: 1, platform: "chrome-ice" },
-  { name: "Toxic Transit", top: "#102b22", mid: "#132d12", bottom: "#030b08", accent: "#72ff4d", secondary: "#00eaff", warning: "#f5ff73", motif: 2, platform: "corroded-ice" },
-  { name: "Crimson Firewall", top: "#351018", mid: "#280617", bottom: "#090208", accent: "#ff365f", secondary: "#ff9b35", warning: "#fff06a", motif: 3, platform: "molten-glass" },
-  { name: "Azure Data Sea", top: "#062b45", mid: "#071a45", bottom: "#020612", accent: "#36bfff", secondary: "#7c5cff", warning: "#7fffee", motif: 4, platform: "deep-ice" },
-  { name: "Violet Reactor", top: "#29104a", mid: "#19072d", bottom: "#05020c", accent: "#c65cff", secondary: "#ff3dbb", warning: "#70f7ff", motif: 5, platform: "plasma-crystal" },
-  { name: "Solar Megagrid", top: "#4a1d0a", mid: "#35100e", bottom: "#0c0304", accent: "#ff9f32", secondary: "#ff355d", warning: "#fff26b", motif: 6, platform: "solar-array" },
-  { name: "Ghost Network", top: "#0e3034", mid: "#11202e", bottom: "#03070b", accent: "#84fff2", secondary: "#b1a3ff", warning: "#ffffff", motif: 7, platform: "phase-ice" },
-  { name: "Quantum Rift", top: "#25104b", mid: "#071f3b", bottom: "#03020e", accent: "#9c6bff", secondary: "#00f6ff", warning: "#ff61d2", motif: 8, platform: "rift-crystal" },
-  { name: "Skybreak Apex", top: "#3a143f", mid: "#082d45", bottom: "#02040d", accent: "#ffffff", secondary: "#00f0ff", warning: "#ffcf4a", motif: 9, platform: "apex-ice" },
-] as const;
-
-const MUSIC_TRACKS = [
-  "audio/level-01-neon-undercity.mp3",
-  "audio/level-02-chrome-bazaar.mp3",
-  "audio/level-03-toxic-transit.mp3",
-  "audio/level-04-crimson-firewall.mp3",
-  "audio/level-05-azure-data-sea.mp3",
-  "audio/level-06-violet-reactor.mp3",
-  "audio/level-07-solar-megagrid.mp3",
-  "audio/level-08-ghost-network.mp3",
-  "audio/level-09-quantum-rift.mp3",
-  "audio/level-10-skybreak-apex.mp3",
-].map((path) => `${import.meta.env.BASE_URL}${path}`);
 
 const DIFFICULTY_SETTINGS: Record<Difficulty, { enemy: number; hazards: number; hazardSpeed: number; score: number }> = {
   easy: { enemy: 0.3, hazards: 0.15, hazardSpeed: 0.34, score: 0.65 },
@@ -98,326 +77,8 @@ function cappedPixelRatio(rect: DOMRect, preferredRatio: number, resolution: Ren
   );
 }
 
-const TILE = 64;
-const PLAYER_W = 34;
-const PLAYER_H = 50;
-const LEVEL_FLOORS = 15;
-const FLOOR_SPACING = 92;
-const FLOOR_BASE_Y = 475;
-const GRAVITY = 1450;
-const MOVE_SPEED = 255;
-const JUMP_SPEED = 610;
-const WORLD_TOP = FLOOR_BASE_Y - (LEVEL_FLOORS - 1) * FLOOR_SPACING - PLAYER_H + 13;
+import { applyEasyAssists, buildLevel, FLOOR_BASE_Y, FLOOR_SPACING, GRAVITY, JUMP_SPEED, levelProgress, makeWorld, MOVE_SPEED, PLAYER_H, PLAYER_W, placeWorldAtLevel, themeColor, TILE, tileIsActive, WORLD_TOP, type Chest, type Enemy, type Objective, type Particle, type Player, type Tile, type TileMode, type World } from "./game/world";
 
-type TileMode = "stable" | "fragile" | "phase" | "rift" | "moving" | "ice" | "bridge";
-type Tile = { x: number; y: number; alive: boolean; cracked: boolean; mode: TileMode; phaseOffset: number; baseX: number; travel: number; speed: number; previousX: number; temporaryLife?: number };
-type Objective = { x: number; y: number; kind: "cell" | "switch"; active: boolean };
-type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean; kind: number; attackTimer: number; frozen: number; guardian?: boolean; integrity?: number };
-type BlockExplosionStyle = "cryo-shard" | "chrome-sliver" | "toxic-splinter" | "fire-spark" | "sea-droplet" | "plasma-crystal" | "solar-ray" | "ghost-fragment" | "rift-diamond" | "apex-star";
-type Particle = {
-  x: number; y: number; vx: number; vy: number; life: number; color: string;
-  hazard?: "fall" | "laser" | "pulse" | "boss";
-  blockExplosion?: BlockExplosionStyle; size?: number; rotation?: number; spin?: number;
-};
-type Chest = { x: number; y: number; opened: boolean; powerUp: PowerUpKind };
-type Player = {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  grounded: boolean;
-  facing: number;
-  attack: number;
-  idleTime: number;
-  pickaxePower: number;
-  pickaxeStyle: number;
-  invulnerable: number;
-  shield: number;
-  overdrive: number;
-  damage: number;
-  avatar: "robot" | "bikini";
-};
-
-type World = {
-  player: Player;
-  tiles: Tile[];
-  enemies: Enemy[];
-  chests: Chest[];
-  objectives: Objective[];
-  roamingChest: Chest | null;
-  roamingChestTimer: number;
-  roamingChestMoves: number;
-  roamingChestSector: number;
-  collectedRoamingChestSectors: boolean[];
-  particles: Particle[];
-  cameraX: number;
-  cameraY: number;
-  score: number;
-  lives: number;
-  sector: number;
-  highestSector: number;
-  lastTime: number;
-  status: GameStatus;
-  hazardTimer: number;
-  fxTime: number;
-  shake: number;
-  powerUpMessage: string;
-  powerUpMessageTime: number;
-  immortalSector: number | null;
-  cheatUsed: boolean;
-  transition: number;
-  victoryTime: number;
-  celebrationTime: number;
-  celebrationTarget: "upgrade" | "won";
-  mechanicCooldown: number;
-  bridgeCooldown: number;
-  easyAssistsApplied: boolean;
-};
-
-const LEVEL_GAMEPLAY = [
-  { de: "AUFSTIEG", en: "ASCENT", hazard: "fall", drift: 0 },
-  { de: "BRUCHZONEN", en: "FRACTURE ZONES", hazard: "fall", drift: 0 },
-  { de: "TOXINWIND", en: "TOXIC DRAFT", hazard: "fall", drift: 46 },
-  { de: "FIREWALL-LASER", en: "FIREWALL LASERS", hazard: "laser", drift: 0 },
-  { de: "DATENSTRÖMUNG", en: "DATA CURRENT", hazard: "fall", drift: -42 },
-  { de: "REAKTOR-PHASEN", en: "REACTOR PHASES", hazard: "pulse", drift: 0 },
-  { de: "SOLARSTURM", en: "SOLAR STORM", hazard: "laser", drift: 28 },
-  { de: "GEIST-PHASEN", en: "GHOST PHASES", hazard: "pulse", drift: -26 },
-  { de: "RIFT-SPRUNG", en: "RIFT JUMP", hazard: "pulse", drift: 0 },
-  { de: "APEX-ANSTIEG", en: "APEX ASCENT", hazard: "laser", drift: 18 },
-] as const;
-
-function tileIsActive(tile: Tile, time: number) {
-  return tile.alive && (tile.mode !== "phase" || Math.sin(time * 2.6 + tile.phaseOffset) > -0.38);
-}
-
-function buildLevel(sector = 1): Pick<World, "tiles" | "enemies" | "chests" | "objectives"> {
-  const tiles: Tile[] = [];
-  const enemies: Enemy[] = [];
-  const chests: Chest[] = [];
-  const objectives: Objective[] = [];
-  const chestSpawns = new Map(buildChestSpawns(LEVEL_FLOORS).map((spawn) => [spawn.row, spawn.powerUp]));
-
-  for (let row = 0; row < LEVEL_FLOORS; row++) {
-    const y = FLOOR_BASE_Y - row * FLOOR_SPACING;
-    const gapStart = row === 0 ? -10 : (row * 5 + 2) % 11;
-    const rowTiles: Tile[] = [];
-    for (let col = 0; col < 15; col++) {
-      const safeEdge = col === 0 || col === 14;
-      const gap = !safeEdge && (col === gapStart || (row % 7 === 4 && col === gapStart + 1));
-      if (!gap) {
-        const mode: TileMode = sector === 9 && row > 3 && row % 4 === 1 && col % 5 === 2
-          ? "rift"
-          : ([6, 8].includes(sector) && row > 2 && (row + col) % 7 === 0
-            ? "phase"
-            : ([1, 5, 10].includes(sector) && row > 2 && (row + col) % 9 === 0
-              ? "moving"
-              : ([3, 7].includes(sector) && row > 1 && (row + col) % 8 === 0
-                ? "ice"
-                : ([2, 4, 7].includes(sector) && row > 1 && (row + col) % 6 === 0 ? "fragile" : "stable"))));
-        const baseX = col * TILE;
-        const tile = { x: baseX, y, alive: true, cracked: row > 0 || mode === "fragile", mode, phaseOffset: row * 0.73 + col * 0.41, baseX, travel: mode === "moving" ? 46 + (row % 3) * 12 : 0, speed: 0.9 + (col % 3) * 0.18, previousX: baseX };
-        tiles.push(tile);
-        rowTiles.push(tile);
-      }
-    }
-    if (row === 4 || row === 9) {
-      const objectiveKind: Objective["kind"] = sector % 2 === 0 ? "switch" : "cell";
-      const support = rowTiles[Math.min(rowTiles.length - 2, 2 + ((sector * 3 + row) % Math.max(1, rowTiles.length - 3)))];
-      if (support) objectives.push({ x: support.x + 20, y: y - 28, kind: objectiveKind, active: true });
-    }
-    const powerUp = chestSpawns.get(row);
-    if (powerUp) {
-      const preferredX = (2 + ((row * 7 + 3) % 11)) * TILE;
-      const support = rowTiles.reduce((closest, tile) =>
-        Math.abs(tile.x - preferredX) < Math.abs(closest.x - preferredX) ? tile : closest,
-      );
-      chests.push({ x: support.x + 13, y: y - 30, opened: false, powerUp });
-    }
-    const enemyStep = Math.max(2, 5 - Math.floor(row / 11));
-    if (row === LEVEL_FLOORS - 2) {
-      enemies.push({ x: VIEW_W / 2 - 28, y: y - 56, vx: 46, vy: 0, alive: true, grounded: true, kind: 0, attackTimer: 1.8, frozen: 0, guardian: true, integrity: 3 });
-    } else if (row > 2 && row % enemyStep === 1) {
-      enemies.push({
-        x: ((row * 137) % 720) + 110,
-        y: y - 34,
-        vx: row % 8 === 1 ? 72 : -72,
-        vy: 0,
-        alive: true,
-        grounded: true,
-        kind: (row + sector) % 6,
-        attackTimer: 1 + (row % 3) * 0.35,
-        frozen: 0,
-      });
-    }
-  }
-  return { tiles, enemies, chests, objectives };
-}
-
-function makeWorld(): World {
-  const level = buildLevel(1);
-  return {
-    ...level,
-    player: {
-      x: 463,
-      y: 415,
-      vx: 0,
-      vy: 0,
-      grounded: true,
-      facing: 1,
-      attack: 0,
-      idleTime: 0,
-      pickaxePower: 1,
-      pickaxeStyle: 1,
-      invulnerable: 0,
-      shield: 0,
-      overdrive: 0,
-      damage: 0,
-      avatar: "robot",
-    },
-    particles: [],
-    // Keep the ready screen aligned to the left world edge. A non-zero
-    // starting offset is exposed on wide desktop canvases behind the overlay.
-    cameraX: 0,
-    cameraY: 0,
-    score: 0,
-    lives: 3,
-    sector: 1,
-    highestSector: 1,
-    lastTime: 0,
-    status: "ready",
-    hazardTimer: 2.4,
-    fxTime: 0,
-    shake: 0,
-    powerUpMessage: "",
-    powerUpMessageTime: 0,
-    immortalSector: null,
-    cheatUsed: false,
-    transition: 0,
-    victoryTime: 0,
-    celebrationTime: 0,
-    celebrationTarget: "upgrade",
-    mechanicCooldown: 0,
-    bridgeCooldown: 0,
-    easyAssistsApplied: false,
-    roamingChest: null,
-    roamingChestTimer: 0,
-    roamingChestMoves: 0,
-    roamingChestSector: 1,
-    collectedRoamingChestSectors: Array(LEVEL_COUNT).fill(false),
-  };
-}
-
-function placeWorldAtLevel(world: World, level: number) {
-  const targetLevel = Math.min(LEVEL_COUNT, Math.max(1, Math.round(level)));
-  const levelData = buildLevel(targetLevel);
-  world.tiles = levelData.tiles;
-  world.enemies = levelData.enemies;
-  world.chests = levelData.chests;
-  world.objectives = levelData.objectives;
-  world.sector = targetLevel;
-  world.highestSector = targetLevel;
-  world.roamingChestSector = targetLevel;
-  world.mechanicCooldown = 0;
-  world.bridgeCooldown = 0;
-  world.celebrationTime = 0;
-  world.celebrationTarget = "upgrade";
-  world.easyAssistsApplied = false;
-}
-
-function applyEasyAssists(world: World) {
-  if (world.easyAssistsApplied) return;
-  world.easyAssistsApplied = true;
-  // Easy is an onboarding mode: retain the visual world, but remove the
-  // mechanics that create the largest frustration spikes.
-  world.lives = Math.max(world.lives, 8);
-  // Regular enemies are omitted entirely in Easy. The guardian remains as a
-  // short, one-hit final encounter so the level objective still has meaning.
-  world.enemies = world.enemies.filter((enemy) => enemy.guardian).map((enemy) => ({ ...enemy, integrity: 1, attackTimer: 3.2 }));
-  world.objectives = world.objectives.slice(0, 1);
-  world.tiles = world.tiles.map((tile) => {
-    if (!["moving", "phase", "ice", "fragile", "rift"].includes(tile.mode)) return tile;
-    return { ...tile, mode: "stable", x: tile.baseX, travel: 0, previousX: tile.baseX };
-  });
-}
-
-function levelProgress(playerY: number): number {
-  return Math.max(0, Math.min(1, (FLOOR_BASE_Y - playerY) / (FLOOR_BASE_Y - WORLD_TOP)));
-}
-
-function themeColor(sector: number, key: "accent" | "secondary" | "warning") {
-  return LEVEL_THEMES[Math.max(0, Math.min(LEVEL_THEMES.length - 1, sector - 1))][key];
-}
-
-function drawHologramDancer(ctx: CanvasRenderingContext2D, time: number, scale: number) {
-  const beat = time * Math.PI * 2.55;
-  const step = Math.sin(beat);
-  const groove = Math.sin(beat * .5);
-  const pulse = .74 + (Math.sin(beat * 2) + 1) * .13;
-  const point = (x: number, y: number, length: number, angle: number) => ({ x: x + Math.cos(angle) * length, y: y + Math.sin(angle) * length });
-  const limb = (start: { x: number; y: number }, elbow: { x: number; y: number }, end: { x: number; y: number }, color: string) => {
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "rgba(1, 8, 20, .96)";
-    ctx.lineWidth = 17;
-    ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(elbow.x, elbow.y); ctx.lineTo(end.x, end.y); ctx.stroke();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(elbow.x, elbow.y); ctx.lineTo(end.x, end.y); ctx.stroke();
-    ctx.fillStyle = "#ffd84d";
-    ctx.beginPath(); ctx.arc(elbow.x, elbow.y, 3.5, 0, Math.PI * 2); ctx.fill();
-  };
-
-  ctx.save();
-  ctx.scale(scale, scale);
-  ctx.globalAlpha = pulse;
-  const hip = { x: step * 11, y: 22 };
-  const shoulderY = -65 + Math.abs(step) * 4;
-  const leftHip = { x: hip.x - 17, y: hip.y };
-  const rightHip = { x: hip.x + 17, y: hip.y };
-  const leftKnee = point(leftHip.x, leftHip.y, 62, Math.PI / 2 + step * .34);
-  const rightKnee = point(rightHip.x, rightHip.y, 62, Math.PI / 2 - step * .34);
-  const leftFoot = point(leftKnee.x, leftKnee.y, 66, Math.PI / 2 - step * .2);
-  const rightFoot = point(rightKnee.x, rightKnee.y, 66, Math.PI / 2 + step * .2);
-  limb(leftHip, leftKnee, leftFoot, "#ff2b8a");
-  limb(rightHip, rightKnee, rightFoot, "#00f0ff");
-
-  const torsoTilt = groove * .13;
-  ctx.save();
-  ctx.translate(hip.x, hip.y - 8);
-  ctx.rotate(torsoTilt);
-  const torso = ctx.createLinearGradient(-30, -90, 30, 15);
-  torso.addColorStop(0, "#00f0ff"); torso.addColorStop(.48, "#091a31"); torso.addColorStop(1, "#ff2b8a");
-  ctx.fillStyle = torso;
-  ctx.beginPath(); ctx.moveTo(-31, 8); ctx.lineTo(-26, -62); ctx.lineTo(26, -62); ctx.lineTo(31, 8); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#e9ffff"; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = "#07111f";
-  ctx.beginPath(); ctx.moveTo(-24, -24); ctx.lineTo(24, -24); ctx.lineTo(18, 6); ctx.lineTo(-18, 6); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#ff2b8a"; ctx.stroke();
-  ctx.restore();
-
-  const leftShoulder = { x: hip.x - 29, y: shoulderY };
-  const rightShoulder = { x: hip.x + 29, y: shoulderY };
-  const leftElbow = point(leftShoulder.x, leftShoulder.y, 52, 2.35 - step * 1.08);
-  const rightElbow = point(rightShoulder.x, rightShoulder.y, 52, .79 + step * 1.08);
-  const leftHand = point(leftElbow.x, leftElbow.y, 51, 1.66 + step * .62);
-  const rightHand = point(rightElbow.x, rightElbow.y, 51, 1.48 - step * .62);
-  limb(leftShoulder, leftElbow, leftHand, "#ff2b8a");
-  limb(rightShoulder, rightElbow, rightHand, "#00f0ff");
-
-  const headX = hip.x + groove * 5;
-  ctx.fillStyle = "#07111f";
-  ctx.beginPath(); ctx.arc(headX, -113, 29, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "#ff2b8a"; ctx.lineWidth = 4; ctx.stroke();
-  ctx.fillStyle = "#ffd84d";
-  ctx.fillRect(headX - 12, -116, 24, 5);
-  ctx.fillStyle = "#00f0ff";
-  ctx.fillRect(headX - 4, -96, 8, 9);
-  ctx.fillStyle = "#081222";
-  ctx.fillRect(leftFoot.x - 16, leftFoot.y - 8, 32, 18);
-  ctx.fillRect(rightFoot.x - 16, rightFoot.y - 8, 32, 18);
-  ctx.restore();
-}
 
 const CHEST_POWER_UPS: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
 const PICKAXE_STYLES = [
@@ -446,10 +107,6 @@ const BIKINI_LOOKS = [
   { name: "APEX WHITE", primary: "#ffffff", secondary: "#ffcf4a", cut: 9 },
 ] as const;
 
-const BLOCK_EXPLOSION_STYLES: BlockExplosionStyle[] = [
-  "cryo-shard", "chrome-sliver", "toxic-splinter", "fire-spark", "sea-droplet",
-  "plasma-crystal", "solar-ray", "ghost-fragment", "rift-diamond", "apex-star",
-];
 
 function pickaxeBreakCount(power: number) {
   return Math.min(5, 1 + Math.floor((Math.min(10, power) - 1) / 2));
@@ -491,124 +148,6 @@ function placeRoamingChest(world: World, difficulty: RoamingChestDifficulty, vie
   return forceBelow && below.length > 0;
 }
 
-function createAudio() {
-  let context: AudioContext | null = null;
-  let music: HTMLAudioElement | null = null;
-  const activeMusic = new Set<HTMLAudioElement>();
-  let soundEnabled = true;
-  let currentSector = 0;
-  let fadeFrame = 0;
-  let musicRequest = 0;
-  const tone = (frequency: number, duration: number, type: OscillatorType, gain = 0.07) => {
-    if (!soundEnabled) return;
-    context ??= new AudioContext();
-    if (context.state === "suspended") context.resume();
-    const osc = context.createOscillator();
-    const amp = context.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(frequency, context.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(40, frequency * 0.72), context.currentTime + duration);
-    amp.gain.setValueAtTime(gain, context.currentTime);
-    amp.gain.exponentialRampToValueAtTime(0.001, context.currentTime + duration);
-    osc.connect(amp).connect(context.destination);
-    osc.start();
-    osc.stop(context.currentTime + duration);
-  };
-  const playMusic = async (sector: number) => {
-    const nextSector = Math.max(1, Math.min(LEVEL_COUNT, sector));
-    if (music && currentSector === nextSector) {
-      if (music.paused) await music.play().catch(() => undefined);
-      return;
-    }
-    const previous = music;
-    const request = ++musicRequest;
-    const next = new Audio(MUSIC_TRACKS[nextSector - 1]);
-    activeMusic.add(next);
-    next.loop = true;
-    next.preload = "auto";
-    next.volume = 0;
-    try {
-      await next.play();
-    } catch {
-      activeMusic.delete(next);
-      return;
-    }
-    if (request !== musicRequest) {
-      next.pause();
-      next.src = "";
-      activeMusic.delete(next);
-      return;
-    }
-    music = next;
-    currentSector = nextSector;
-    cancelAnimationFrame(fadeFrame);
-    const started = performance.now();
-    const fade = (time: number) => {
-      const progress = Math.min(1, (time - started) / 900);
-      next.volume = 0.28 * progress;
-      if (previous) previous.volume = 0.28 * (1 - progress);
-      if (progress < 1) fadeFrame = requestAnimationFrame(fade);
-      else {
-        previous?.pause();
-        if (previous) previous.src = "";
-        if (previous) activeMusic.delete(previous);
-      }
-    };
-    fadeFrame = requestAnimationFrame(fade);
-  };
-  const stop = () => {
-    musicRequest += 1;
-    cancelAnimationFrame(fadeFrame);
-    for (const track of activeMusic) {
-      track.pause();
-      track.src = "";
-    }
-    activeMusic.clear();
-    music = null;
-    currentSector = 0;
-    void context?.close();
-    context = null;
-  };
-  const pauseMusic = () => {
-    musicRequest += 1;
-    cancelAnimationFrame(fadeFrame);
-    for (const track of activeMusic) {
-      track.pause();
-      if (track !== music) {
-        track.src = "";
-        activeMusic.delete(track);
-      }
-    }
-    if (music) music.volume = 0.28;
-  };
-  const setSoundEnabled = (enabled: boolean) => {
-    soundEnabled = enabled;
-    if (!enabled) {
-      void context?.close();
-      context = null;
-    }
-  };
-  return {
-    jump: () => tone(330, 0.11, "square", 0.045),
-    smash: () => tone(105, 0.16, "sawtooth", 0.08),
-    hit: () => tone(65, 0.3, "sawtooth", 0.1),
-    enemy: () => tone(520, 0.1, "square", 0.06),
-    powerUp: () => {
-      tone(440, 0.12, "sine", 0.065);
-      window.setTimeout(() => tone(660, 0.16, "sine", 0.06), 90);
-    },
-    shield: () => tone(210, 0.24, "sine", 0.08),
-    win: () => {
-      tone(520, 0.22, "sine", 0.07);
-      window.setTimeout(() => tone(780, 0.32, "sine", 0.07), 130);
-    },
-    playMusic,
-    pauseMusic,
-    setSoundEnabled,
-    stop,
-  };
-}
-
 function roundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -619,756 +158,6 @@ function roundedRect(
 ) {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, radius);
-}
-
-type EffectCleanup = () => void;
-
-async function startWebGpuEffects(
-  canvas: HTMLCanvasElement,
-  updateRenderer: (name: string) => void,
-  getSceneInstances: () => Float32Array,
-  getResolution: () => RenderResolution,
-): Promise<EffectCleanup | null> {
-  const gpu = (navigator as Navigator & { gpu?: any }).gpu;
-  if (!gpu) return null;
-
-  const adapter = await gpu.requestAdapter({ powerPreference: "high-performance" });
-  if (!adapter) return null;
-  if (adapter.info?.isFallbackAdapter) return null;
-  const maxTextureSize = Math.min(Number(adapter.limits?.maxTextureDimension2D || 4096), 4096);
-  const device = await adapter.requestDevice();
-  const format = gpu.getPreferredCanvasFormat();
-  const shader = device.createShaderModule({
-    label: "Skybreak Ultra atmosphere",
-    code: `
-      struct Uniforms {
-        resolution: vec2f,
-        time: f32,
-        intensity: f32,
-      };
-      @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-
-      fn hash(p: vec2f) -> f32 {
-        return fract(sin(dot(p, vec2f(127.1, 311.7))) * 43758.5453);
-      }
-
-      fn noise(p: vec2f) -> f32 {
-        let i = floor(p);
-        var f = fract(p);
-        f = f * f * (3.0 - 2.0 * f);
-        return mix(mix(hash(i), hash(i + vec2f(1.0, 0.0)), f.x),
-                   mix(hash(i + vec2f(0.0, 1.0)), hash(i + vec2f(1.0, 1.0)), f.x), f.y);
-      }
-
-      @vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
-        var points = array<vec2f, 3>(vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
-        return vec4f(points[index], 0.0, 1.0);
-      }
-
-      @fragment fn fragmentMain(@builtin(position) position: vec4f) -> @location(0) vec4f {
-        let uv = position.xy / uniforms.resolution;
-        var p = uv * 2.0 - 1.0;
-        p.x *= uniforms.resolution.x / uniforms.resolution.y;
-        let t = uniforms.time;
-        let n1 = noise(p * 3.1 + vec2f(t * 0.05, -t * 0.08));
-        let n2 = noise(p * 6.3 - vec2f(t * 0.08, t * 0.04));
-
-        let fogA = exp(-7.0 * abs(p.y + 0.28 + sin(p.x * 2.4 + t * 0.25) * 0.13));
-        let fogB = exp(-10.0 * abs(p.y - 0.34 + sin(p.x * 3.7 - t * 0.19) * 0.09));
-        let fogC = exp(-14.0 * abs(p.y + 0.02 + sin(p.x * 5.1 + t * 0.31) * 0.05));
-        var color = vec3f(0.0, 0.82, 1.0) * fogA * n1 * 0.2;
-        color += vec3f(1.0, 0.03, 0.4) * fogB * (1.0 - n1) * 0.18;
-        color += vec3f(0.42, 0.18, 1.0) * fogC * n2 * 0.1;
-
-        let rainUv = uv * vec2f(150.0, 32.0);
-        let lane = floor(rainUv.x);
-        let drop = fract(rainUv.y + t * (3.0 + hash(vec2f(lane, 4.0))) + hash(vec2f(lane, 7.0)) * 9.0);
-        let rain = smoothstep(0.93, 1.0, drop) * step(0.73, hash(vec2f(lane, floor(rainUv.y))));
-        color += mix(vec3f(0.0, 0.78, 1.0), vec3f(1.0, 0.06, 0.48), hash(vec2f(lane, 2.0))) * rain * 0.15;
-
-        let gridX = 1.0 - smoothstep(0.0, 0.035, abs(fract(uv.x * 28.0) - 0.5));
-        let gridY = 1.0 - smoothstep(0.0, 0.045, abs(fract(uv.y * 18.0 + t * 0.05) - 0.5));
-        color += vec3f(0.0, 0.45, 0.62) * max(gridX, gridY) * 0.035;
-
-        let beamA = exp(-18.0 * abs(p.x - sin(t * 0.16) * 0.5 - p.y * 0.28));
-        let beamB = exp(-21.0 * abs(p.x + cos(t * 0.13) * 0.62 + p.y * 0.34));
-        color += vec3f(0.0, 0.62, 0.82) * beamA * 0.045;
-        color += vec3f(0.85, 0.02, 0.34) * beamB * 0.04;
-
-        let bloom = exp(-5.5 * length(p - vec2f(sin(t * 0.11) * 0.5, 0.18)));
-        color += vec3f(0.18, 0.72, 1.0) * bloom * 0.065;
-        let scan = sin(position.y * 1.7 + t * 3.2) * 0.5 + 0.5;
-        color += vec3f(0.02, 0.05, 0.08) * scan * 0.035;
-        color *= uniforms.intensity;
-
-        let alpha = clamp(max(max(color.r, color.g), color.b) * 1.75, 0.0, 0.34);
-        return vec4f(color, alpha);
-      }
-    `,
-  });
-  const pipeline = device.createRenderPipeline({
-    label: "Skybreak Ultra pipeline",
-    layout: "auto",
-    vertex: { module: shader, entryPoint: "vertexMain" },
-    fragment: {
-      module: shader,
-      entryPoint: "fragmentMain",
-      targets: [{
-        format,
-        blend: {
-          color: { srcFactor: "src-alpha", dstFactor: "one", operation: "add" },
-          alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
-        },
-      }],
-    },
-    primitive: { topology: "triangle-list" },
-  });
-  const context = canvas.getContext("webgpu") as any;
-  if (!context) return null;
-  // Size the WebGPU surface before configuring it. Resizing immediately after
-  // configure makes Safari briefly recreate the transparent swap texture.
-  const dynamicScale = 0.65;
-  const initialRect = canvas.getBoundingClientRect();
-  const initialDprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
-  const initialBaseDpr = cappedPixelRatio(
-    initialRect,
-    Math.min(window.devicePixelRatio || 1, initialDprLimit),
-    getResolution(),
-    Math.min(2160, maxTextureSize),
-  );
-  canvas.width = Math.max(1, Math.round(initialRect.width * initialBaseDpr * dynamicScale));
-  canvas.height = Math.max(1, Math.round(initialRect.height * initialBaseDpr * dynamicScale));
-  context.configure({ device, format, alphaMode: "premultiplied" });
-
-  const usage = (globalThis as any).GPUBufferUsage;
-  const uniformBuffer = device.createBuffer({
-    label: "Skybreak Ultra uniforms",
-    size: 16,
-    usage: (usage?.UNIFORM ?? 0x40) | (usage?.COPY_DST ?? 0x08),
-  });
-  const bindGroup = device.createBindGroup({
-    layout: pipeline.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
-  });
-  const quadBuffer = device.createBuffer({
-    label: "Skybreak instance quad",
-    size: 48,
-    usage: (usage?.VERTEX ?? 0x20) | (usage?.COPY_DST ?? 0x08),
-  });
-  device.queue.writeBuffer(quadBuffer, 0, new Float32Array([
-    -0.5, -0.5, 0.5, -0.5, -0.5, 0.5,
-    -0.5, 0.5, 0.5, -0.5, 0.5, 0.5,
-  ]));
-  const instanceCapacity = 800;
-  const instanceBuffer = device.createBuffer({
-    label: "Skybreak Ultra instances",
-    size: instanceCapacity * 8 * 4,
-    usage: (usage?.VERTEX ?? 0x20) | (usage?.COPY_DST ?? 0x08),
-  });
-  const instanceShader = device.createShaderModule({
-    label: "Skybreak instanced highlights",
-    code: `
-      struct VertexInput {
-        @location(0) corner: vec2f,
-        @location(1) center: vec2f,
-        @location(2) size: vec2f,
-        @location(3) color: vec4f,
-      };
-      struct VertexOutput {
-        @builtin(position) position: vec4f,
-        @location(0) color: vec4f,
-        @location(1) local: vec2f,
-      };
-      @vertex fn vertexMain(input: VertexInput) -> VertexOutput {
-        var output: VertexOutput;
-        let point = input.center + input.corner * input.size;
-        output.position = vec4f(point.x * 2.0 - 1.0, 1.0 - point.y * 2.0, 0.0, 1.0);
-        output.color = input.color;
-        output.local = input.corner;
-        return output;
-      }
-      @fragment fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-        let glow = 1.0 - smoothstep(0.24, 0.72, length(input.local));
-        return vec4f(input.color.rgb, input.color.a * (0.45 + glow * 0.55));
-      }
-    `,
-  });
-  const instancePipeline = device.createRenderPipeline({
-    label: "Skybreak GPU instancing pipeline",
-    layout: "auto",
-    vertex: {
-      module: instanceShader,
-      entryPoint: "vertexMain",
-      buffers: [
-        { arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }] },
-        {
-          arrayStride: 32,
-          stepMode: "instance",
-          attributes: [
-            { shaderLocation: 1, offset: 0, format: "float32x2" },
-            { shaderLocation: 2, offset: 8, format: "float32x2" },
-            { shaderLocation: 3, offset: 16, format: "float32x4" },
-          ],
-        },
-      ],
-    },
-    fragment: {
-      module: instanceShader,
-      entryPoint: "fragmentMain",
-      targets: [{
-        format,
-        blend: {
-          color: { srcFactor: "src-alpha", dstFactor: "one", operation: "add" },
-          alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
-        },
-      }],
-    },
-    primitive: { topology: "triangle-list" },
-  });
-  const isMac = /Macintosh|Mac OS X/i.test(navigator.userAgent);
-  updateRenderer(isMac ? "WEBGPU · METAL" : "WEBGPU · NATIVE GPU");
-  let active = true;
-  let animation = 0;
-
-  void device.lost.then(() => {
-    if (active) updateRenderer("WEBGPU LOST");
-  });
-
-  const render = (time: number) => {
-    if (!active) return;
-    const rect = canvas.getBoundingClientRect();
-    const dprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
-    const baseDpr = cappedPixelRatio(
-      rect,
-      Math.min(window.devicePixelRatio || 1, dprLimit),
-      getResolution(),
-      Math.min(2160, maxTextureSize),
-    );
-    const width = Math.max(1, Math.round(rect.width * baseDpr * dynamicScale));
-    const height = Math.max(1, Math.round(rect.height * baseDpr * dynamicScale));
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
-    }
-
-    device.queue.writeBuffer(uniformBuffer, 0, new Float32Array([width, height, time * 0.001, 1]));
-    const encoder = device.createCommandEncoder({ label: "Skybreak Ultra frame" });
-    const pass = encoder.beginRenderPass({
-      colorAttachments: [{
-        view: context.getCurrentTexture().createView(),
-        clearValue: { r: 0, g: 0, b: 0, a: 0 },
-        loadOp: "clear",
-        storeOp: "store",
-      }],
-    });
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
-    pass.draw(3);
-    const instances = getSceneInstances();
-    const instanceCount = Math.min(Math.floor(instances.length / 8), instanceCapacity);
-    if (instanceCount > 0) {
-      device.queue.writeBuffer(instanceBuffer, 0, instances.subarray(0, instanceCount * 8));
-      pass.setPipeline(instancePipeline);
-      pass.setVertexBuffer(0, quadBuffer);
-      pass.setVertexBuffer(1, instanceBuffer);
-      pass.draw(6, instanceCount);
-    }
-    pass.end();
-    device.queue.submit([encoder.finish()]);
-    canvas.classList.add("fx-ready");
-    animation = requestAnimationFrame(render);
-  };
-  animation = requestAnimationFrame(render);
-  return () => {
-    active = false;
-    cancelAnimationFrame(animation);
-    uniformBuffer.destroy();
-    quadBuffer.destroy();
-    instanceBuffer.destroy();
-    device.destroy();
-  };
-}
-
-async function startWebGpuUltraRenderer(
-  canvas: HTMLCanvasElement,
-  sourceCanvas: HTMLCanvasElement,
-  updateRenderer: (name: string) => void,
-  getSceneInstances: () => Float32Array,
-  updateFrameRate: (fps: number) => void,
-  getAllowHighRefresh: () => boolean,
-  updateThermalProtection: (active: boolean) => void,
-  getResolution: () => RenderResolution,
-): Promise<EffectCleanup | null> {
-  const gpu = (navigator as Navigator & { gpu?: any }).gpu;
-  if (!gpu) return null;
-
-  const adapter = await gpu.requestAdapter({ powerPreference: "high-performance" });
-  if (!adapter || adapter.info?.isFallbackAdapter) return null;
-  const maxTextureSize = Math.min(Number(adapter.limits?.maxTextureDimension2D || 4096), 4096);
-  const mobile = window.matchMedia("(pointer: coarse)").matches;
-  // Current mobile WebKit builds can expose shader-f16 while producing a black
-  // post-process texture. Keep the stable F32 path on touch devices.
-  const supportsF16 = !mobile && Boolean(adapter.features?.has?.("shader-f16"));
-  const device = await adapter.requestDevice({ requiredFeatures: supportsF16 ? ["shader-f16"] : [] });
-  const format = gpu.getPreferredCanvasFormat();
-  const context = canvas.getContext("webgpu") as any;
-  if (!context) return null;
-  let renderScale = 1;
-  const initialRect = canvas.getBoundingClientRect();
-  const initialDprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
-  const initialBaseDpr = cappedPixelRatio(
-    initialRect,
-    Math.min(window.devicePixelRatio || 1, initialDprLimit),
-    getResolution(),
-    Math.min(2160, maxTextureSize),
-  );
-  canvas.width = Math.max(1, Math.round(initialRect.width * initialBaseDpr * renderScale));
-  canvas.height = Math.max(1, Math.round(initialRect.height * initialBaseDpr * renderScale));
-  context.configure({ device, format, alphaMode: "premultiplied" });
-
-  const usage = (globalThis as any).GPUBufferUsage;
-  const textureUsage = (globalThis as any).GPUTextureUsage;
-  const uniformBuffer = device.createBuffer({
-    label: "Skybreak Ultra uniforms",
-    size: 32,
-    usage: (usage?.UNIFORM ?? 0x40) | (usage?.COPY_DST ?? 0x08),
-  });
-  const quadBuffer = device.createBuffer({
-    label: "Skybreak instance quad",
-    size: 48,
-    usage: (usage?.VERTEX ?? 0x20) | (usage?.COPY_DST ?? 0x08),
-  });
-  device.queue.writeBuffer(quadBuffer, 0, new Float32Array([
-    -0.5, -0.5, 0.5, -0.5, -0.5, 0.5,
-    -0.5, 0.5, 0.5, -0.5, 0.5, 0.5,
-  ]));
-  const instanceCapacity = 1024;
-  const instanceBuffer = device.createBuffer({
-    label: "Skybreak Ultra instances",
-    size: instanceCapacity * 8 * 4,
-    usage: (usage?.VERTEX ?? 0x20) | (usage?.COPY_DST ?? 0x08),
-  });
-
-  const postShader = device.createShaderModule({
-    label: "Skybreak full-scene post processing",
-    code: `
-      ${supportsF16 ? "enable f16;" : ""}
-      struct Uniforms {
-        resolution: vec2f,
-        time: f32,
-        intensity: f32,
-        postQuality: f32,
-        bloomStrength: f32,
-        reflectionStrength: f32,
-        padding: f32,
-      };
-      @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-      @group(0) @binding(1) var sceneTexture: texture_2d<f32>;
-      @group(0) @binding(2) var sceneSampler: sampler;
-
-      fn hash(p: vec2f) -> f32 { return fract(sin(dot(p, vec2f(127.1, 311.7))) * 43758.5453); }
-      fn noise(p: vec2f) -> f32 {
-        let i = floor(p); var f = fract(p); f = f * f * (3.0 - 2.0 * f);
-        return mix(mix(hash(i), hash(i + vec2f(1.0, 0.0)), f.x),
-                   mix(hash(i + vec2f(0.0, 1.0)), hash(i + vec2f(1.0, 1.0)), f.x), f.y);
-      }
-      ${supportsF16
-        ? "fn toneMap(color32: vec3f) -> vec3f { let color = vec3<f16>(max(color32, vec3f(0.0))); let mapped = color / (color + vec3<f16>(f16(0.82))); return vec3f(mapped); }"
-        : "fn toneMap(color: vec3f) -> vec3f { return color / (color + vec3f(0.82)); }"}
-      @vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
-        var points = array<vec2f, 3>(vec2f(-1.0, -1.0), vec2f(3.0, -1.0), vec2f(-1.0, 3.0));
-        return vec4f(points[index], 0.0, 1.0);
-      }
-      @fragment fn fragmentMain(@builtin(position) position: vec4f) -> @location(0) vec4f {
-        let uv = position.xy / uniforms.resolution;
-        let textureSize = vec2f(textureDimensions(sceneTexture));
-        let texel = 1.0 / max(textureSize, vec2f(1.0));
-        let chroma = texel * (1.4 + sin(uniforms.time * 0.7) * 0.25);
-        let baseR = textureSample(sceneTexture, sceneSampler, clamp(uv + vec2f(chroma.x, 0.0), vec2f(0.0), vec2f(1.0))).r;
-        let baseG = textureSample(sceneTexture, sceneSampler, uv).g;
-        let baseB = textureSample(sceneTexture, sceneSampler, clamp(uv - vec2f(chroma.x, 0.0), vec2f(0.0), vec2f(1.0))).b;
-        var scene = vec3f(baseR, baseG, baseB);
-
-        var bloom = vec3f(0.0);
-        if (uniforms.postQuality > 0.25) {
-          bloom += textureSample(sceneTexture, sceneSampler, uv + texel * vec2f(4.0, 0.0)).rgb;
-          bloom += textureSample(sceneTexture, sceneSampler, uv - texel * vec2f(4.0, 0.0)).rgb;
-          if (uniforms.postQuality > 1.25) {
-            bloom += textureSample(sceneTexture, sceneSampler, uv + texel * vec2f(0.0, 4.0)).rgb;
-            bloom += textureSample(sceneTexture, sceneSampler, uv - texel * vec2f(0.0, 4.0)).rgb;
-            bloom += textureSample(sceneTexture, sceneSampler, uv + texel * vec2f(3.0, 3.0)).rgb;
-            bloom += textureSample(sceneTexture, sceneSampler, uv - texel * vec2f(3.0, 3.0)).rgb;
-            bloom *= 0.1667;
-          } else {
-            bloom *= 0.5;
-          }
-          bloom = max(bloom - vec3f(0.28), vec3f(0.0));
-          scene += bloom * uniforms.bloomStrength;
-
-          let distortion = (noise(vec2f(uv.x * 24.0, uniforms.time * 0.45)) - 0.5) * 0.012;
-          let reflectionUv = clamp(vec2f(uv.x + distortion, 1.18 - uv.y), vec2f(0.0), vec2f(1.0));
-          let reflected = textureSample(sceneTexture, sceneSampler, reflectionUv).rgb;
-          let reflectionMask = smoothstep(0.5, 0.96, uv.y) * (1.0 - smoothstep(0.96, 1.0, uv.y));
-          scene += reflected * reflectionMask * uniforms.reflectionStrength;
-        }
-
-        var p = uv * 2.0 - 1.0;
-        p.x *= uniforms.resolution.x / uniforms.resolution.y;
-        let n = noise(p * 3.1 + vec2f(uniforms.time * 0.05, -uniforms.time * 0.08));
-        let fogA = exp(-7.0 * abs(p.y + 0.28 + sin(p.x * 2.4 + uniforms.time * 0.25) * 0.13));
-        let fogB = exp(-10.0 * abs(p.y - 0.34 + sin(p.x * 3.7 - uniforms.time * 0.19) * 0.09));
-        scene += vec3f(0.0, 0.82, 1.0) * fogA * n * 0.09;
-        scene += vec3f(1.0, 0.03, 0.4) * fogB * (1.0 - n) * 0.075;
-
-        let beamA = exp(-18.0 * abs(p.x - sin(uniforms.time * 0.16) * 0.5 - p.y * 0.28));
-        let beamB = exp(-21.0 * abs(p.x + cos(uniforms.time * 0.13) * 0.62 + p.y * 0.34));
-        scene += vec3f(0.0, 0.62, 0.82) * beamA * 0.035;
-        scene += vec3f(0.85, 0.02, 0.34) * beamB * 0.03;
-
-        let vignette = 1.0 - smoothstep(0.55, 1.25, length(p));
-        scene *= 0.78 + vignette * 0.28;
-        scene = toneMap(scene);
-        scene = pow(max(scene, vec3f(0.0)), vec3f(0.92));
-        // A few macOS WebGPU implementations can briefly expose an empty
-        // external Canvas texture. Keep that frame transparent so the source
-        // canvas remains visible instead of flashing black.
-        let sourceEnergy = max(max(baseR, baseG), baseB);
-        let outputAlpha = select(0.0, 1.0, sourceEnergy > 0.003);
-        return vec4f(scene, outputAlpha);
-      }
-    `,
-  });
-  const postPipeline = await device.createRenderPipelineAsync({
-    label: "Skybreak full-scene post pipeline",
-    layout: "auto",
-    vertex: { module: postShader, entryPoint: "vertexMain" },
-    fragment: { module: postShader, entryPoint: "fragmentMain", targets: [{ format }] },
-    primitive: { topology: "triangle-list" },
-  });
-
-  const instanceShader = device.createShaderModule({
-    label: "Skybreak instanced highlights",
-    code: `
-      struct VertexInput {
-        @location(0) corner: vec2f,
-        @location(1) center: vec2f,
-        @location(2) size: vec2f,
-        @location(3) color: vec4f,
-      };
-      struct VertexOutput {
-        @builtin(position) position: vec4f,
-        @location(0) color: vec4f,
-        @location(1) local: vec2f,
-      };
-      @vertex fn vertexMain(input: VertexInput) -> VertexOutput {
-        var output: VertexOutput;
-        let point = input.center + input.corner * input.size;
-        output.position = vec4f(point.x * 2.0 - 1.0, 1.0 - point.y * 2.0, 0.0, 1.0);
-        output.color = input.color;
-        output.local = input.corner;
-        return output;
-      }
-      @fragment fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-        let glow = 1.0 - smoothstep(0.24, 0.72, length(input.local));
-        return vec4f(input.color.rgb, input.color.a * (0.45 + glow * 0.55));
-      }
-    `,
-  });
-  const instancePipeline = await device.createRenderPipelineAsync({
-    label: "Skybreak GPU instancing pipeline",
-    layout: "auto",
-    vertex: {
-      module: instanceShader,
-      entryPoint: "vertexMain",
-      buffers: [
-        { arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }] },
-        {
-          arrayStride: 32,
-          stepMode: "instance",
-          attributes: [
-            { shaderLocation: 1, offset: 0, format: "float32x2" },
-            { shaderLocation: 2, offset: 8, format: "float32x2" },
-            { shaderLocation: 3, offset: 16, format: "float32x4" },
-          ],
-        },
-      ],
-    },
-    fragment: {
-      module: instanceShader,
-      entryPoint: "fragmentMain",
-      targets: [{
-        format,
-        blend: {
-          color: { srcFactor: "src-alpha", dstFactor: "one", operation: "add" },
-          alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
-        },
-      }],
-    },
-    primitive: { topology: "triangle-list" },
-  });
-
-  const sampler = device.createSampler({ magFilter: "linear", minFilter: "linear" });
-  let sceneTexture: any = null;
-  let sceneTextureWidth = 0;
-  let sceneTextureHeight = 0;
-  let postBindGroup: any = null;
-  const ensureSceneTexture = () => {
-    const width = Math.max(1, Math.min(maxTextureSize, sourceCanvas.width));
-    const height = Math.max(1, Math.min(maxTextureSize, sourceCanvas.height));
-    if (sceneTexture && width === sceneTextureWidth && height === sceneTextureHeight) return;
-    sceneTexture?.destroy();
-    sceneTextureWidth = width;
-    sceneTextureHeight = height;
-    sceneTexture = device.createTexture({
-      label: "Skybreak Canvas scene texture",
-      size: [width, height, 1],
-      format: "rgba8unorm",
-      usage: (textureUsage?.TEXTURE_BINDING ?? 0x04) | (textureUsage?.COPY_DST ?? 0x02),
-    });
-    postBindGroup = device.createBindGroup({
-      layout: postPipeline.getBindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-        { binding: 1, resource: sceneTexture.createView() },
-        { binding: 2, resource: sampler },
-      ],
-    });
-  };
-
-  const isMac = /Macintosh|Mac OS X/i.test(navigator.userAgent);
-  updateRenderer(`${isMac ? "WEBGPU · METAL" : "WEBGPU · NATIVE"}${supportsF16 ? " · F16" : " · F32"} · INSTANCED`);
-  const worker = new Worker(new URL("./ultraWorker.ts", import.meta.url), { type: "module" });
-  let active = true;
-  let animation = 0;
-  let workerBusy = false;
-  let workerInstances = new Float32Array(0);
-  let targetFps = 60;
-  let postQuality = 2;
-  let lastAnimationFrame = performance.now();
-  let lastRenderedFrame = 0;
-  let nextFrameDue = 0;
-  let lastWorkerPost = 0;
-
-  worker.onmessage = (event: MessageEvent<{ buffer: ArrayBuffer; renderScale: number; targetFps: number; postQuality: number }>) => {
-    workerBusy = false;
-    workerInstances = new Float32Array(event.data.buffer);
-    renderScale = Math.max(0.62, Math.min(1, event.data.renderScale));
-    postQuality = Math.max(0, Math.min(2, event.data.postQuality));
-    updateThermalProtection(postQuality < 2);
-    const nextFps = Math.max(60, Math.min(120, event.data.targetFps));
-    if (nextFps !== targetFps) {
-      targetFps = nextFps;
-      updateFrameRate(nextFps);
-    }
-  };
-  worker.onerror = () => {
-    workerBusy = false;
-    targetFps = 60;
-    updateFrameRate(60);
-  };
-  void device.lost.then(() => {
-    if (active) updateRenderer("WEBGPU LOST");
-  });
-
-  const render = (time: number) => {
-    if (!active) return;
-    const animationDelta = Math.max(4, Math.min(40, time - lastAnimationFrame));
-    lastAnimationFrame = time;
-    if (!workerBusy && time - lastWorkerPost >= 24) {
-      workerBusy = true;
-      lastWorkerPost = time;
-      worker.postMessage({ type: "tick", time, frameDelta: animationDelta, allowHighRefresh: getAllowHighRefresh(), mobile, rainCount: 220 });
-    }
-
-    const frameInterval = 1000 / targetFps;
-    if (!nextFrameDue) nextFrameDue = time;
-    if (time + 0.35 < nextFrameDue) {
-      animation = requestAnimationFrame(render);
-      return;
-    }
-    lastRenderedFrame = time;
-    nextFrameDue += frameInterval;
-    if (nextFrameDue < time - frameInterval) nextFrameDue = time + frameInterval;
-    const rect = canvas.getBoundingClientRect();
-    const dprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
-    const baseDpr = cappedPixelRatio(
-      rect,
-      Math.min(window.devicePixelRatio || 1, dprLimit),
-      getResolution(),
-      Math.min(2160, maxTextureSize),
-    );
-    const width = Math.max(1, Math.round(rect.width * baseDpr * renderScale));
-    const height = Math.max(1, Math.round(rect.height * baseDpr * renderScale));
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
-    }
-
-    ensureSceneTexture();
-    try {
-      device.queue.copyExternalImageToTexture(
-        { source: sourceCanvas },
-        { texture: sceneTexture },
-        [sceneTextureWidth, sceneTextureHeight],
-      );
-    } catch {
-      animation = requestAnimationFrame(render);
-      return;
-    }
-
-    const sceneInstances = getSceneInstances();
-    const workerCount = Math.min(workerInstances.length / 8, instanceCapacity);
-    const sceneCount = Math.min(sceneInstances.length / 8, instanceCapacity - workerCount);
-    if (workerCount > 0) device.queue.writeBuffer(instanceBuffer, 0, workerInstances.subarray(0, workerCount * 8));
-    if (sceneCount > 0) device.queue.writeBuffer(instanceBuffer, workerCount * 32, sceneInstances.subarray(0, sceneCount * 8));
-    const bloomStrength = postQuality >= 2 ? 0.42 : postQuality >= 1 ? 0.22 : 0;
-    const reflectionStrength = postQuality >= 2 ? 0.16 : postQuality >= 1 ? 0.07 : 0;
-    device.queue.writeBuffer(uniformBuffer, 0, new Float32Array([
-      width, height, time * 0.001, 1, postQuality, bloomStrength, reflectionStrength, 0,
-    ]));
-
-    const encoder = device.createCommandEncoder({ label: "Skybreak Ultra frame" });
-    const pass = encoder.beginRenderPass({
-      colorAttachments: [{
-        view: context.getCurrentTexture().createView(),
-        clearValue: { r: 0, g: 0, b: 0, a: 0 },
-        loadOp: "clear",
-        storeOp: "store",
-      }],
-    });
-    pass.setPipeline(postPipeline);
-    pass.setBindGroup(0, postBindGroup);
-    pass.draw(3);
-    if (workerCount + sceneCount > 0) {
-      pass.setPipeline(instancePipeline);
-      pass.setVertexBuffer(0, quadBuffer);
-      pass.setVertexBuffer(1, instanceBuffer);
-      pass.draw(6, workerCount + sceneCount);
-    }
-    pass.end();
-    device.queue.submit([encoder.finish()]);
-    canvas.classList.add("fx-ready");
-    animation = requestAnimationFrame(render);
-  };
-  animation = requestAnimationFrame(render);
-  return () => {
-    active = false;
-    cancelAnimationFrame(animation);
-    worker.terminate();
-    updateThermalProtection(false);
-    sceneTexture?.destroy();
-    uniformBuffer.destroy();
-    quadBuffer.destroy();
-    instanceBuffer.destroy();
-    device.destroy();
-  };
-}
-
-function startWebGlEffects(
-  canvas: HTMLCanvasElement,
-  updateRenderer: (name: string) => void,
-  getQuality: () => Quality,
-  getResolution: () => RenderResolution,
-): EffectCleanup | null {
-  const gl = canvas.getContext("webgl2", {
-    alpha: true,
-    antialias: false,
-    depth: false,
-    powerPreference: "high-performance",
-    premultipliedAlpha: true,
-  });
-  if (!gl) return null;
-  updateRenderer("WEBGL2");
-
-  const vertexSource = `#version 300 es
-    precision highp float;
-    const vec2 points[3] = vec2[3](vec2(-1.0,-1.0), vec2(3.0,-1.0), vec2(-1.0,3.0));
-    void main(){ gl_Position = vec4(points[gl_VertexID], 0.0, 1.0); }
-  `;
-  const fragmentSource = `#version 300 es
-    precision highp float;
-    uniform vec2 u_resolution;
-    uniform float u_time;
-    out vec4 outColor;
-    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
-    float noise(vec2 p) {
-      vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
-      return mix(mix(hash(i), hash(i + vec2(1,0)), f.x), mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x), f.y);
-    }
-    void main() {
-      vec2 uv = gl_FragCoord.xy / u_resolution; vec2 p = uv * 2.0 - 1.0;
-      p.x *= u_resolution.x / u_resolution.y;
-      float n = noise(p * 2.8 + vec2(u_time * .035, -u_time * .06));
-      float fogA = exp(-7.0 * abs(p.y + .26 + sin(p.x * 2.2 + u_time * .22) * .12));
-      float fogB = exp(-9.0 * abs(p.y - .38 + sin(p.x * 3.4 - u_time * .17) * .08));
-      vec3 color = vec3(0.0, .85, 1.0) * fogA * n * .16;
-      color += vec3(1.0, .04, .42) * fogB * (1.0 - n) * .13;
-      vec2 rainUv = uv * vec2(95.0, 24.0); float lane = floor(rainUv.x);
-      float drop = fract(rainUv.y + u_time * (2.4 + hash(vec2(lane, 4.0))) + hash(vec2(lane, 7.0)) * 7.0);
-      float rain = smoothstep(.94, 1.0, drop) * step(.82, hash(vec2(lane, floor(rainUv.y))));
-      color += mix(vec3(0.0,.75,1.0), vec3(1.0,.08,.5), hash(vec2(lane,2.0))) * rain * .1;
-      float scan = sin(gl_FragCoord.y * 1.55 + u_time * 3.0) * .5 + .5;
-      color += vec3(.02,.05,.08) * scan * .035;
-      float alpha = clamp(max(max(color.r, color.g), color.b) * 1.7, 0.0, .28);
-      outColor = vec4(color, alpha);
-    }
-  `;
-  const compile = (type: number, source: string) => {
-    const shader = gl.createShader(type);
-    if (!shader) return null;
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      gl.deleteShader(shader);
-      return null;
-    }
-    return shader;
-  };
-  const vertex = compile(gl.VERTEX_SHADER, vertexSource);
-  const fragment = compile(gl.FRAGMENT_SHADER, fragmentSource);
-  if (!vertex || !fragment) return null;
-  const program = gl.createProgram();
-  if (!program) return null;
-  gl.attachShader(program, vertex);
-  gl.attachShader(program, fragment);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return null;
-  const resolutionLocation = gl.getUniformLocation(program, "u_resolution");
-  const timeLocation = gl.getUniformLocation(program, "u_time");
-  let animation = 0;
-  let lastGlFrame = 0;
-  const render = (time: number) => {
-    const settings = activeQualitySettings(getQuality());
-    const frameInterval = 1000 / settings.glFps;
-    if (time - lastGlFrame < frameInterval) {
-      animation = requestAnimationFrame(render);
-      return;
-    }
-    lastGlFrame = time;
-    const rect = canvas.getBoundingClientRect();
-    const dpr = cappedPixelRatio(rect, Math.min(window.devicePixelRatio || 1, settings.glDpr), getResolution());
-    const width = Math.max(1, Math.round(rect.width * dpr));
-    const height = Math.max(1, Math.round(rect.height * dpr));
-    if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
-    gl.viewport(0, 0, width, height);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    if (settings.webgl) {
-      gl.useProgram(program);
-      gl.uniform2f(resolutionLocation, width, height);
-      gl.uniform1f(timeLocation, time * 0.001);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-      canvas.classList.add("fx-ready");
-    }
-    animation = requestAnimationFrame(render);
-  };
-  animation = requestAnimationFrame(render);
-  return () => {
-    cancelAnimationFrame(animation);
-    gl.deleteProgram(program);
-    gl.deleteShader(vertex);
-    gl.deleteShader(fragment);
-  };
 }
 
 type Language = "en" | "de";
@@ -1389,6 +178,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fxCanvasRef = useRef<HTMLCanvasElement>(null);
   const bikiniAvatarImageRef = useRef<HTMLImageElement | null>(null);
+  const levelBackdropImagesRef = useRef<(HTMLImageElement | null)[]>(Array(LEVEL_BACKDROP_FILES.length).fill(null));
   const worldRef = useRef<World>(makeWorld());
   const inputRef = useRef<Record<InputKey, boolean>>({ left: false, right: false, jump: false, attack: false });
   const pressedRef = useRef<Record<InputKey, boolean>>({ left: false, right: false, jump: false, attack: false });
@@ -1444,6 +234,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [bindingCapture, setBindingCapture] = useState<BindableAction | null>(null);
   const [unlockedLevel, setUnlockedLevel] = useState(1);
   const [selectedStartLevel, setSelectedStartLevel] = useState(1);
+  const [pendingChest, setPendingChest] = useState<Chest | null>(null);
 
   const syncHud = useCallback((world: World) => {
     setScore(world.score);
@@ -1458,6 +249,19 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     image.onload = () => { bikiniAvatarImageRef.current = image; };
     return () => {
       bikiniAvatarImageRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const images = LEVEL_BACKDROP_FILES.map((file, index) => {
+      const image = new Image();
+      image.src = `${import.meta.env.BASE_URL}images/${file}`;
+      image.onload = () => { levelBackdropImagesRef.current[index] = image; };
+      return image;
+    });
+    return () => {
+      void images;
+      levelBackdropImagesRef.current = Array(LEVEL_BACKDROP_FILES.length).fill(null);
     };
   }, []);
 
@@ -1487,6 +291,25 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     }
     syncHud(next);
   }, [syncHud]);
+
+  const chooseChestReward = useCallback((kind: PowerUpKind) => {
+    const chest = pendingChest;
+    const world = worldRef.current;
+    if (!chest || world.status !== "chestChoice") return;
+    chest.opened = true;
+    if (chest === world.roamingChest) {
+      world.collectedRoamingChestSectors[world.sector - 1] = true;
+      world.roamingChest = null;
+      world.roamingChestTimer = 0;
+    }
+    const difficulty = DIFFICULTY_SETTINGS[difficultiesRef.current[world.sector - 1] || "medium"];
+    const reward = applyPowerUp(kind, { lives: world.lives, shield: world.player.shield, overdrive: world.player.overdrive, invulnerable: world.player.invulnerable, damage: world.player.damage, score: world.score }, difficulty.score);
+    world.lives = reward.lives; world.score = reward.score; world.player.shield = reward.shield; world.player.overdrive = reward.overdrive; world.player.invulnerable = reward.invulnerable; world.player.damage = reward.damage;
+    world.powerUpMessage = reward.message === "shield" ? (isDe ? "SCHUTZSCHILD AKTIV" : "SHIELD ACTIVE") : reward.message === "life" ? (isDe ? "EXTRALEBEN ERHALTEN" : "EXTRA LIFE ACQUIRED") : reward.message === "life-full" ? `${isDe ? "LEBEN VOLL" : "LIVES FULL"} // +${reward.awardedScore}` : reward.message === "score" ? `${isDe ? "DATENBONUS" : "DATA BONUS"} // +${reward.awardedScore}` : reward.message === "jackpot" ? `${isDe ? "JACKPOT" : "JACKPOT"} // +${reward.awardedScore}` : reward.message === "repair" ? (isDe ? "REPARATUR UND SCHILD AKTIV" : "REPAIR AND SHIELD ACTIVE") : reward.message === "phase" ? (isDe ? "PHASENPANZERUNG // 7 SEKUNDEN" : "PHASE ARMOR // 7 SECONDS") : (isDe ? "EISPICKEL-OVERDRIVE // 12 SEKUNDEN" : "ICE PICK OVERDRIVE // 12 SECONDS");
+    world.powerUpMessageTime = 2.5; world.shake = 5; world.status = "playing";
+    audioRef.current?.powerUp();
+    setPendingChest(null); syncHud(world);
+  }, [isDe, pendingChest, syncHud]);
 
   useEffect(() => {
     if (!benchmarkMode) return;
@@ -1836,7 +659,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const gpuRenderer = benchmarkVariant === "effects-off"
         ? Promise.resolve<EffectCleanup>(() => setRenderer("CANVAS 2D"))
         : desktopMac
-          ? startWebGpuEffects(canvas, setRenderer, useGpuSceneInstances ? getUltraSceneInstances : () => new Float32Array(0), () => renderResolutionRef.current)
+          ? startWebGpuEffects(
+            canvas,
+            setRenderer,
+            useGpuSceneInstances ? getUltraSceneInstances : () => new Float32Array(0),
+            () => renderResolutionRef.current,
+            () => [2, 7].includes(worldRef.current.sector) ? 0 : 1,
+          )
           : startFullSceneRenderer();
 
       void gpuRenderer
@@ -2062,7 +891,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const platformSurfaceCache = new Map<string, HTMLCanvasElement>();
     const makeLayer = () => document.createElement("canvas");
     const drawStaticBackdrop = (theme: typeof LEVEL_THEMES[number]) => {
-      const key = `${theme.name}:${Math.round(view.width)}:${Math.round(view.height)}`;
+      const backdrop = levelBackdropImagesRef.current[theme.motif];
+      const key = `${theme.name}:${Math.round(view.width)}:${Math.round(view.height)}:${backdrop?.complete ? "art" : "gradient"}`;
       if (key !== staticBackdropKey || !staticBackdrop) {
         staticBackdropKey = key;
         staticBackdrop = makeLayer();
@@ -2076,6 +906,21 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           bg.addColorStop(1, theme.bottom);
           layer.fillStyle = bg;
           layer.fillRect(0, 0, view.width, view.height);
+          if (backdrop?.complete && backdrop.naturalWidth > 0) {
+            const scale = Math.max(view.width / backdrop.naturalWidth, view.height / backdrop.naturalHeight);
+            const width = backdrop.naturalWidth * scale;
+            const height = backdrop.naturalHeight * scale;
+            layer.globalAlpha = 1;
+            layer.drawImage(backdrop, (view.width - width) / 2, (view.height - height) / 2, width, height);
+            // Keep platforms readable in the center while retaining the deep city silhouette.
+            const veil = layer.createLinearGradient(0, 0, 0, view.height);
+            veil.addColorStop(0, "rgba(1,7,16,.05)");
+            veil.addColorStop(.45, "rgba(2,10,22,.12)");
+            veil.addColorStop(1, "rgba(0,4,12,.28)");
+            layer.globalAlpha = 1;
+            layer.fillStyle = veil;
+            layer.fillRect(0, 0, view.width, view.height);
+          }
         }
       }
       ctx.drawImage(staticBackdrop, 0, 0, view.width, view.height);
@@ -2216,7 +1061,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           color: index % 3 === 0 ? theme.warning : index % 2 ? theme.accent : theme.secondary,
           blockExplosion: style,
           size,
-          rotation: Math.random() * Math.PI * 2,
+          rotation: style === "energy-bolt" ? angle : Math.random() * Math.PI * 2,
           spin: (Math.random() - .5) * (ultra ? 16 : 10),
         });
       }
@@ -2231,7 +1076,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             vy: Math.sin(angle) * (230 + Math.random() * 75),
             life: .24 + Math.random() * .12,
             color: theme.warning,
-            blockExplosion: "solar-ray",
+            blockExplosion: style === "energy-bolt" ? "energy-bolt" : "solar-ray",
             size: 14 + Math.random() * 7,
             rotation: angle,
             spin: 0,
@@ -2367,9 +1212,18 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const standingTile = world.tiles.find((tile) => tileIsActive(tile, world.fxTime)
         && p.x + PLAYER_W - 7 > tile.x && p.x + 7 < tile.x + TILE && Math.abs(p.y + PLAYER_H - tile.y) < 5);
       if (standingTile?.mode === "moving") p.x += standingTile.x - standingTile.previousX;
-      const glide = standingTile?.mode === "ice" ? 0.08 : 0.002;
+      const elementalIntensity = .45 + levelProgress(p.y) * .55;
+      const elementalWave = Math.sin(world.fxTime * (world.sector === 13 ? 1.35 : 1.05) + world.sector * 1.7);
+      const wetActive = world.sector === 12 && elementalWave > -.1;
+      const windActive = world.sector === 13 && elementalWave > .32;
+      const heatActive = world.sector === 11 && elementalWave > .48;
+      const earthActive = world.sector === 14 && elementalWave > .62;
+      const glide = standingTile?.mode === "ice" ? 0.08 : wetActive ? .12 : 0.002;
       p.vx = input.left ? -MOVE_SPEED : input.right ? MOVE_SPEED : p.vx * Math.pow(glide, dt);
       if (difficultyLevel !== "easy" && levelRule.drift && !input.left && !input.right) p.vx += levelRule.drift * dt;
+      if (windActive && !input.left && !input.right) p.vx += Math.sign(Math.sin(world.fxTime * .36)) * 42 * elementalIntensity * dt;
+      if (heatActive && !p.grounded) p.vy -= 42 * elementalIntensity * dt;
+      if (earthActive) world.shake = Math.max(world.shake, 1.4 + elementalIntensity * 1.2);
       if (p.vx) p.facing = Math.sign(p.vx);
       const activelyMoving = input.left || input.right || !p.grounded || Math.abs(p.vx) > 18;
       p.idleTime = activelyMoving || input.attack || input.jump ? 0 : p.idleTime + dt;
@@ -2454,32 +1308,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           && p.y + PLAYER_H > chest.y
           && p.y < chest.y + 30;
         if (!intersects) continue;
-        chest.opened = true;
-        if (chest === world.roamingChest) {
-          world.collectedRoamingChestSectors[world.sector - 1] = true;
-          world.roamingChest = null;
-          world.roamingChestTimer = 0;
-        }
-        const reward = applyPowerUp(chest.powerUp, {
-          lives: world.lives,
-          shield: p.shield,
-          overdrive: p.overdrive,
-          score: world.score,
-        }, difficulty.score);
-        world.lives = reward.lives;
-        world.score = reward.score;
-        p.shield = reward.shield;
-        p.overdrive = reward.overdrive;
-        if (reward.message === "shield") world.powerUpMessage = isDe ? "SCHUTZSCHILD AKTIV" : "SHIELD ACTIVE";
-        else if (reward.message === "life") world.powerUpMessage = isDe ? "EXTRALEBEN ERHALTEN" : "EXTRA LIFE ACQUIRED";
-        else if (reward.message === "life-full") world.powerUpMessage = `${isDe ? "LEBEN VOLL" : "LIVES FULL"} // +${reward.awardedScore}`;
-        else if (reward.message === "score") world.powerUpMessage = `${isDe ? "DATENBONUS" : "DATA BONUS"} // +${reward.awardedScore}`;
-        else world.powerUpMessage = isDe ? "EISPICKEL-OVERDRIVE // 12 SEKUNDEN" : "ICE PICK OVERDRIVE // 12 SECONDS";
-        world.powerUpMessageTime = 2.5;
-        world.shake = 5;
-        audioRef.current?.powerUp();
-        burst(world, chest.x + 19, chest.y + 14, chest.powerUp === "shield" ? "#72ffef" : "#ffd84d", 24);
+        world.status = "chestChoice";
+        setPendingChest(chest);
         syncHud(world);
+        break;
       }
 
       if (p.attack > 0) {
@@ -2582,22 +1414,23 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           const shotSpeeds = [70, 92, 62, 156, 86, 122, 74, 118, 174, 102];
           const shotArcs = [115, 92, -42, 62, -108, 138, -78, 24, 172, -18];
           enemy.attackTimer = (difficultyLevel === "easy" ? 2.6 : 1) * Math.max(1.15, 2.45 - Math.min(0.72, world.sector * 0.05) - bossPhase * 0.24);
-          const shotCount = difficultyLevel === "easy" ? 1 : Math.min(4, shotCounts[bossMode] + (bossPhase === 2 ? 1 : 0));
+          const baseShotCount = shotCounts[bossMode] ?? 2;
+          const baseShotSpeed = shotSpeeds[bossMode] ?? 116;
+          const baseShotArc = shotArcs[bossMode] ?? -32;
+          const shotCount = difficultyLevel === "easy" ? 1 : Math.min(4, baseShotCount + (bossPhase === 2 ? 1 : 0));
           for (let shot = 0; shot < shotCount; shot += 1) {
             const aimed = bossMode === 1 || bossMode === 5 || bossMode === 8;
             const direction = aimed ? Math.sign(p.x - enemy.x) || 1 : shotCount === 1 ? (bossMode % 2 === 0 ? -1 : 1) : shot - (shotCount - 1) / 2;
             world.particles.push({
               x: enemy.x + 19,
               y: enemy.y + 8,
-              vx: direction * (shotSpeeds[bossMode] + world.sector * 6 + bossPhase * 18) * (difficultyLevel === "easy" ? 0.45 : 1),
-              vy: shotArcs[bossMode] + shot * 34,
+              vx: direction * (baseShotSpeed + world.sector * 6 + bossPhase * 18) * (difficultyLevel === "easy" ? 0.45 : 1),
+              vy: baseShotArc + shot * 34,
               life: 3.2,
-              color: "#ff2b8a",
+              color: themeColor(world.sector, "warning"),
               hazard: "boss",
             });
           }
-          world.powerUpMessage = isDe ? "WÄCHTER-ANGRIFF" : "GUARDIAN ATTACK";
-          world.powerUpMessageTime = 0.7;
           burst(world, enemy.x + 19, enemy.y + 12, themeColor(world.sector, "warning"), 10 + world.sector);
         } else if (!enemy.guardian && enemyArchetype === 1 && enemy.grounded && enemy.attackTimer <= 0) {
           enemy.vy = -260 - world.sector * 8;
@@ -2752,6 +1585,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const ultraActive = qualityRef.current === "ultra" && !ultraFallbackRef.current;
       const mobileHigh = qualityRef.current === "high" && window.matchMedia("(pointer: coarse)").matches;
       const theme = LEVEL_THEMES[Math.max(0, world.sector - 1)] || LEVEL_THEMES[0];
+      const cinematicBackdrop = Boolean(levelBackdropImagesRef.current[theme.motif]?.complete);
       const sx = canvas.width / view.width;
       const sy = canvas.height / view.height;
       ctx.setTransform(sx, 0, 0, sy, 0, 0);
@@ -2766,199 +1600,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       // decorative panorama. Desktop Low is a performance mode, not a
       // 30-FPS-limited version of the full Ultra background.
       if (settings.layers > 0 && !(benchmarkMode && benchmarkVariant === "background-off")) {
-      // Each level has a distinct animated skyline signature.
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      ctx.strokeStyle = theme.accent;
-      ctx.fillStyle = theme.secondary;
-      ctx.lineWidth = 1.4;
-      const pulse = world.fxTime;
-      if (theme.motif === 0) {
-        // Neon Undercity: deep shafts, service pipes and fast maglev traffic.
-        ctx.globalAlpha = 0.24;
-        for (let i = 0; i < 12; i++) {
-          const x = (i * 113 - world.cameraX * 0.08) % (view.width + 80) - 40;
-          ctx.fillRect(x, 0, 5 + (i % 3) * 3, view.height);
-          ctx.fillRect(x - 18, 72 + (i * 47) % (view.height - 90), 62, 3);
-        }
-        for (let i = 0; i < 7; i++) {
-          const x = (i * 171 + pulse * 95) % (view.width + 180) - 90;
-          const y = 52 + (i * 73) % Math.max(100, view.height - 100);
-          ctx.fillStyle = i % 2 ? theme.secondary : theme.accent;
-          ctx.fillRect(x, y, 74, 3);
-          ctx.fillRect(x + 69, y - 2, 9, 7);
-        }
-      } else if (theme.motif === 1) {
-        // Chrome Bazaar: hanging signs, market canopies and floating lanterns.
-        for (let i = 0; i < 10; i++) {
-          const x = (i * 131 - world.cameraX * 0.12) % (view.width + 100) - 50;
-          const y = 45 + (i * 79) % Math.max(130, view.height - 120);
-          const width = 56 + (i % 3) * 20;
-          ctx.globalAlpha = 0.16 + (Math.sin(pulse * 2.4 + i) + 1) * 0.06;
-          ctx.fillStyle = i % 2 ? theme.secondary : theme.accent;
-          ctx.fillRect(x, y, width, 22);
-          ctx.strokeRect(x - 3, y - 3, width + 6, 28);
-          ctx.beginPath();
-          ctx.arc(x + width / 2, y - 18 - Math.sin(pulse * 1.7 + i) * 5, 5 + (i % 2) * 3, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      } else if (theme.motif === 2) {
-        // Toxic Transit: tunnel ribs, moving train windows and rising gas.
-        ctx.globalAlpha = 0.2;
-        for (let rib = 0; rib < 8; rib++) {
-          const radius = 90 + rib * 65;
-          ctx.beginPath();
-          ctx.arc(view.width / 2, view.height + 35, radius, Math.PI, Math.PI * 2);
-          ctx.stroke();
-        }
-        ctx.fillStyle = theme.accent;
-        for (let i = 0; i < 11; i++) {
-          const x = (i * 96 - pulse * 115) % (view.width + 120) - 60;
-          ctx.fillRect(x, view.height * 0.62, 55, 18);
-          ctx.fillStyle = i % 2 ? theme.secondary : theme.accent;
-        }
-        for (let i = 0; i < 18; i++) {
-          ctx.beginPath();
-          ctx.arc((i * 83 + pulse * 17) % view.width, view.height - ((i * 61 + pulse * 34) % view.height), 3 + (i % 5) * 3, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      } else if (theme.motif === 3) {
-        // Crimson Firewall: pulsing data walls and upward-flying embers.
-        ctx.globalAlpha = 0.22;
-        for (let i = 0; i < 15; i++) {
-          const x = i * (view.width / 14);
-          const opening = 45 + (Math.sin(pulse * 2.8 + i) + 1) * 28;
-          ctx.fillRect(x, 0, 4, view.height - opening);
-          ctx.fillRect(x + 7, opening + 24, 2, view.height - opening - 24);
-        }
-        for (let i = 0; i < 30; i++) {
-          const x = (i * 47 + Math.sin(i) * 35) % view.width;
-          const y = view.height - ((i * 29 + pulse * (75 + i % 5 * 17)) % view.height);
-          ctx.fillStyle = i % 3 ? theme.accent : theme.warning;
-          ctx.fillRect(x, y, 2, 8 + i % 9);
-        }
-      } else if (theme.motif === 4) {
-        // Azure Data Sea: layered waves, bubbles and luminous data jellyfish.
-        ctx.globalAlpha = 0.25;
-        for (let band = 0; band < 7; band++) {
-          ctx.beginPath();
-          for (let x = 0; x <= view.width; x += 18) {
-            const y = 55 + band * 72 + Math.sin(x * 0.021 + pulse * (1.3 + band * 0.08) + band) * (10 + band * 2);
-            if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
-        }
-        for (let i = 0; i < 9; i++) {
-          const x = (i * 127 + Math.sin(pulse + i) * 42) % view.width;
-          const y = view.height - ((i * 71 + pulse * 24) % (view.height + 80));
-          ctx.beginPath(); ctx.arc(x, y, 11 + i % 4 * 4, Math.PI, 0); ctx.stroke();
-          for (let arm = -1; arm <= 1; arm++) {
-            ctx.beginPath(); ctx.moveTo(x + arm * 7, y); ctx.lineTo(x + arm * 10 + Math.sin(pulse * 2 + i) * 4, y + 26); ctx.stroke();
-          }
-        }
-      } else if (theme.motif === 5) {
-        // Violet Reactor: rotating containment rings and an unstable core.
-        const cx = view.width * 0.5;
-        const cy = view.height * 0.48;
-        const core = ctx.createRadialGradient(cx, cy, 4, cx, cy, 125);
-        core.addColorStop(0, theme.warning);
-        core.addColorStop(0.2, theme.secondary);
-        core.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.globalAlpha = 0.22;
-        ctx.fillStyle = core;
-        ctx.fillRect(cx - 140, cy - 140, 280, 280);
-        for (let i = 0; i < 8; i++) {
-          ctx.beginPath();
-          ctx.ellipse(cx, cy, 42 + i * 34, 20 + i * 18, pulse * (i % 2 ? 0.22 : -0.17) + i, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-        for (let i = 0; i < 6; i++) {
-          const angle = pulse * 1.8 + i * Math.PI / 3;
-          ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(angle) * 220, cy + Math.sin(angle) * 135); ctx.stroke();
-        }
-      } else if (theme.motif === 6) {
-        // Solar Megagrid: blazing sun, heat shimmer and moving panel arrays.
-        const sun = ctx.createRadialGradient(view.width * 0.72, view.height * 0.28, 8, view.width * 0.72, view.height * 0.28, 210);
-        sun.addColorStop(0, theme.warning);
-        sun.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = sun;
-        ctx.fillRect(0, 0, view.width, view.height);
-        for (let row = 0; row < 6; row++) {
-          for (let col = 0; col < 9; col++) {
-            const x = col * 128 - ((world.cameraX * 0.08 + row * 47) % 128);
-            const y = view.height * 0.48 + row * 55 + Math.sin(pulse * 1.5 + col) * 3;
-            ctx.fillStyle = (col + row) % 2 ? theme.accent : theme.secondary;
-            ctx.fillRect(x, y, 82, 28);
-            ctx.strokeRect(x, y, 82, 28);
-          }
-        }
-      } else if (theme.motif === 7) {
-        // Ghost Network: broken packet streams and flickering phantom nodes.
-        ctx.globalAlpha = 0.21;
-        for (let i = 0; i < 28; i++) {
-          const x = (i * 67 + Math.sin(pulse * 1.7 + i) * 45) % view.width;
-          const y = (i * 97 + pulse * (38 + i % 4 * 11)) % view.height;
-          ctx.fillRect(x, y, 2, 18 + (i % 7) * 7);
-          if (i % 3 === 0) ctx.fillRect(x - 22, y + 8, 46, 1);
-        }
-        ctx.globalAlpha = 0.1 + (Math.sin(pulse * 9) + 1) * 0.05;
-        for (let i = 0; i < 5; i++) {
-          const x = 100 + i * 190 + Math.sin(pulse + i) * 30;
-          const y = 100 + (i * 83) % 330;
-          ctx.beginPath(); ctx.arc(x, y, 28, Math.PI, 0); ctx.lineTo(x + 28, y + 52); ctx.lineTo(x - 28, y + 52); ctx.closePath(); ctx.stroke();
-        }
-      } else if (theme.motif === 8) {
-        // Quantum Rift: rotating singularity with warped star trails.
-        const cx = view.width * 0.52;
-        const cy = view.height * 0.44;
-        ctx.globalAlpha = 0.25;
-        for (let arm = 0; arm < 7; arm++) {
-          ctx.beginPath();
-          for (let i = 0; i < 22; i++) {
-            const radius = 12 + i * 15;
-            const angle = pulse * 0.28 + arm * 0.9 + i * 0.19;
-            const x = cx + Math.cos(angle) * radius;
-            const y = cy + Math.sin(angle) * radius * 0.58;
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
-        }
-        for (let i = 0; i < 45; i++) {
-          const angle = i * 2.399 + pulse * 0.08;
-          const radius = 65 + (i * 47) % 370;
-          ctx.fillRect(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius * 0.62, 2 + i % 3, 2 + i % 3);
-        }
-      } else {
-        // Skybreak Apex: dawn above the clouds and the transmission beacon.
-        const horizon = view.height * 0.55;
-        const dawn = ctx.createRadialGradient(view.width / 2, horizon, 8, view.width / 2, horizon, 310);
-        dawn.addColorStop(0, theme.warning);
-        dawn.addColorStop(0.35, theme.secondary);
-        dawn.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = dawn;
-        ctx.fillRect(0, 0, view.width, view.height);
-        for (let i = 0; i < 24; i++) {
-          const angle = (Math.PI * 2 * i) / 24 + pulse * 0.025;
-          ctx.beginPath();
-          ctx.moveTo(view.width / 2, horizon);
-          ctx.lineTo(view.width / 2 + Math.cos(angle) * view.width, horizon + Math.sin(angle) * view.height);
-          ctx.stroke();
-        }
-        ctx.globalAlpha = 0.24;
-        for (let i = 0; i < 10; i++) {
-          const x = (i * 137 + pulse * (8 + i % 3 * 4)) % (view.width + 220) - 110;
-          const y = horizon + 35 + (i % 3) * 42;
-          ctx.beginPath(); ctx.ellipse(x, y, 90 + i % 4 * 18, 20 + i % 3 * 7, 0, 0, Math.PI * 2); ctx.fill();
-        }
-        ctx.globalAlpha = 0.42;
-        ctx.fillStyle = theme.accent;
-        ctx.fillRect(view.width / 2 - 4, 45, 8, horizon - 45);
-        ctx.fillRect(view.width / 2 - 58, 86, 116, 3);
-      }
-      ctx.restore();
-
+      drawLevelBackgroundAnimation(ctx, theme, view, world.fxTime, world.cameraX);
       // Ultra draws its moving shafts, bloom, rain, and grid in the WebGPU
       // overlay. Keep the Canvas 2D version only for lower graphics levels.
       if (!ultraActive && settings.layers > 0) {
@@ -2986,7 +1628,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       // Distant air traffic gives the skyline depth without bitmap assets.
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      const trafficCount = [0, 1, 6, 9].includes(theme.motif) ? settings.traffic : 0;
+      const trafficCount = ![1, 6].includes(theme.motif) && [0, 1, 6, 9].includes(theme.motif) ? settings.traffic : 0;
       for (let i = 0; i < trafficCount; i++) {
         const speed = 18 + (i % 5) * 8;
         const x = (i * 151 + world.fxTime * speed) % (view.width + 120) - 60;
@@ -3001,7 +1643,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       ctx.restore();
 
       ctx.save();
-      const skylineLayers = [0, 1, 3, 6, 9].includes(theme.motif) ? settings.layers : 0;
+      const skylineLayers = !cinematicBackdrop && [0, 1, 3, 6, 9].includes(theme.motif) ? settings.layers : 0;
       for (let layer = 0; layer < skylineLayers; layer++) {
         const alpha = 0.18 + layer * 0.13;
         const scale = 0.72 + layer * 0.22;
@@ -3037,7 +1679,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       // Animated holographic billboards in the middle distance.
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      const billboardCount = [0, 1, 3].includes(theme.motif) ? 3 : 0;
+      const billboardCount = !cinematicBackdrop && [0, 1, 3].includes(theme.motif) ? 3 : 0;
       for (let i = 0; i < billboardCount; i++) {
         const bx = 80 + ((i * 337 - world.cameraX * 0.14) % Math.max(300, view.width - 120));
         const by = view.height * (0.26 + i * 0.16) + ((-world.cameraY * 0.045) % 70);
@@ -3057,7 +1699,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
       // Ultra rain is rendered in WebGPU. Mobile High uses a cached Canvas
       // layer, while the remaining quality levels retain the Canvas version.
-      if (ultraActive) {
+      if (ultraActive && ![1, 6].includes(theme.motif)) {
         // WebGPU overlay owns the atmospheric rain on this path.
       } else if (mobileHigh) {
         drawMobileRain(world, theme, settings);
@@ -3079,7 +1721,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.restore();
       }
 
-      if (!ultraActive && settings.layers > 0 && [0, 3, 6].includes(theme.motif)) {
+      if (!cinematicBackdrop && !ultraActive && settings.layers > 0 && [0, 3, 6].includes(theme.motif)) {
         ctx.strokeStyle = theme.accent;
         ctx.globalAlpha = 0.08;
         ctx.lineWidth = 1;
@@ -3111,6 +1753,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ["#4d7375", "#10282b", "#041011"],
         ["#574986", "#17143d", "#070518"],
         ["#778da3", "#173449", "#06121d"],
+        ["#9b361b", "#401007", "#140302"],
+        ["#2877a5", "#082b55", "#020a18"],
+        ["#7ebfc6", "#1e5265", "#06131c"],
+        ["#557045", "#1c311d", "#050c06"],
       ][theme.motif];
       const platformShape = (target: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) => {
         target.beginPath();
@@ -3135,15 +1781,23 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             target.moveTo(x + 5, y); target.lineTo(x + width - 2, y + 4); target.lineTo(x + width - 12, y + height); target.lineTo(x + 14, y + height - 3); target.lineTo(x, y + 12); break;
           case 8: // Quantum rift: arrowhead prism.
             target.moveTo(x + 12, y); target.lineTo(x + width, y + height / 2); target.lineTo(x + 12, y + height); target.lineTo(x, y + height - 5); target.lineTo(x + 15, y + height / 2); target.lineTo(x, y + 5); break;
-          default: // Skybreak apex: crown-shaped summit plate.
+          case 9: // Skybreak apex: crown-shaped summit plate.
             target.moveTo(x, y + 7); target.lineTo(x + 12, y); target.lineTo(x + width * 0.5, y + 5); target.lineTo(x + width - 12, y); target.lineTo(x + width, y + 7); target.lineTo(x + width - 7, y + height); target.lineTo(x + 7, y + height); break;
+          case 10: // Inferno: heavy molten forge plate.
+            target.moveTo(x, y + 5); target.lineTo(x + width, y + 2); target.lineTo(x + width - 6, y + height); target.lineTo(x + 8, y + height); target.lineTo(x + 3, y + 13); break;
+          case 11: // Abyss: flowing coral-server shelf.
+            target.moveTo(x, y + 9); target.quadraticCurveTo(x + width * .24, y - 4, x + width * .48, y + 8); target.quadraticCurveTo(x + width * .74, y + 21, x + width, y + 4); target.lineTo(x + width - 5, y + height); target.lineTo(x + 5, y + height); break;
+          case 12: // Air: swept aero-alloy wing.
+            target.moveTo(x + 8, y); target.lineTo(x + width - 4, y + 6); target.lineTo(x + width - 14, y + height); target.lineTo(x + 6, y + height - 3); target.lineTo(x, y + 10); break;
+          default: // Earth: geode-bastion facet.
+            target.moveTo(x + 7, y); target.lineTo(x + width - 8, y + 2); target.lineTo(x + width, y + 11); target.lineTo(x + width - 12, y + height); target.lineTo(x + 13, y + height); target.lineTo(x, y + 12); break;
         }
         target.closePath();
       };
       const spriteCacheEnabled = true;
       const platformScale = Math.max(1, Math.min(4, canvas.width / Math.max(1, view.width)));
       const getPlatformSurface = (cracked: boolean, glow: string) => {
-        const key = `${theme.motif}:${cracked ? "cracked" : "solid"}:${platformScale}`;
+        const key = `${theme.motif}:${cracked ? "cracked" : "solid"}:${glow}:${platformScale}`;
         const cached = platformSurfaceCache.get(key);
         if (cached) return cached;
         const surface = makeLayer();
@@ -3152,11 +1806,18 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         const layer = surface.getContext("2d");
         if (!layer) return surface;
         layer.scale(platformScale, platformScale);
-        const underside = layer.createLinearGradient(0, 16, 0, 40);
-        underside.addColorStop(0, platformMaterials[1]); underside.addColorStop(1, platformMaterials[2]);
-        layer.fillStyle = underside;
-        layer.beginPath(); layer.moveTo(5, 15); layer.lineTo(TILE - 5, 15); layer.lineTo(TILE - 11, 36); layer.lineTo(11, 36); layer.closePath(); layer.fill();
-        layer.strokeStyle = "rgba(95,132,164,.28)"; layer.stroke();
+        // Compact 2.5D floating slab: the front and side faces are deliberately
+        // short, so every tile reads as its own hovering solid instead of a
+        // long hanging wedge.
+        const frontFace = layer.createLinearGradient(0, 16, 0, 31);
+        frontFace.addColorStop(0, platformMaterials[1]); frontFace.addColorStop(1, platformMaterials[2]);
+        layer.fillStyle = frontFace;
+        layer.beginPath(); layer.moveTo(5, 16); layer.lineTo(TILE - 5, 16); layer.lineTo(TILE - 9, 31); layer.lineTo(9, 31); layer.closePath(); layer.fill();
+        const sideFace = layer.createLinearGradient(TILE - 13, 6, TILE, 31);
+        sideFace.addColorStop(0, platformMaterials[0]); sideFace.addColorStop(1, platformMaterials[2]);
+        layer.fillStyle = sideFace;
+        layer.beginPath(); layer.moveTo(TILE - 5, 7); layer.lineTo(TILE, 11); layer.lineTo(TILE - 9, 31); layer.lineTo(TILE - 13, 23); layer.closePath(); layer.fill();
+        layer.strokeStyle = "rgba(185,232,255,.22)"; layer.lineWidth = 1; layer.stroke();
         layer.shadowBlur = ultraActive ? 0 : 19; layer.shadowColor = glow;
         platformShape(layer, 2, 0, TILE - 4, 24);
         const plate = layer.createLinearGradient(0, 0, 0, 24);
@@ -3169,7 +1830,19 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         if (!tile.alive || tile.y < world.cameraY - 80 || tile.y > world.cameraY + view.height + 50) continue;
         const phaseActive = tileIsActive(tile, world.fxTime);
         const glow = tile.mode === "rift" ? theme.secondary : tile.mode === "phase" ? theme.warning : tile.cracked ? theme.accent : theme.warning;
+        const hover = 2 + Math.sin(world.fxTime * 1.45 + tile.x * .05 + tile.y * .004) * 1.25;
         ctx.globalAlpha = phaseActive ? 1 : 0.18;
+        // Contact shadow sits behind the cached slab and gives platforms a
+        // stable depth cue without adding per-frame gradients or paths.
+        ctx.save();
+        ctx.globalAlpha *= 0.22;
+        ctx.fillStyle = "#01040a";
+        ctx.beginPath();
+        ctx.ellipse(tile.x + TILE * .56, tile.y + 38, TILE * .46, 4, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+        ctx.translate(0, -hover);
         if (spriteCacheEnabled) {
           ctx.drawImage(getPlatformSurface(tile.cracked, glow), tile.x, tile.y, TILE, 40);
         } else {
@@ -3184,15 +1857,64 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         plate.addColorStop(0, platformMaterials[0]); plate.addColorStop(0.18, platformMaterials[1]); plate.addColorStop(0.58, platformMaterials[2]); plate.addColorStop(1, "#02040a");
         ctx.fillStyle = plate; ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = glow; ctx.lineWidth = 2; ctx.stroke();
         }
+        // Water only becomes slippery while this clearly visible wet front is
+        // passing through the level. It deliberately uses the very same phase
+        // as the movement code, so the player never slides "for no reason".
+        const waterSlipActive = world.sector === 12
+          && Math.sin(world.fxTime * 1.05 + world.sector * 1.7) > -0.1;
+        if (waterSlipActive) {
+          const wetShine = 0.3 + Math.sin(world.fxTime * 4 + tile.x * 0.04) * 0.16;
+          ctx.globalAlpha = wetShine;
+          ctx.fillStyle = "#8af8ff";
+          ctx.beginPath();
+          ctx.ellipse(tile.x + TILE * .5, tile.y + 5, TILE * .38, 2.4, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.3;
+          ctx.fillStyle = "#d8ffff";
+          ctx.fillRect(tile.x + 11, tile.y + 4, TILE * .38, 1.2);
+        }
         const corePulse = 0.55 + Math.sin(world.fxTime * 5 + tile.x * 0.03) * 0.3;
-        ctx.globalAlpha = corePulse;
-        ctx.fillStyle = glow;
-        ctx.fillRect(tile.x + 8, tile.y + 6, 13, 2);
-        ctx.fillRect(tile.x + 41, tile.y + 15, 11, 2);
-        ctx.fillRect(tile.x + 25, tile.y + 9, 3, 8);
-        ctx.globalAlpha = 1;
         ctx.strokeStyle = theme.secondary;
         ctx.lineWidth = 1;
+        ctx.globalAlpha = corePulse;
+        if (theme.motif === 0) {
+          // Undercity: linked energy conductors, not a generic lightning icon.
+          ctx.strokeStyle = glow; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(tile.x + 9, tile.y + 17); ctx.lineTo(tile.x + 19, tile.y + 9); ctx.lineTo(tile.x + 30, tile.y + 16); ctx.lineTo(tile.x + 43, tile.y + 7); ctx.lineTo(tile.x + 54, tile.y + 13); ctx.stroke();
+          for (const x of [12, 30, 52]) { ctx.fillStyle = "#e9ffff"; ctx.beginPath(); ctx.arc(tile.x + x, tile.y + (x === 30 ? 16 : x === 12 ? 15 : 12), 1.5, 0, Math.PI * 2); ctx.fill(); }
+        } else if (theme.motif === 1) {
+          // Bazaar: animated holographic price glyph.
+          ctx.strokeStyle = theme.accent; ctx.strokeRect(tile.x + 20, tile.y + 5, 23, 14);
+          ctx.fillStyle = theme.secondary; ctx.fillRect(tile.x + 24, tile.y + 9, 15, 2); ctx.fillRect(tile.x + 28, tile.y + 14, 8, 2);
+        } else if (theme.motif === 2) {
+          ctx.fillStyle = theme.accent;
+          for (const [x, y, r] of [[14, 12, 2], [26, 7, 3], [38, 15, 2], [50, 10, 3]] as const) { ctx.beginPath(); ctx.arc(tile.x + x, tile.y + y + Math.sin(world.fxTime * 2 + x) * 1.5, r, 0, Math.PI * 2); ctx.fill(); }
+        } else if (theme.motif === 3) {
+          ctx.fillStyle = theme.warning;
+          for (let bar = 0; bar < 5; bar++) ctx.fillRect(tile.x + 10 + bar * 10, tile.y + 7 + (bar % 2) * 5, 6, 3);
+        } else if (theme.motif === 4) {
+          ctx.strokeStyle = theme.accent; ctx.lineWidth = 1.4;
+          for (let wave = 0; wave < 2; wave++) { ctx.beginPath(); for (let x = 8; x < 57; x += 5) { const y = tile.y + 10 + wave * 6 + Math.sin(world.fxTime * 2.4 + x * .25 + wave) * 1.7; if (x === 8) ctx.moveTo(tile.x + x, y); else ctx.lineTo(tile.x + x, y); } ctx.stroke(); }
+        } else if (theme.motif === 5) {
+          ctx.strokeStyle = theme.secondary; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(tile.x + 32, tile.y + 5); ctx.lineTo(tile.x + 42, tile.y + 12); ctx.lineTo(tile.x + 32, tile.y + 20); ctx.lineTo(tile.x + 22, tile.y + 12); ctx.closePath(); ctx.stroke(); ctx.fillStyle = theme.warning; ctx.beginPath(); ctx.arc(tile.x + 32, tile.y + 12, 2, 0, Math.PI * 2); ctx.fill();
+        } else if (theme.motif === 6) {
+          ctx.strokeStyle = theme.warning; ctx.lineWidth = 1;
+          for (let cell = 0; cell < 4; cell++) { const x = tile.x + 12 + cell * 10; ctx.strokeRect(x, tile.y + 6, 7, 12); ctx.fillStyle = "rgba(255,213,103,.34)"; ctx.fillRect(x + 1, tile.y + 7, 5, 2); }
+        } else if (theme.motif === 7) {
+          ctx.setLineDash([2, 3]); ctx.strokeStyle = theme.accent; ctx.strokeRect(tile.x + 13, tile.y + 6, 38, 12); ctx.setLineDash([]); ctx.fillStyle = theme.secondary; ctx.fillRect(tile.x + 20, tile.y + 11, 7, 2); ctx.fillRect(tile.x + 37, tile.y + 11, 6, 2);
+        } else if (theme.motif === 8) {
+          ctx.strokeStyle = theme.secondary; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(tile.x + 32, tile.y + 12, 7 + Math.sin(world.fxTime * 3 + tile.phaseOffset) * 1.5, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = theme.accent; ctx.beginPath(); ctx.arc(tile.x + 32, tile.y + 12, 2, 0, Math.PI * 2); ctx.fill();
+        } else if (theme.motif === 10) {
+          ctx.fillStyle = "#ff5c24"; for (let vent = 0; vent < 3; vent++) { ctx.beginPath(); ctx.arc(tile.x + 17 + vent * 15, tile.y + 14, 4, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = "#fff0a3"; ctx.fillRect(tile.x + 13, tile.y + 7, 38, 2);
+        } else if (theme.motif === 11) {
+          ctx.strokeStyle = "#b2fff6"; ctx.beginPath(); ctx.arc(tile.x + 21, tile.y + 12, 6, Math.PI, 0); ctx.arc(tile.x + 41, tile.y + 12, 6, Math.PI, 0); ctx.stroke(); ctx.fillStyle = "rgba(34,220,255,.55)"; ctx.fillRect(tile.x + 11, tile.y + 16, 42, 2);
+        } else if (theme.motif === 12) {
+          ctx.strokeStyle = "#cdefff"; ctx.beginPath(); ctx.moveTo(tile.x + 10, tile.y + 15); ctx.quadraticCurveTo(tile.x + 28, tile.y + 4, tile.x + 54, tile.y + 11); ctx.stroke(); ctx.fillStyle = "#75fff3"; ctx.fillRect(tile.x + 25, tile.y + 9, 14, 2);
+        } else if (theme.motif === 13) {
+          ctx.strokeStyle = "#64f09a"; ctx.beginPath(); ctx.moveTo(tile.x + 16, tile.y + 18); ctx.lineTo(tile.x + 26, tile.y + 6); ctx.lineTo(tile.x + 35, tile.y + 17); ctx.lineTo(tile.x + 47, tile.y + 5); ctx.stroke(); ctx.fillStyle = "#f0ba52"; ctx.beginPath(); ctx.arc(tile.x + 32, tile.y + 12, 3, 0, Math.PI * 2); ctx.fill();
+        } else {
+          ctx.fillStyle = theme.warning; ctx.fillRect(tile.x + 29, tile.y + 5, 6, 14); ctx.fillRect(tile.x + 20, tile.y + 10, 24, 3); ctx.fillStyle = "rgba(255,255,255,.78)"; ctx.fillRect(tile.x + 31, tile.y + 7, 2, 10);
+        }
         ctx.globalAlpha = 0.45;
         if (theme.platform === "cryo-steel") {
           for (let rivet = 0; rivet < 4; rivet++) { ctx.beginPath(); ctx.arc(tile.x + 12 + rivet * 14, tile.y + 12, 2, 0, Math.PI * 2); ctx.stroke(); }
@@ -3214,8 +1936,32 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.fillStyle = "rgba(225,249,255,.48)";
         ctx.fillRect(tile.x + 9, tile.y + 2, TILE - 19, 1);
         if (tile.cracked) {
-          ctx.strokeStyle = "rgba(177,247,255,.75)";
-          ctx.beginPath(); ctx.moveTo(tile.x + 31, tile.y + 2); ctx.lineTo(tile.x + 26, tile.y + 10); ctx.lineTo(tile.x + 35, tile.y + 16); ctx.lineTo(tile.x + 29, tile.y + 23); ctx.stroke();
+          ctx.strokeStyle = theme.accent;
+          ctx.lineWidth = 1.15;
+          ctx.globalAlpha = .78;
+          switch (theme.motif) {
+            case 0: // Split circuit traces.
+              ctx.beginPath(); ctx.moveTo(tile.x + 13, tile.y + 4); ctx.lineTo(tile.x + 22, tile.y + 9); ctx.lineTo(tile.x + 19, tile.y + 17); ctx.moveTo(tile.x + 45, tile.y + 4); ctx.lineTo(tile.x + 39, tile.y + 12); ctx.lineTo(tile.x + 47, tile.y + 20); break;
+            case 1: // Fractured market display frame.
+              ctx.strokeStyle = theme.secondary; ctx.strokeRect(tile.x + 17, tile.y + 5, 28, 13); ctx.beginPath(); ctx.moveTo(tile.x + 31, tile.y + 5); ctx.lineTo(tile.x + 28, tile.y + 18); break;
+            case 2: // Corrosion pits and a dripping split.
+              ctx.beginPath(); ctx.arc(tile.x + 26, tile.y + 10, 4, 0, Math.PI * 2); ctx.moveTo(tile.x + 38, tile.y + 5); ctx.quadraticCurveTo(tile.x + 34, tile.y + 13, tile.x + 40, tile.y + 20); break;
+            case 3: // Broken firewall bars.
+              ctx.strokeStyle = theme.warning; for (const x of [17, 29, 41]) { ctx.beginPath(); ctx.moveTo(tile.x + x, tile.y + 5); ctx.lineTo(tile.x + x - 4, tile.y + 12); ctx.moveTo(tile.x + x + 2, tile.y + 15); ctx.lineTo(tile.x + x - 2, tile.y + 20); } break;
+            case 4: // A torn data wave.
+              ctx.beginPath(); for (let x = 10; x < 55; x += 5) { const y = tile.y + 12 + Math.sin(x * .35) * 3 + (x > 31 ? 4 : 0); if (x === 10) ctx.moveTo(tile.x + x, y); else ctx.lineTo(tile.x + x, y); } break;
+            case 5: // Crystal fracture facets.
+              ctx.beginPath(); ctx.moveTo(tile.x + 32, tile.y + 3); ctx.lineTo(tile.x + 24, tile.y + 12); ctx.lineTo(tile.x + 32, tile.y + 21); ctx.lineTo(tile.x + 41, tile.y + 11); ctx.closePath(); break;
+            case 6: // One damaged photovoltaic cell.
+              ctx.strokeStyle = theme.warning; ctx.strokeRect(tile.x + 26, tile.y + 5, 10, 15); ctx.beginPath(); ctx.moveTo(tile.x + 27, tile.y + 7); ctx.lineTo(tile.x + 35, tile.y + 18); ctx.stroke(); break;
+            case 7: // Ghost packet dropout.
+              ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(tile.x + 13, tile.y + 8); ctx.lineTo(tile.x + 27, tile.y + 8); ctx.moveTo(tile.x + 35, tile.y + 16); ctx.lineTo(tile.x + 51, tile.y + 16); ctx.stroke(); ctx.setLineDash([]); break;
+            case 8: // Rift ring separation.
+              ctx.strokeStyle = theme.secondary; ctx.beginPath(); ctx.arc(tile.x + 32, tile.y + 12, 8, .25, Math.PI * .78); ctx.moveTo(tile.x + 32, tile.y + 4); ctx.lineTo(tile.x + 32, tile.y + 20); break;
+            default: // Apex beacon panel split.
+              ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.beginPath(); ctx.moveTo(tile.x + 18, tile.y + 7); ctx.lineTo(tile.x + 32, tile.y + 12); ctx.lineTo(tile.x + 46, tile.y + 7); ctx.moveTo(tile.x + 32, tile.y + 12); ctx.lineTo(tile.x + 32, tile.y + 21); break;
+          }
+          ctx.stroke();
         }
         if (tile.mode === "rift") {
           ctx.globalAlpha = 0.9;
@@ -3240,6 +1986,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.strokeRect(tile.x + 6, tile.y + 4, TILE - 12, 16);
         }
         ctx.globalAlpha = 1;
+        ctx.restore();
       }
 
       for (const objective of world.objectives) {
@@ -3281,7 +2028,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255,214,117,.72)"; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(8, 5); ctx.lineTo(8, 29); ctx.moveTo(30, 5); ctx.lineTo(30, 29); ctx.stroke();
         if (!chest.opened) {
-          const lockColor = chest.powerUp === "shield" ? "#72ffef" : chest.powerUp === "life" ? "#ff5b95" : chest.powerUp === "score" ? "#ffd84d" : "#c65cff";
+          const lockColor = chest.powerUp === "shield" ? "#72ffef" : chest.powerUp === "life" ? "#ff5b95" : chest.powerUp === "score" || chest.powerUp === "jackpot" ? "#ffd84d" : chest.powerUp === "repair" ? "#84fff2" : chest.powerUp === "phase" ? "#9c6bff" : "#c65cff";
           ctx.fillStyle = lockColor; ctx.shadowBlur = ultraActive ? 0 : 12; ctx.shadowColor = lockColor; roundedRect(ctx, 15, 12, 8, 9, 2); ctx.fill();
         }
         if (chest === world.roamingChest && !chest.opened) {
@@ -3302,6 +2049,15 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.save();
         ctx.translate(enemy.x + 19, enemy.y + 16);
         if (enemy.guardian) ctx.scale(1.65, 1.65);
+        // A compressed contact shadow anchors hovering robots in the same
+        // perspective as the extruded platforms.
+        ctx.save();
+        ctx.globalAlpha = enemy.guardian ? .28 : .2;
+        ctx.fillStyle = "#01040a";
+        ctx.beginPath();
+        ctx.ellipse(4, 23, enemy.guardian ? 23 : 15, enemy.guardian ? 5.5 : 3.8, -.12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
         const tilt = Math.max(-0.18, Math.min(0.18, enemy.vy / 900));
         ctx.rotate(tilt);
         const enemyVariant = world.sector - 1;
@@ -3477,6 +2233,17 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.restore();
       }
 
+      // Sector emitters at the upper edge telegraph the origin of falling hazards.
+      if (difficultiesRef.current[world.sector - 1] !== "easy") {
+        ctx.save();
+        ctx.globalAlpha = .68;
+        for (const x of [VIEW_W * .18, VIEW_W * .5, VIEW_W * .82]) {
+          ctx.fillStyle = theme.motif === 2 ? "#72ff4d" : theme.motif === 6 ? "#ffd84d" : theme.accent;
+          ctx.beginPath(); ctx.arc(x, world.cameraY + 18, 10, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#07111b"; ctx.fillRect(x - 5, world.cameraY + 14, 10, 5);
+        }
+        ctx.restore();
+      }
       for (const particle of world.particles) {
         ctx.globalAlpha = Math.min(1, particle.life * 2);
         ctx.fillStyle = particle.color;
@@ -3492,6 +2259,26 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.strokeStyle = particle.color;
           ctx.lineWidth = ultraActive ? 1.2 : 1;
           switch (particle.blockExplosion) {
+            case "energy-bolt":
+              ctx.globalAlpha *= .92;
+              ctx.strokeStyle = particle.color;
+              ctx.lineWidth = Math.max(1.2, size * .22);
+              ctx.beginPath();
+              ctx.moveTo(0, size * 1.1);
+              ctx.lineTo(size * .26, size * .22);
+              ctx.lineTo(-size * .2, -size * .05);
+              ctx.lineTo(size * .48, -size * 1.2);
+              ctx.stroke();
+              ctx.globalAlpha *= .56;
+              ctx.strokeStyle = "#e9ffff";
+              ctx.lineWidth = Math.max(.7, size * .09);
+              ctx.beginPath();
+              ctx.moveTo(0, size * 1.05);
+              ctx.lineTo(size * .23, size * .2);
+              ctx.lineTo(-size * .15, -size * .05);
+              ctx.lineTo(size * .43, -size * 1.15);
+              ctx.stroke();
+              break;
             case "cryo-shard":
             case "plasma-crystal":
               ctx.beginPath(); ctx.moveTo(0, -size); ctx.lineTo(size * .62, size); ctx.lineTo(-size * .62, size); ctx.closePath(); ctx.fill();
@@ -3522,6 +2309,18 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             case "apex-star":
               ctx.beginPath(); ctx.moveTo(0, -size); ctx.lineTo(size * .3, -size * .3); ctx.lineTo(size, 0); ctx.lineTo(size * .3, size * .3); ctx.lineTo(0, size); ctx.lineTo(-size * .3, size * .3); ctx.lineTo(-size, 0); ctx.lineTo(-size * .3, -size * .3); ctx.closePath(); ctx.fill();
               break;
+            case "magma-burst":
+              ctx.fillStyle = "#ff5c24"; ctx.beginPath(); ctx.arc(0, 0, size * .72, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fff0a3"; ctx.beginPath(); ctx.arc(0, 0, size * .28, 0, Math.PI * 2); ctx.fill();
+              break;
+            case "bubble-spray":
+              ctx.globalAlpha *= .74; ctx.strokeStyle = "#b2fff6"; ctx.beginPath(); ctx.arc(-size * .32, size * .18, size * .48, 0, Math.PI * 2); ctx.arc(size * .36, -size * .2, size * .32, 0, Math.PI * 2); ctx.stroke();
+              break;
+            case "wind-shard":
+              ctx.beginPath(); ctx.moveTo(-size, 0); ctx.quadraticCurveTo(0, -size * .45, size, -size * .12); ctx.quadraticCurveTo(0, size * .35, -size, 0); ctx.fill();
+              break;
+            case "geode-fragment":
+              ctx.beginPath(); ctx.moveTo(0, -size); ctx.lineTo(size * .75, -size * .2); ctx.lineTo(size * .4, size); ctx.lineTo(-size * .55, size * .65); ctx.lineTo(-size, -size * .25); ctx.closePath(); ctx.fill();
+              break;
           }
           ctx.restore();
         } else if (particle.hazard === "laser") {
@@ -3530,19 +2329,93 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.fillRect(particle.x - length / 2, particle.y - 6, length, 12);
           ctx.fillStyle = "#fff1a8";
           ctx.fillRect(particle.x - length / 2, particle.y - 1.5, length, 3);
+        } else if (particle.hazard) {
+          const size = 8 + (theme.motif % 3) * 2;
+          ctx.save(); ctx.translate(particle.x, particle.y); ctx.rotate(world.fxTime * (1.5 + theme.motif * .1));
+          ctx.fillStyle = theme.accent; ctx.strokeStyle = theme.warning; ctx.lineWidth = 1.4;
+          switch (theme.motif) {
+            case 0: ctx.beginPath(); ctx.moveTo(0, -size); ctx.lineTo(size, 0); ctx.lineTo(0, size); ctx.lineTo(-size, 0); ctx.closePath(); ctx.stroke(); break;
+            case 1: ctx.fillStyle = theme.secondary; ctx.fillRect(-size, -size / 2, size * 2, size); ctx.fillStyle = theme.accent; ctx.fillRect(-size / 2, -size / 4, size, size / 2); break;
+            case 2: ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#d9ff8a"; ctx.beginPath(); ctx.arc(-size / 3, -size / 4, 2, 0, Math.PI * 2); ctx.fill(); break;
+            case 3: ctx.fillStyle = theme.warning; ctx.fillRect(-3, -size, 6, size * 2); ctx.fillStyle = theme.accent; ctx.fillRect(-size, -2, size * 2, 4); break;
+            case 4: ctx.strokeStyle = theme.accent; ctx.beginPath(); ctx.arc(0, 0, size, Math.PI, 0); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 2, size * .65, Math.PI, 0); ctx.stroke(); break;
+            case 5: ctx.beginPath(); ctx.moveTo(0, -size); ctx.lineTo(size, 0); ctx.lineTo(0, size); ctx.lineTo(-size, 0); ctx.closePath(); ctx.fill(); break;
+            case 6: ctx.fillStyle = theme.warning; ctx.fillRect(-size, -size, size * 2, size * 2); ctx.strokeStyle = "#6d2e0c"; ctx.strokeRect(-size, -size, size * 2, size * 2); ctx.beginPath(); ctx.moveTo(0, -size); ctx.lineTo(0, size); ctx.moveTo(-size, 0); ctx.lineTo(size, 0); ctx.stroke(); break;
+            case 7: ctx.setLineDash([2, 2]); ctx.strokeRect(-size, -size, size * 2, size * 2); ctx.setLineDash([]); break;
+            case 8: ctx.strokeStyle = theme.secondary; ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = theme.accent; ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill(); break;
+            default: ctx.fillStyle = theme.warning; ctx.beginPath(); ctx.moveTo(0, -size); ctx.lineTo(size * .4, -size * .3); ctx.lineTo(size, 0); ctx.lineTo(size * .4, size * .3); ctx.lineTo(0, size); ctx.lineTo(-size * .4, size * .3); ctx.lineTo(-size, 0); ctx.lineTo(-size * .4, -size * .3); ctx.closePath(); ctx.fill(); break;
+          }
+          ctx.restore();
         } else {
-          const size = particle.color === "#ff2b8a" && particle.life > 1 ? 11 : 5;
-          ctx.fillRect(particle.x, particle.y, size, size);
+          ctx.fillRect(particle.x, particle.y, 5, 5);
         }
       }
       ctx.globalAlpha = 1;
       ctx.shadowBlur = 0;
 
       const p = world.player;
+      const elementalIntensity = .45 + levelProgress(p.y) * .55;
+      const elementalWave = Math.sin(world.fxTime * (world.sector === 13 ? 1.35 : 1.05) + world.sector * 1.7);
+      const wetActive = world.sector === 12 && elementalWave > -.1;
+      const windActive = world.sector === 13 && elementalWave > .32;
+      const heatActive = world.sector === 11 && elementalWave > .48;
+      const earthActive = world.sector === 14 && elementalWave > .62;
+      // Environmental cues are rendered before the avatar and are tied one to
+      // one to the physics phase above. The effect explains the influence,
+      // instead of adding a hidden generic penalty to every element level.
+      if (wetActive || windActive || heatActive || earthActive) {
+        ctx.save();
+        ctx.translate(p.x + PLAYER_W / 2, p.y + PLAYER_H / 2);
+        if (wetActive) {
+          ctx.globalAlpha = .35 + elementalIntensity * .22;
+          ctx.fillStyle = "#67edff";
+          ctx.beginPath(); ctx.ellipse(0, 35, 24, 3.2, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#d8ffff";
+          for (const offset of [-12, 1, 13]) { ctx.beginPath(); ctx.arc(offset, 28 + Math.sin(world.fxTime * 5 + offset) * 2, 1.8, 0, Math.PI * 2); ctx.fill(); }
+        }
+        if (windActive) {
+          const direction = Math.sign(Math.sin(world.fxTime * .36)) || 1;
+          ctx.globalAlpha = .36 + elementalIntensity * .25;
+          ctx.strokeStyle = "#d4ffff"; ctx.lineWidth = 1.7;
+          for (let streak = 0; streak < 3; streak++) {
+            const y = -18 + streak * 14;
+            const reach = 23 + streak * 8;
+            ctx.beginPath();
+            ctx.moveTo(-direction * reach, y);
+            ctx.quadraticCurveTo(0, y - 5 + Math.sin(world.fxTime * 4 + streak) * 2, direction * reach, y + 1);
+            ctx.stroke();
+          }
+        }
+        if (heatActive) {
+          ctx.globalAlpha = .32 + elementalIntensity * .25;
+          ctx.strokeStyle = "#ffad45"; ctx.lineWidth = 2;
+          for (const offset of [-13, 0, 13]) {
+            ctx.beginPath();
+            ctx.moveTo(offset, 31);
+            ctx.quadraticCurveTo(offset + Math.sin(world.fxTime * 6 + offset) * 6, 18, offset + Math.sin(world.fxTime * 5 + offset) * 4, 5);
+            ctx.stroke();
+          }
+        }
+        if (earthActive) {
+          ctx.globalAlpha = .35 + elementalIntensity * .24;
+          ctx.strokeStyle = "#dca653"; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.ellipse(0, 35, 28, 5, 0, 0, Math.PI * 2); ctx.stroke();
+          ctx.fillStyle = "#8c673c";
+          for (const offset of [-20, -8, 10, 22]) { ctx.fillRect(offset, 30 - Math.abs(Math.sin(world.fxTime * 7 + offset)) * 5, 2.5, 2.5); }
+        }
+        ctx.restore();
+      }
       if (!(p.invulnerable > 0 && Math.floor(p.invulnerable * 12) % 2 === 0)) {
         ctx.save();
         ctx.translate(p.x + PLAYER_W / 2, p.y + PLAYER_H / 2);
         ctx.scale(p.facing, 1);
+        ctx.save();
+        ctx.globalAlpha = .24;
+        ctx.fillStyle = "#01040a";
+        ctx.beginPath();
+        ctx.ellipse(4, 36, 18, 4.5, -.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
         if (p.shield > 0) {
           ctx.globalAlpha = 0.32 + Math.sin(world.fxTime * 5) * 0.08;
           ctx.fillStyle = "rgba(114,255,239,.12)";
@@ -4152,14 +3025,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   });
 
   const overlayTitle =
-    status === "ready" ? "SKYBREAK PROTOCOL" : status === "paused" ? (isDe ? "SYSTEM PAUSIERT" : "SYSTEM PAUSED") : status === "upgrade" ? (isDe ? "LEVEL GESCHAFFT" : "LEVEL COMPLETE") : status === "won" ? (sector === LEVEL_COUNT ? (isDe ? "GIPFEL ERREICHT" : "SUMMIT REACHED") : (isDe ? "LEVEL GESCHAFFT" : "LEVEL COMPLETE")) : (isDe ? "LAUF BEENDET" : "RUN TERMINATED");
+    status === "ready" ? "SKYBREAK PROTOCOL" : status === "paused" ? (isDe ? "SYSTEM PAUSIERT" : "SYSTEM PAUSED") : status === "chestChoice" ? (isDe ? "BELOHNUNG ERFASST" : "REWARD ACQUIRED") : status === "upgrade" ? (isDe ? "LEVEL GESCHAFFT" : "LEVEL COMPLETE") : status === "won" ? (sector === LEVEL_COUNT ? (isDe ? "GIPFEL ERREICHT" : "SUMMIT REACHED") : (isDe ? "LEVEL GESCHAFFT" : "LEVEL COMPLETE")) : (isDe ? "LAUF BEENDET" : "RUN TERMINATED");
   const overlayCopy =
     status === "ready"
       ? (isDe
-        ? `Zielregel: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].de}. Durchbrich 10 Cyberpunk-Level und erreiche den Sendeturm.`
+        ? `Zielregel: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].de}. Durchbrich ${LEVEL_COUNT} Cyberpunk-Level und erreiche den Sendeturm.`
         : `Level rule: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].en}. Break through 10 cyberpunk levels and reach the transmission tower.`)
       : status === "paused"
         ? (isDe ? "Die Zeit steht still. Noch." : "Time stands still. For now.")
+        : status === "chestChoice"
+          ? (isDe ? "Wähle die Belohnung, die dir für den weiteren Aufstieg am meisten hilft." : "Choose the reward that helps your ascent most.")
         : status === "upgrade"
           ? (isDe ? `Level ${sector} abgeschlossen. Wähle ein Eispickel-Upgrade für Level ${Math.min(LEVEL_COUNT, sector + 1)}.` : `Level ${sector} complete. Choose an ice-pick upgrade for level ${Math.min(LEVEL_COUNT, sector + 1)}.`)
         : status === "won"
@@ -4233,7 +3108,24 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             <p className="eyebrow">{status === "ready" ? `NIGHT CITY // 03:17 // ${APP_BUILD_CHANNEL === "dev" ? "LOCAL TEST // " : APP_BUILD_CHANNEL === "beta" ? "BETA // " : "FINAL // "}v${APP_VERSION}` : status === "upgrade" ? `PICKAXE CORE // LEVEL ${sector}` : "NEURAL LINK STATUS"}</p>
             <h1 className={status === "upgrade" ? "upgrade-title" : undefined}>{overlayTitle}</h1>
             <p>{overlayCopy}</p>
-            {status === "upgrade" ? (
+            {status === "chestChoice" ? (
+              <div className="transition-panel" style={{ "--next-accent": LEVEL_THEMES[sector - 1].accent, "--next-secondary": LEVEL_THEMES[sector - 1].secondary } as React.CSSProperties}>
+                <div className="level-transition-card">
+                  <span>{isDe ? "TRUHE GEÖFFNET" : "CHEST OPENED"}</span>
+                  <strong>{isDe ? "GOODIE WÄHLEN" : "CHOOSE A GOODIE"}</strong>
+                  <small>{isDe ? "DIE ZEIT STEHT AN, BIS DU DEINE BELohnUNG WÄHLST." : "TIME IS PAUSED UNTIL YOU CHOOSE YOUR REWARD."}</small>
+                </div>
+                <div className="upgrade-grid">
+                  <button onClick={() => chooseChestReward("shield")}><strong>{isDe ? "SCHILD" : "SHIELD"}</strong><span>{isDe ? "+1 TREFFER ABWEHREN" : "+1 HIT ABSORPTION"}</span></button>
+                  <button onClick={() => chooseChestReward("life")}><strong>{isDe ? "LEBEN" : "LIFE"}</strong><span>{isDe ? "+1 LEBEN ODER PUNKTE BEI VOLLEM VORRAT" : "+1 LIFE OR SCORE WHEN FULL"}</span></button>
+                  <button onClick={() => chooseChestReward("score")}><strong>{isDe ? "DATENBONUS" : "DATA BONUS"}</strong><span>{isDe ? "SOFORT MEHR PUNKTE" : "INSTANT SCORE BOOST"}</span></button>
+                  <button onClick={() => chooseChestReward("overdrive")}><strong>OVERDRIVE</strong><span>{isDe ? "12 SEKUNDEN MEHR EISPICKEL-KRAFT" : "12 SECONDS MORE PICKAXE POWER"}</span></button>
+                  <button onClick={() => chooseChestReward("jackpot")}><strong>JACKPOT</strong><span>{isDe ? "GROSSER DATENBONUS" : "LARGE DATA BONUS"}</span></button>
+                  <button onClick={() => chooseChestReward("repair")}><strong>{isDe ? "REPARATUR" : "REPAIR"}</strong><span>{isDe ? "EINEN SCHADEN REPARIEREN + SCHILD" : "REPAIR ONE DAMAGE + SHIELD"}</span></button>
+                  <button onClick={() => chooseChestReward("phase")}><strong>{isDe ? "PHASENPANZER" : "PHASE ARMOR"}</strong><span>{isDe ? "7 SEKUNDEN UNVERWUNDBAR" : "7 SECONDS INVULNERABLE"}</span></button>
+                </div>
+              </div>
+            ) : status === "upgrade" ? (
               <div className="transition-panel" style={{ "--next-accent": LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].accent, "--next-secondary": LEVEL_THEMES[Math.min(LEVEL_COUNT - 1, sector)].secondary } as React.CSSProperties}>
                 <div className="level-transition-card">
                   <span>{isDe ? "NÄCHSTER SEKTOR" : "NEXT SECTOR"}</span>

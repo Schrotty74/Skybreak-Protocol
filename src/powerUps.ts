@@ -1,4 +1,4 @@
-export type PowerUpKind = "shield" | "life" | "score" | "overdrive";
+export type PowerUpKind = "shield" | "life" | "score" | "overdrive" | "jackpot" | "repair" | "phase";
 export type RoamingChestDifficulty = "medium" | "hard";
 
 export type ChestSpawn = {
@@ -10,15 +10,17 @@ export type PowerUpState = {
   lives: number;
   shield: number;
   overdrive: number;
+  invulnerable: number;
+  damage: number;
   score: number;
 };
 
 export type PowerUpResult = PowerUpState & {
-  message: "shield" | "life" | "life-full" | "score" | "overdrive";
+  message: "shield" | "life" | "life-full" | "score" | "overdrive" | "jackpot" | "repair" | "phase";
   awardedScore: number;
 };
 
-const POWER_UP_ROTATION: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
+const POWER_UP_ROTATION: PowerUpKind[] = ["shield", "life", "score", "overdrive", "jackpot", "repair", "phase"];
 
 export const ROAMING_CHEST_RULES: Record<RoamingChestDifficulty, {
   unlockProgress: number;
@@ -55,8 +57,16 @@ export function applyPowerUp(kind: PowerUpKind, state: PowerUpState, scoreMultip
   } else if (kind === "score") {
     result.awardedScore = Math.round(1000 * scoreMultiplier);
     result.score += result.awardedScore;
-  } else {
+  } else if (kind === "overdrive") {
     result.overdrive = Math.max(state.overdrive, 12);
+  } else if (kind === "jackpot") {
+    result.awardedScore = Math.round(2500 * scoreMultiplier);
+    result.score += result.awardedScore;
+  } else if (kind === "repair") {
+    result.damage = Math.max(0, state.damage - 1);
+    result.shield = Math.min(2, state.shield + 1);
+  } else {
+    result.invulnerable = Math.max(state.invulnerable, 7);
   }
   return result;
 }

@@ -6,9 +6,9 @@
 
 # Skybreak Protocol
 
-**Current release:** `v1.0.1-beta.1` · [Detailed changelog](docs/releases/1.0.1-beta.1.en.md) · [All changelogs](CHANGELOG.md)
+**Current release:** `v1.0.1-beta.2` · [Detailed changelog](docs/releases/1.0.1-beta.2.en.md) · [All changelogs](CHANGELOG.md)
 
-An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through ten visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Each level has its own cyberpunk palette, animated scenery, effects, and a difficulty that carries into the next level.
+An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through fourteen visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Every level has its own theme, 2.5D platform material, animated scenery, effects, guardian, and soundtrack.
 
 > Skybreak Protocol uses no graphics, music, characters, or source code from Nintendo or Ice Climber. It is an independent reinterpretation of the classic vertical arcade concept.
 
@@ -23,11 +23,11 @@ The web app runs without installation. On iPhone or iPad, use **Share → Add to
 
 The current version is shown in the game. On startup, Skybreak Protocol checks the public GitHub releases once and displays a notice when a newer beta or final build is available.
 
-**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.1). Extract it and open the matching starter for macOS, Windows, or Linux. All ten music tracks are included; only the optional update check requires internet access.
+**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.2). Extract it and open the matching starter for macOS, Windows, or Linux. All fourteen music tracks are included; only the optional update check requires internet access.
 
 ## Manual
 
-- [English PDF manual](docs/manual/Skybreak-Protocol-Manual-EN.pdf) - gameplay, controls, every button, ten levels, power-ups, and cheat codes
+- [English PDF manual](docs/manual/Skybreak-Protocol-Manual-EN.pdf) - gameplay, controls, every button, fourteen levels, power-ups, and cheat codes
 - [Deutsches PDF-Handbuch](docs/manual/Skybreak-Protocol-Handbuch-DE.pdf)
 
 ## Mobile screenshots
@@ -52,11 +52,11 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
 
 ## Gameplay
 
-- Ascend through ten increasingly difficult cyberpunk levels
-- Every level is a complete 15-floor ascent with a distinct animated environment, platform material, enemy and guardian design, ice-pick base model, and soundtrack
+- Ascend through fourteen increasingly difficult cyberpunk and elemental levels
+- Every level is a complete 15-floor ascent with a distinct animated environment, 2.5D platform material, enemy and guardian design, ice-pick base model, and soundtrack
 - Break platform modules from below
 - Use the robot's ice pick against enemies and nearby platform modules
-- Difficulty-aware chests: persistent every two to three floors on Easy, time-limited after halfway on Medium, and only after two thirds on Hard with faster relocations; Hard relocations stay in view and prefer the player's height or above it, while an unlocked roaming chest stays active during backtracking
+- Difficulty-aware chests: choose from seven rewards (shield, life, data bonus, overdrive, jackpot, repair plus shield, or phase armor). They are persistent every two to three floors on Easy, time-limited after halfway on Medium, and only after two thirds on Hard with faster relocations
 - Defeat the level guardian, preview the next sector, then choose the concrete next ice-pick power or visual-style upgrade
 - Watch the robot show persistent armor damage, sensor flicker, and sparks when lives are lost
 - Permanently unlock reached levels locally and select any unlocked level as the next starting point after a run
@@ -79,7 +79,7 @@ On desktop, use **Key bindings** below the game: select an action and then press
 
 The playable character is a compact cyberpunk climbing robot with separate mechanical limbs, illuminated sensors, antenna, animated joints, and a permanently visible ice pick. When left standing still, the robot inspects and playfully twirls the tool instead of remaining frozen.
 
-The ice pick attacks drones and breaks cracked platform modules in front of the robot. When entering levels 2 through 10 for the first time, the game pauses briefly and offers one upgrade:
+The ice pick attacks drones and breaks cracked platform modules in front of the robot. When entering levels 2 through 14 for the first time, the game pauses briefly and offers one upgrade:
 
 - **Power:** previews reach and breakable platform modules per strike before selection, then increases both progressively
 - **Style:** previews the next design name before selection, then changes the ice pick's core color, head geometry, and glow intensity
@@ -102,6 +102,10 @@ The start screen and every level have their own original cyberpunk-techno track.
 | 8 | Ghost Network | 128 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-08-ghost-network.mp3) |
 | 9 | Quantum Rift | 138 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-09-quantum-rift.mp3) |
 | 10 | Skybreak Apex | 142 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-10-skybreak-apex.mp3) |
+| 11 | Inferno Foundry | 116 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-11-inferno-foundry.mp3) |
+| 12 | Abyssal Data Ocean | 92 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-12-abyssal-data-ocean.mp3) |
+| 13 | Stratosphere Relay | 126 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-13-stratosphere-relay.mp3) |
+| 14 | Terra Core Citadel | 100 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-14-terra-core-citadel.mp3) |
 
 ## Graphics quality
 
@@ -167,7 +171,7 @@ Hardware ray-tracing cores cannot currently be addressed directly by this web ap
 - automatic GitHub Pages deployment through GitHub Actions
 - CSS immersive fullscreen fallback for iPhone Safari
 
-## Ten level environments
+## Fourteen level environments
 
 | Level | Environment | Visual identity and effect |
 |---:|---|---|
@@ -181,6 +185,10 @@ Hardware ray-tracing cores cannot currently be addressed directly by this web ap
 | 8 | Ghost Network | pale-cyan network ruins with drifting spectral streaks |
 | 9 | Quantum Rift | purple-blue dimensional zone with a moving quantum path |
 | 10 | Skybreak Apex | bright cyan summit with rotating transmission rays |
+| 11 | Inferno Foundry | lava cavern with unstable heat haze and forge eruptions |
+| 12 | Abyssal Data Ocean | deep ocean with manta rays and visibly wet, slippery platforms |
+| 13 | Stratosphere Relay | high-altitude storm with turbines and visible gusts |
+| 14 | Terra Core Citadel | mineral core cavern with levitating rocks and tremors |
 
 Enemy density and environmental hazards increase from level to level. Every level can independently use **Easy**, **Medium**, or **Hard**; the selected setting changes enemy speed, hazard frequency, hazard speed, and score multiplier. Choices are stored only in the browser on the device.
 

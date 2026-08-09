@@ -62,8 +62,8 @@ TEXT = {
         "manual": "SPIELHANDBUCH",
         "subtitle": "Aufstieg, Steuerung, Systeme, Level und Cheat-Codes",
         "edition": f"VERSION {VERSION} // DEUTSCH",
-        "intro": "Skybreak Protocol ist ein vertikales Cyberpunk-Arcade-Spiel. Jedes der zehn Levels ist ein vollständiger Aufstieg über 15 Etagen mit eigener Kulisse, Musik und Schwierigkeit. Durchbrich Plattformen, schalte Drohnen aus und erreiche den Sendeturm.",
-        "facts": [("ZIEL", "Level 10 erreichen"), ("START", "3 Leben"), ("LEVEL", "10 Sektoren"), ("SPEICHERUNG", "Highscore und Einstellungen lokal")],
+        "intro": "Skybreak Protocol ist ein vertikales Cyberpunk-Arcade-Spiel. Jedes der vierzehn Levels ist ein vollständiger Aufstieg über 15 Etagen mit eigener Kulisse, Musik und Schwierigkeit. Durchbrich Plattformen, schalte Drohnen aus und erreiche den Sendeturm.",
+        "facts": [("ZIEL", "Level 14 erreichen"), ("START", "3 Leben"), ("LEVEL", "14 Sektoren"), ("SPEICHERUNG", "Highscore und Einstellungen lokal")],
         "start": "SCHNELLSTART",
         "start_steps": [
             "AUFSTIEG STARTEN wählen.",
@@ -103,13 +103,14 @@ TEXT = {
         "systems_cards": [
             ("PLATTFORMEN", "Neben stabilen und brüchigen Modulen gibt es bewegliche, vereiste, zeitweise phasenverschobene und Rift-Plattformen. Beschädigte Module lassen sich von unten oder mit dem Eispickel zerstören. Unsichtbare Phasenplattformen tragen nicht."),
             ("GEGNER & GEFAHREN", "Patrouille, Sprungangriff und Richtungswechsel bilden die drei Gegner-Archetypen; Schild-, Schützen- und Schwebegner ergänzen sie. Energiesplitter, Seitenlaser und Energiepulse kosten ein Leben. Von oben getroffene Drohnen werden ausgeschaltet."),
-            ("TRUHEN", "Leicht: dauerhaft alle 2-3 Etagen. Mittel: ab der Hälfte 8 Sekunden sichtbar. Schwer: ab 2/3 nur 4,5 Sekunden und häufig versetzt. Schwere Truhen bleiben sichtbar und erscheinen bevorzugt auf Spielerhöhe oder darüber. Eine erschienene Truhe bleibt beim Zurückspringen aktiv."),
+            ("TRUHEN", "Truhen bieten sieben wählbare Belohnungen: Schild, Leben, Datenbonus, Overdrive, Jackpot, Reparatur plus Schild oder sieben Sekunden Phasenpanzerung. Leicht: dauerhaft alle 2-3 Etagen. Mittel: ab der Hälfte 8 Sekunden sichtbar. Schwer: ab 2/3 nur 4,5 Sekunden und häufig versetzt."),
             ("ZIELE & EISPICKEL", "Je zwei Energiezellen oder Zugangsschalter müssen vor dem Levelziel aktiviert werden. Der Eispickel löst gegnerische Projektile auf und knackt Schilde. Ein erster Treffer friert einen normalen Gegner ein, der nächste schaltet ihn aus. Ab Kraft 4 entsteht kurz eine Eisbrücke."),
             ("WÄCHTER & LEVEL", "Jedes Level hat 15 Etagen, eigene Regeln, ein Eispickel-Grundmodell und einen Wächter. Dessen Schüsse unterscheiden sich je Level und werden bei der letzten Integritätsstufe schneller. Nach Sieg folgt die nächste Upgrade-Vorschau."),
-            ("ABSCHLUSS & SIEG", "Nach jedem Levelziel zeigt der Roboter fünf Sekunden SKYBREAK DANCE vor Upgrade oder Finale. Beim kosmetischen Bikini-Avatar erscheint stattdessen eine levelabhängige Look-Präsentation. Nach Level 10 aktiviert sich der Sendeturm; Cheat-Läufe ändern den Rekord nicht."),
+            ("ABSCHLUSS & SIEG", "Nach jedem Levelziel zeigt der Roboter fünf Sekunden SKYBREAK DANCE vor Upgrade oder Finale. Beim kosmetischen Bikini-Avatar erscheint stattdessen eine levelabhängige Look-Präsentation. Nach Level 14 aktiviert sich der Sendeturm; Cheat-Läufe ändern den Rekord nicht."),
         ],
         "levels_a": "LEVEL 1 BIS 5",
         "levels_b": "LEVEL 6 BIS 10",
+        "levels_c": "LEVEL 11 BIS 14",
         "levels": [
             (1, "Neon Undercity", "Cyan-magenta Unterstadt mit Versorgungsschächten, Rohren, Regen und schnellen Magnetschwebebahnen. Regel: Aufstieg mit beweglichen Plattformen."),
             (2, "Chrome Bazaar", "Pink-mintfarbener Chrommarkt mit schwebenden Laternen, Marktständen und animierten Reklamen. Regel: Bruchzonen mit vielen fragilen Modulen."),
@@ -121,6 +122,10 @@ TEXT = {
             (8, "Ghost Network", "Blass-cyanfarbene Netzruine mit flackernden Phantomknoten, Paketströmen und Glitches. Regel: Energiepulse, Phasenplattformen und Seitenwind."),
             (9, "Quantum Rift", "Violett-blaue Dimensionszone mit rotierender Singularität, Spiralarmen und verzogenen Sternspuren. Regel: Rift-Sprungfelder versetzen die Spielfigur."),
             (10, "Skybreak Apex", "Leuchtender Gipfel über Wolken mit Morgendämmerung, Sendestrahlen und Transmissionsturm. Regel: Apex-Aufstieg mit Bewegung, Seitenlaser und Seitenwind."),
+            (11, "Inferno-Schmiede", "Reine Lavakaverne mit Feuerfontänen, Asche und sichtbarem Hitzeflimmern. Regel: Hitzeschübe geben in der Luft kurz Auftrieb."),
+            (12, "Abyssales Datenmeer", "Dunkler Ozean mit Mantarochen, Strömungen und nassem Plattformfilm. Regel: Sichtbare Nässe reduziert kurz die Haftung."),
+            (13, "Stratosphären-Relais", "Offener Sturm über Wolken mit Turbinen und Windwirbeln. Regel: Sichtbare Böen verschieben den Roboter leicht."),
+            (14, "Terra-Kernzitadelle", "Erdkernhöhle mit schwebenden Gesteinsbrocken und Mineraladern. Regel: sichtbare Erdbeben erschüttern die Szene."),
         ],
         "settings": "EINSTELLUNGEN, AUDIO UND OFFLINE-MODUS",
         "settings_cards": [
@@ -128,7 +133,7 @@ TEXT = {
             ("GRAFIK", "Auf einem iPhone 17 Pro erreicht Ultra bei 1080p 60 FPS. 4K Ultra ist kein 60-FPS-Mobilmodus. Ultra kann das Gerät dennoch erwärmen. Zerstörte Blöcke explodieren in Ultra passend zur Welt; Hoch nutzt weniger Fragmente. Bei Hitze, Sonne oder Erwärmung Mittel oder Niedrig wählen."),
             ("MOBILE ULTRA", "60 FPS ist der sichere Standard. FPS AN/AUS schaltet die lokale Anzeige. Bis 120 FPS erhöht Wärme und Akkuverbrauch; der adaptive Wärmeschutz kann Effekte reduzieren."),
             ("AUDIO", "Jedes Level besitzt einen eigenen Track. MUSIC und SFX lassen sich vollständig getrennt schalten."),
-            ("OFFLINE", "Das Release-ZIP entpacken und den Starter für macOS, Windows oder Linux öffnen. Alle zehn Musikstücke sind enthalten."),
+            ("OFFLINE", "Das Release-ZIP entpacken und den Starter für macOS, Windows oder Linux öffnen. Alle vierzehn Musikstücke sind enthalten."),
             ("UPDATES", "Beim Start prüft das Spiel öffentliche GitHub-Releases. Nur die Update-Prüfung benötigt Internet; Spielstände bleiben lokal."),
         ],
         "upgrades": "UPGRADES UND LEISTUNGSANZEIGE",
@@ -163,8 +168,8 @@ TEXT = {
         "manual": "GAME MANUAL",
         "subtitle": "Ascent, controls, systems, levels, and cheat codes",
         "edition": f"VERSION {VERSION} // ENGLISH",
-        "intro": "Skybreak Protocol is a vertical cyberpunk arcade game. Each of the ten levels is a complete 15-floor ascent with its own scenery, music, and difficulty. Break platforms, disable drones, and reach the transmission tower.",
-        "facts": [("GOAL", "Reach level 10"), ("START", "3 lives"), ("LEVELS", "10 sectors"), ("STORAGE", "Local high score and settings")],
+        "intro": "Skybreak Protocol is a vertical cyberpunk arcade game. Each of the fourteen levels is a complete 15-floor ascent with its own scenery, music, and difficulty. Break platforms, disable drones, and reach the transmission tower.",
+        "facts": [("GOAL", "Reach level 14"), ("START", "3 lives"), ("LEVELS", "14 sectors"), ("STORAGE", "Local high score and settings")],
         "start": "QUICK START",
         "start_steps": [
             "Select START ASCENT.",
@@ -204,13 +209,14 @@ TEXT = {
         "systems_cards": [
             ("PLATFORMS", "Alongside stable and fragile modules, there are moving, icy, temporarily phased, and rift platforms. Damaged modules can be destroyed from below or with the ice pick. Invisible phase platforms do not support the robot."),
             ("ENEMIES & HAZARDS", "Patrol, leap attack, and direction change form the three enemy archetypes; shield, shooter, and hover enemies add roles. Energy fragments, side lasers, and energy pulses cost a life. Landing on a drone disables it."),
-            ("CHESTS", "Easy: persistent every 2-3 floors. Medium: available after halfway for 8 seconds. Hard: only after two thirds for 4.5 seconds and frequently relocated. Hard chests stay in view and prefer the player's height or above. An active chest stays active while backtracking."),
+            ("CHESTS", "Chests offer seven selectable rewards: shield, life, data bonus, overdrive, jackpot, repair plus shield, or seven seconds of phase armor. Easy: persistent every 2-3 floors. Medium: after halfway for 8 seconds. Hard: after two thirds for 4.5 seconds and frequently relocated."),
             ("OBJECTIVES & ICE PICK", "Two energy cells or access switches must be activated before the level goal. The ice pick dissolves enemy projectiles and breaks shields. A first hit freezes a normal enemy; the next disables it. From power 4, it briefly creates an ice bridge."),
             ("GUARDIANS & LEVELS", "Each level has 15 floors, unique rules, an ice-pick base model, and a guardian. Its shots vary by level and become faster at the final integrity stage. The next upgrade preview follows a win."),
-            ("COMPLETION & VICTORY", "After every level goal, the robot shows SKYBREAK DANCE for five seconds before the upgrade or finale. The cosmetic bikini avatar instead shows a level-specific look presentation. After level 10, the tower activates; cheat runs do not change the record."),
+            ("COMPLETION & VICTORY", "After every level goal, the robot shows SKYBREAK DANCE for five seconds before the upgrade or finale. The cosmetic bikini avatar instead shows a level-specific look presentation. After level 14, the tower activates; cheat runs do not change the record."),
         ],
         "levels_a": "LEVELS 1 TO 5",
         "levels_b": "LEVELS 6 TO 10",
+        "levels_c": "LEVELS 11 TO 14",
         "levels": [
             (1, "Neon Undercity", "Cyan-magenta depths with service shafts, pipes, rain, and fast maglev traffic. Rule: ascent with moving platforms."),
             (2, "Chrome Bazaar", "Pink-mint chrome market with floating lanterns, stalls, and animated advertising. Rule: fracture zones with many fragile modules."),
@@ -222,6 +228,10 @@ TEXT = {
             (8, "Ghost Network", "Pale-cyan network ruins with flickering phantom nodes, packet streams, and glitches. Rule: energy pulses, phased platforms, and side draft."),
             (9, "Quantum Rift", "Purple-blue dimension with a rotating singularity, spiral arms, and warped star trails. Rule: rift jump fields reposition the robot."),
             (10, "Skybreak Apex", "Bright summit above the clouds with dawn light, transmission rays, and the final tower. Rule: apex ascent with movement, side lasers, and side draft."),
+            (11, "Inferno Foundry", "Pure lava cavern with fire fountains, ash, and visible heat haze. Rule: heat surges briefly lift the robot while airborne."),
+            (12, "Abyssal Data Ocean", "Dark ocean with manta rays, currents, and a wet platform film. Rule: visible wetness briefly reduces grip."),
+            (13, "Stratosphere Relay", "Open storm above the clouds with turbines and wind vortices. Rule: visible gusts lightly shift the robot."),
+            (14, "Terra Core Citadel", "Earth-core cavern with levitating rocks and mineral seams. Rule: visible quakes shake the scene."),
         ],
         "settings": "SETTINGS, AUDIO, AND OFFLINE MODE",
         "settings_cards": [
@@ -229,7 +239,7 @@ TEXT = {
             ("GRAPHICS", "On an iPhone 17 Pro, Ultra reaches 60 FPS at 1080p. 4K Ultra is not a 60 FPS mobile mode. Ultra can still warm the device. Destroyed blocks use world-specific explosions in Ultra; High uses fewer fragments. In heat, sunlight, or when warm, choose Medium or Low."),
             ("MOBILE ULTRA", "60 FPS is the safer default. FPS ON/OFF toggles the local display. Up to 120 FPS increases heat and battery use; adaptive thermal protection can reduce effects."),
             ("AUDIO", "Every level has its own track. MUSIC and SFX are completely independent."),
-            ("OFFLINE", "Extract the release ZIP and open the starter for macOS, Windows, or Linux. All ten music tracks are included."),
+            ("OFFLINE", "Extract the release ZIP and open the starter for macOS, Windows, or Linux. All fourteen music tracks are included."),
             ("UPDATES", "On startup, the game checks public GitHub releases. Only the update check needs internet; game data remains local."),
         ],
         "upgrades": "UPGRADES AND PERFORMANCE DISPLAY",
@@ -522,10 +532,11 @@ def build(lang):
     draw_controls(c, data, 3)
     draw_cards_page(c, data, 4, data["systems"], data["systems_cards"])
     draw_levels(c, data, 5, data["levels_a"], data["levels"][:5])
-    draw_levels(c, data, 6, data["levels_b"], data["levels"][5:])
-    draw_cards_page(c, data, 7, data["settings"], data["settings_cards"])
-    draw_cards_page(c, data, 8, data["upgrades"], data["upgrade_cards"])
-    draw_cheats(c, data, 9)
+    draw_levels(c, data, 6, data["levels_b"], data["levels"][5:10])
+    draw_levels(c, data, 7, data["levels_c"], data["levels"][10:])
+    draw_cards_page(c, data, 8, data["settings"], data["settings_cards"])
+    draw_cards_page(c, data, 9, data["upgrades"], data["upgrade_cards"])
+    draw_cheats(c, data, 10)
     c.save()
     print(target)
 

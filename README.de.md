@@ -6,9 +6,9 @@
 
 # Skybreak Protocol
 
-**Aktuelle Version:** `v1.0.1-beta.1` · [Ausführlicher Changelog](docs/releases/1.0.1-beta.1.md) · [Alle Changelogs](CHANGELOG.md)
+**Aktuelle Version:** `v1.0.1-beta.2` · [Ausführlicher Changelog](docs/releases/1.0.1-beta.2.md) · [Alle Changelogs](CHANGELOG.md)
 
-Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Kämpfe dich durch zehn optisch eigenständige Level nach oben, durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus und erreiche den Sendeturm über der Megacity. Jedes Level besitzt eine eigene Cyberpunk-Farbwelt, animierte Kulisse, Effekte und eine Schwierigkeit, die in den nächsten Level übernommen wird.
+Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Kämpfe dich durch vierzehn optisch eigenständige Level nach oben, durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus und erreiche den Sendeturm über der Megacity. Jedes Level besitzt eigene 2.5D-Plattformen, Kulisse, Effekte, Wächter und Musik.
 
 > Skybreak Protocol verwendet keine Grafiken, Musik, Figuren oder Quelltexte von Nintendo oder Ice Climber. Es handelt sich um eine eigenständige Neuinterpretation des klassischen vertikalen Arcade-Spielprinzips.
 
@@ -23,11 +23,11 @@ Die Web-App funktioniert ohne Installation. Auf iPhone oder iPad kann sie in Saf
 
 Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protocol einmal die öffentlichen GitHub-Releases und zeigt einen Hinweis an, wenn eine neuere Beta- oder Final-Version verfügbar ist.
 
-**Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.1) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle zehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
+**Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.2) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle vierzehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
 
 ## Handbuch
 
-- [Deutsches PDF-Handbuch](docs/manual/Skybreak-Protocol-Handbuch-DE.pdf) - Spielprinzip, Steuerung, alle Buttons, zehn Level, Power-ups und Cheat-Codes
+- [Deutsches PDF-Handbuch](docs/manual/Skybreak-Protocol-Handbuch-DE.pdf) - Spielprinzip, Steuerung, alle Buttons, vierzehn Level, Power-ups und Cheat-Codes
 - [English PDF manual](docs/manual/Skybreak-Protocol-Manual-EN.pdf)
 
 ## Handy-Screenshots
@@ -52,11 +52,11 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 
 ## Spielprinzip
 
-- Durch zehn zunehmend schwierigere Cyberpunk-Level aufsteigen
-- Jedes Level ist ein vollständiger Aufstieg über 15 Etagen mit eigener animierter Umgebung, Plattformmaterial, Gegner- und Wächterdesign, Eispickel-Grundmodell und Soundtrack
+- Durch vierzehn zunehmend schwierigere Cyberpunk- und Element-Level aufsteigen
+- Jedes Level ist ein vollständiger Aufstieg über 15 Etagen mit eigener animierter Umgebung, 2.5D-Plattformmaterial, Gegner- und Wächterdesign, Eispickel-Grundmodell und Soundtrack
 - Plattformmodule von unten durchbrechen
 - Gegner und nahe Plattformmodule mit dem Eispickel des Roboters angreifen
-- Truhen passend zur Schwierigkeit: auf Leicht dauerhaft alle zwei bis drei Etagen, auf Mittel ab der Hälfte zeitlich begrenzt und auf Schwer erst ab zwei Dritteln mit schnellen Positionswechseln; Schwere Truhen bleiben dabei sichtbar und erscheinen bevorzugt auf Spielerhöhe oder darüber, eine erschienene wandernde Truhe bleibt beim Zurückspringen aktiv
+- Truhen passend zur Schwierigkeit: aus sieben Belohnungen wählen – Schild, Leben, Datenbonus, Overdrive, Jackpot, Reparatur plus Schild oder Phasenpanzerung. Auf Leicht dauerhaft alle zwei bis drei Etagen, auf Mittel ab der Hälfte zeitlich begrenzt und auf Schwer erst ab zwei Dritteln mit schnellen Positionswechseln
 - Wächterdrohne ausschalten, den nächsten Sektor als Vorschau sehen und danach die konkrete Kraft- oder Designstufe des Eispickels auswählen
 - Sichtbare Roboterschäden, Sensorflackern und Funken bei verlorenen Leben erleben
 - Erreichte Level dauerhaft lokal freischalten und nach einem Lauf direkt als neues Startlevel auswählen
@@ -79,7 +79,7 @@ Am Desktop befindet sich unter dem Spiel die **Tastenbelegung**. Eine Aktion ank
 
 Die Spielfigur ist ein kompakter Cyberpunk-Kletterroboter mit getrennten mechanischen Gliedmaßen, leuchtenden Sensoren, Antenne, animierten Gelenken und einem ständig sichtbaren Eispickel. Bleibt der Roboter stehen, begutachtet und dreht er spielerisch sein Werkzeug, statt unbewegt zu bleiben.
 
-Der Eispickel greift Drohnen an und zerstört beschädigte Plattformmodule vor dem Roboter. Beim ersten Eintritt in Level 2 bis 10 pausiert das Spiel kurz und bietet jeweils ein Upgrade an:
+Der Eispickel greift Drohnen an und zerstört beschädigte Plattformmodule vor dem Roboter. Beim ersten Eintritt in Level 2 bis 14 pausiert das Spiel kurz und bietet jeweils ein Upgrade an:
 
 - **Kraft:** zeigt vor der Wahl Reichweite und zerstörbare Plattformmodule pro Schlag und erhöht beides schrittweise
 - **Design:** zeigt vor der Wahl den Namen des nächsten Designs und verändert Kernfarbe, Kopfgeometrie und Leuchtstärke des Eispickels
@@ -102,6 +102,10 @@ Der Startbildschirm und jedes Level besitzen einen eigenen Cyberpunk-Techno-Trac
 | 8 | Ghost Network | 128 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-08-ghost-network.mp3) |
 | 9 | Quantum Rift | 138 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-09-quantum-rift.mp3) |
 | 10 | Skybreak Apex | 142 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-10-skybreak-apex.mp3) |
+| 11 | Inferno-Schmiede | 116 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-11-inferno-foundry.mp3) |
+| 12 | Abyssales Datenmeer | 92 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-12-abyssal-data-ocean.mp3) |
+| 13 | Stratosphären-Relais | 126 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-13-stratosphere-relay.mp3) |
+| 14 | Terra-Kernzitadelle | 100 | [MP3](https://schrotty74.github.io/Skybreak-Protocol/audio/level-14-terra-core-citadel.mp3) |
 
 ## Grafikqualität
 
@@ -167,7 +171,7 @@ Die Hardware-Raytracing-Kerne können von dieser Web-App derzeit nicht direkt an
 - automatische GitHub-Pages-Bereitstellung über GitHub Actions
 - CSS-basierter immersiver Vollbild-Fallback für Safari auf dem iPhone
 
-## Zehn Level-Umgebungen
+## Vierzehn Level-Umgebungen
 
 | Level | Umgebung | Farbwelt und Effekt |
 |---:|---|---|
@@ -181,6 +185,10 @@ Die Hardware-Raytracing-Kerne können von dieser Web-App derzeit nicht direkt an
 | 8 | Ghost Network | blass-cyanfarbene Netzruinen mit geisterhaften Lichtspuren |
 | 9 | Quantum Rift | violett-blaue Dimensionszone mit bewegtem Quantenpfad |
 | 10 | Skybreak Apex | leuchtend-cyanfarbener Gipfel mit rotierenden Sendestrahlen |
+| 11 | Inferno-Schmiede | Lavahöhle mit instabilem Hitzeflimmern und Schmiedeausbrüchen |
+| 12 | Abyssales Datenmeer | tiefer Ozean mit Mantarochen und sichtbar nassen, rutschigen Plattformen |
+| 13 | Stratosphären-Relais | Höhensturm mit Turbinen und sichtbaren Windböen |
+| 14 | Terra-Kernzitadelle | Mineralkernhöhle mit schwebenden Felsen und Erdbeben |
 
 Gegnerdichte und Umgebungsgefahren steigen von Level zu Level. Für jedes Level kann unabhängig **Leicht**, **Mittel** oder **Schwer** gewählt werden; die Einstellung beeinflusst Gegnergeschwindigkeit, Häufigkeit und Geschwindigkeit der Gefahren sowie den Punktemultiplikator. Die Auswahl bleibt ausschließlich lokal im Browser des Geräts gespeichert.
 

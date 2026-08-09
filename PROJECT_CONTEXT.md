@@ -1,13 +1,13 @@
 # Skybreak Protocol – Projektkontext
 
-**Stand:** 8. August 2026
-**Status:** öffentliche Web-Beta `1.0.0-beta.7`
+**Stand:** 9. August 2026
+**Status:** öffentliche Web-Beta `1.0.1-beta.2`
 
 Diese Datei ist die zentrale technische Übergabe für neue Codex-Chats. Zuerst diese Datei und anschließend [`NEXT_STEPS.md`](NEXT_STEPS.md) lesen. Für Release-Vorhaben zusätzlich [`docs/RELEASE_WORKFLOW.md`](docs/RELEASE_WORKFLOW.md), [`docs/UNRELEASED.md`](docs/UNRELEASED.md), [`CHANGELOG.md`](CHANGELOG.md) und die passenden Release-Notizen lesen.
 
 ## Zweck
 
-Skybreak Protocol ist ein eigenständiges, vertikales Cyberpunk-Arcade-Spiel für aktuelle Desktop- und Mobilbrowser. Es umfasst zehn Level mit eigenen Kulissen, Plattformen, Wächterdrohnen und Musikstücken. Die veröffentlichte Web-App läuft über GitHub Pages; ein versioniertes Offline-Paket wird bei öffentlichen Releases erstellt.
+Skybreak Protocol ist ein eigenständiges, vertikales Cyberpunk-Arcade-Spiel für aktuelle Desktop- und Mobilbrowser. Es umfasst vierzehn Level mit eigenen Kulissen, 2.5D-Plattformen, Wächterdrohnen und Musikstücken. Die veröffentlichte Web-App läuft über GitHub Pages; ein versioniertes Offline-Paket wird bei öffentlichen Releases erstellt.
 
 ## Architektur und wichtige Dateien
 
@@ -18,7 +18,7 @@ Skybreak Protocol ist ein eigenständiges, vertikales Cyberpunk-Arcade-Spiel fü
 | `src/storage.ts` | nach Build-Kanal getrennte Local-Storage-Schlüssel und einmalige Übernahme älterer Final-Spielstände |
 | `src/ultraWorker.ts` | Worker für Ultra-Effektinstanzen und lokale Leistungssteuerung |
 | `src/updateCheck.ts` | öffentliche GitHub-Release-Prüfung beim Start von Beta/Final |
-| `public/audio/` | zehn mitgelieferte Level-Musikstücke |
+| `public/audio/` | vierzehn mitgelieferte Level-Musikstücke |
 | `source/` | Vite-Einstiegspunkte für Englisch und Deutsch |
 | `scripts/` | Release-Prüfung, Pages-Aufbereitung, Offline-Paket, Handbücher und lokaler Performance-Test |
 | `.github/workflows/` | GitHub-Pages-Bereitstellung und automatisierte Release-Erstellung |
