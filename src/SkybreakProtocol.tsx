@@ -3705,10 +3705,10 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
               </output>
             )}
             {status === "ready" && (
-              <>
+              <nav className="start-shortcuts" aria-label={isDe ? "Startmenü-Links" : "Start menu links"}>
                 <a className="changelog-link" href={`${CHANGELOG_BASE_URL}/${APP_VERSION}${isDe ? "" : ".en"}.md`} target="_blank" rel="noopener">CHANGELOG ↗</a>
                 <a className="language-link" href={languageHref} lang={isDe ? "en" : "de"}>{isDe ? "ENGLISH" : "DEUTSCH"}</a>
-              </>
+              </nav>
             )}
             {status !== "ready" && <p className="eyebrow">{status === "upgrade" ? `PICKAXE CORE // LEVEL ${sector}` : "NEURAL LINK STATUS"}</p>}
             {status === "ready" ? (
@@ -3778,40 +3778,45 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
                         <option value="hard">{isDe ? "Schwer" : "Hard"}</option>
                       </select>
                     </label>
-                    <label className="start-level-picker">
-                      <span>{isDe ? "CHALLENGE" : "CHALLENGE"}</span>
-                      <select value={challengeMode} onChange={(event) => { const next = event.target.value as ChallengeMode; challengeRef.current = next; setChallengeMode(next); }}>
-                        <option value="standard">{isDe ? "STANDARD" : "STANDARD"}</option>
-                        <option value="noDamage">{isDe ? "OHNE TREFFER" : "NO DAMAGE"}</option>
-                        <option value="scoreRush">{isDe ? "15.000 PUNKTE" : "15,000 SCORE"}</option>
-                      </select>
-                    </label>
-                    <label className="start-level-picker">
-                      <span>{isDe ? "PICKEL-DESIGN" : "PICKAXE STYLE"}</span>
-                      <select value={cosmeticLoadout.style} onChange={(event) => saveCosmeticLoadout({ ...cosmeticLoadout, style: Number(event.target.value) })}>
-                        {PICKAXE_STYLES.slice(0, Math.min(PICKAXE_STYLES.length, unlockedLevel)).map((style, index) => (
-                          <option key={style.en} value={index + 1}>S{index + 1} // {isDe ? style.de : style.en}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="start-level-picker">
-                      <span>{isDe ? "AVATAR" : "AVATAR"}</span>
-                      <select value={cosmeticLoadout.avatar} onChange={(event) => saveCosmeticLoadout({ ...cosmeticLoadout, avatar: event.target.value as Player["avatar"] })}>
-                        <option value="robot">{isDe ? "ROBOTER // STANDARD" : "ROBOT // STANDARD"}</option>
-                        {unlockedLevel >= BIKINI_AVATAR_UNLOCK_LEVEL && <option value="bikini">{isDe ? "HOLOGRAMM-AVATAR // LEVEL 07" : "HOLOGRAM AVATAR // LEVEL 07"}</option>}
-                      </select>
-                    </label>
-                    {cosmeticLoadout.avatar === "robot" && (
-                      <label className="start-level-picker">
-                        <span>{isDe ? "ROBOTER-MODELL" : "ROBOT MODEL"}</span>
-                        <select value={cosmeticLoadout.robotProfile} onChange={(event) => saveCosmeticLoadout({ ...cosmeticLoadout, robotProfile: Number(event.target.value) })}>
-                          <option value={0}>{isDe ? "AUTO // AKTUELLES LEVEL" : "AUTO // CURRENT LEVEL"}</option>
-                          {unlockedRobotProfiles.map((profile) => (
-                            <option key={profile} value={profile}>R{profile.toString().padStart(2, "0")} // {LEVEL_THEMES[profile - 1].name}</option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
+                    <details className="optional-start-menu">
+                      <summary>{isDe ? "WEITERE OPTIONEN" : "MORE OPTIONS"}</summary>
+                      <div className="optional-start-content">
+                        <label className="start-level-picker">
+                          <span>{isDe ? "CHALLENGE" : "CHALLENGE"}</span>
+                          <select value={challengeMode} onChange={(event) => { const next = event.target.value as ChallengeMode; challengeRef.current = next; setChallengeMode(next); }}>
+                            <option value="standard">{isDe ? "STANDARD" : "STANDARD"}</option>
+                            <option value="noDamage">{isDe ? "OHNE TREFFER" : "NO DAMAGE"}</option>
+                            <option value="scoreRush">{isDe ? "15.000 PUNKTE" : "15,000 SCORE"}</option>
+                          </select>
+                        </label>
+                        <label className="start-level-picker">
+                          <span>{isDe ? "PICKEL-DESIGN" : "PICKAXE STYLE"}</span>
+                          <select value={cosmeticLoadout.style} onChange={(event) => saveCosmeticLoadout({ ...cosmeticLoadout, style: Number(event.target.value) })}>
+                            {PICKAXE_STYLES.slice(0, Math.min(PICKAXE_STYLES.length, unlockedLevel)).map((style, index) => (
+                              <option key={style.en} value={index + 1}>S{index + 1} // {isDe ? style.de : style.en}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="start-level-picker">
+                          <span>{isDe ? "AVATAR" : "AVATAR"}</span>
+                          <select value={cosmeticLoadout.avatar} onChange={(event) => saveCosmeticLoadout({ ...cosmeticLoadout, avatar: event.target.value as Player["avatar"] })}>
+                            <option value="robot">{isDe ? "ROBOTER // STANDARD" : "ROBOT // STANDARD"}</option>
+                            {unlockedLevel >= BIKINI_AVATAR_UNLOCK_LEVEL && <option value="bikini">{isDe ? "HOLOGRAMM-AVATAR // LEVEL 07" : "HOLOGRAM AVATAR // LEVEL 07"}</option>}
+                          </select>
+                        </label>
+                        {cosmeticLoadout.avatar === "robot" && (
+                          <label className="start-level-picker">
+                            <span>{isDe ? "ROBOTER-MODELL" : "ROBOT MODEL"}</span>
+                            <select value={cosmeticLoadout.robotProfile} onChange={(event) => saveCosmeticLoadout({ ...cosmeticLoadout, robotProfile: Number(event.target.value) })}>
+                              <option value={0}>{isDe ? "AUTO // AKTUELLES LEVEL" : "AUTO // CURRENT LEVEL"}</option>
+                              {unlockedRobotProfiles.map((profile) => (
+                                <option key={profile} value={profile}>R{profile.toString().padStart(2, "0")} // {LEVEL_THEMES[profile - 1].name}</option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                      </div>
+                    </details>
                   </>
                 )}
                 <button className="primary-button" onClick={status === "paused" ? togglePause : restart}>
