@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-**Current release:** `v1.0.1-beta.2` · [Detailed changelog](docs/releases/1.0.1-beta.2.en.md) · [All changelogs](CHANGELOG.md)
+**Current release:** `v1.0.1-beta.3` · [Detailed changelog](docs/releases/1.0.1-beta.3.en.md) · [All changelogs](CHANGELOG.md)
 
 An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through fourteen visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Every level has its own theme, 2.5D platform material, animated scenery, effects, guardian, and soundtrack.
 
@@ -23,7 +23,7 @@ The web app runs without installation. On iPhone or iPad, use **Share → Add to
 
 The current version is shown in the game. On startup, Skybreak Protocol checks the public GitHub releases once and displays a notice when a newer beta or final build is available.
 
-**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.2). Extract it and open the matching starter for macOS, Windows, or Linux. All fourteen music tracks are included; only the optional update check requires internet access.
+**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.3). Extract it and open the matching starter for macOS, Windows, or Linux. All fourteen music tracks are included; only the optional update check requires internet access.
 
 ## Manual
 
@@ -113,10 +113,12 @@ The selected level is stored locally on the device.
 
 | Level | Target | Effects |
 |---|---|---|
-| Low | older or warm mobile devices | 30 FPS, reduced resolution, WebGL effects disabled, little rain and fog |
-| Medium | battery-friendly smartphone setting | 40 FPS, WebGL fog, reduced particles and parallax |
-| High | powerful devices | up to 60 FPS, high resolution, and extended effects |
-| Ultra | current desktop and mobile GPUs | full-scene WebGPU post-processing, optional Mobile Ultra up to 120 FPS, F16 shaders, GPU instancing, adaptive resolution and effects; WebGL2 fallback |
+| Low | older or warm mobile devices | reduced resolution, no WebGL effects, little rain and fog |
+| Medium | battery-friendly smartphone setting | WebGL fog, reduced particles and parallax |
+| High | powerful devices | high resolution and extended effects |
+| Ultra | current desktop and mobile GPUs | full-scene WebGPU post-processing, F16 shaders, GPU instancing, adaptive resolution and effects; WebGL2 fallback |
+
+Every preset has the same **Frame rate limit** choice: 60 FPS, up to 120 FPS, or Unlimited. The in-game **Benchmark** runs the same 14-second measurement after a two-second warm-up and records the selected preset, resolution, limit, FPS, frame time, update time, and draw time locally.
 
 > [!WARNING]
 > **On an iPhone 17 Pro, “Ultra + 1080p” reached 60 FPS. 4K Ultra is an extremely demanding quality and screenshot mode, not a 60 FPS mobile mode. Ultra can still warm the device; in high ambient temperatures, direct sunlight, or when the phone becomes very warm, switch to Medium or Low.**
@@ -125,9 +127,13 @@ The selected level is stored locally on the device.
 
 Ultra adds a full-scene WebGPU pipeline that requests the browser's **high-performance GPU**. On macOS the browser maps WebGPU to Metal; on current NVIDIA and AMD systems it uses the browser's native GPU backend. Compared with High, Ultra renders denser multilayer fog and rain, energy grids, animated light beams, stronger bloom, screen-space neon reflections, chromatic treatment, tone mapping, and higher resolution up to 4K.
 
-Platforms, enemies, debris, gameplay particles, and rain receive GPU-instanced enhancement layers. A dedicated Web Worker calculates atmospheric instances and evaluates frame timing away from the main game thread. On suitable desktop displays the renderer automatically selects 60, 90, or up to 120 FPS and adjusts resolution between 62% and 100% to remain stable.
+Platforms, enemies, debris, gameplay particles, and rain receive GPU-instanced enhancement layers. Prepared sprites, cached background layers, and visible-area culling reduce repeated Canvas work. A dedicated Web Worker calculates atmospheric instances and evaluates frame timing away from the main game thread. The player selects the 60 FPS, up-to-120 FPS, or Unlimited frame-rate limit for every graphics preset.
 
-When supported, Ultra uses efficient 16-bit shader arithmetic for tone mapping and otherwise keeps the compatible 32-bit path. **Mobile Ultra** can be switched from the safer 60 FPS default to adaptive 60/90/120 FPS on high-refresh devices. The browser exposes no temperature sensor, so a local performance controller detects sustained frame-time degradation as a sign of thermal or power throttling and progressively reduces bloom samples, reflections, post-processing, and render resolution. No measurement leaves the device.
+When supported, Ultra uses efficient 16-bit shader arithmetic for tone mapping and otherwise keeps the compatible 32-bit path. A Mac Studio M4 Max reached **120 FPS in Ultra at 4K** in Safari with a 120 Hz display after Safari's page-rendering preference was adjusted. The browser exposes no temperature sensor, so a local performance controller detects sustained frame-time degradation as a sign of thermal or power throttling and progressively reduces bloom samples, reflections, post-processing, and render resolution. No measurement leaves the device.
+
+### 120 Hz browsers on macOS
+
+The display itself must be set to 120 Hz or higher. Safari can still prefer 60 FPS for web pages: open **Safari → Settings → Advanced → Feature Flags**, search for **“Prefer Page Rendering Updates near 60fps”**, disable it, then fully quit Safari with `⌘Q` and reopen it. The Safari window must be on the high-refresh display. Chrome and Firefox normally use the display refresh rate without an equivalent game setting; their measured rate can still be limited by the display, power-saving mode, background tabs, or browser workload.
 
 Unsupported or software-only WebGPU adapters automatically use the existing WebGL2 and Canvas renderer.
 

@@ -307,7 +307,7 @@ export async function startWebGpuUltraRenderer(
   updateRenderer: (name: string) => void,
   getSceneInstances: () => Float32Array,
   updateFrameRate: (fps: number) => void,
-  getAllowHighRefresh: () => boolean,
+  getFrameRateMode: () => "60" | "120" | "unlimited",
   updateThermalProtection: (active: boolean) => void,
   getResolution: () => RenderResolution,
 ): Promise<EffectCleanup | null> {
@@ -585,7 +585,7 @@ export async function startWebGpuUltraRenderer(
     renderScale = Math.max(0.62, Math.min(1, event.data.renderScale));
     postQuality = Math.max(0, Math.min(2, event.data.postQuality));
     updateThermalProtection(postQuality < 2);
-    const nextFps = Math.max(60, Math.min(120, event.data.targetFps));
+    const nextFps = event.data.targetFps === 0 ? 0 : Math.max(60, Math.min(120, event.data.targetFps));
     if (nextFps !== targetFps) {
       targetFps = nextFps;
       updateFrameRate(nextFps);
@@ -607,18 +607,22 @@ export async function startWebGpuUltraRenderer(
     if (!workerBusy && time - lastWorkerPost >= 24) {
       workerBusy = true;
       lastWorkerPost = time;
-      worker.postMessage({ type: "tick", time, frameDelta: animationDelta, allowHighRefresh: getAllowHighRefresh(), mobile, rainCount: 220 });
+      worker.postMessage({ type: "tick", time, frameDelta: animationDelta, frameRateMode: getFrameRateMode(), mobile, rainCount: 220 });
     }
 
-    const frameInterval = 1000 / targetFps;
-    if (!nextFrameDue) nextFrameDue = time;
-    if (time + 0.35 < nextFrameDue) {
-      animation = requestAnimationFrame(render);
-      return;
+    const frameInterval = targetFps > 0 ? 1000 / targetFps : 0;
+    if (targetFps > 0) {
+      if (!nextFrameDue) nextFrameDue = time;
+      if (time + 0.35 < nextFrameDue) {
+        animation = requestAnimationFrame(render);
+        return;
+      }
     }
     lastRenderedFrame = time;
-    nextFrameDue += frameInterval;
-    if (nextFrameDue < time - frameInterval) nextFrameDue = time + frameInterval;
+    if (targetFps > 0) {
+      nextFrameDue += frameInterval;
+      if (nextFrameDue < time - frameInterval) nextFrameDue = time + frameInterval;
+    }
     const rect = canvas.getBoundingClientRect();
     const dprLimit = window.matchMedia("(pointer: coarse)").matches ? 2.25 : 3;
     const baseDpr = cappedPixelRatio(
@@ -767,6 +771,8 @@ export function startWebGlEffects(
   const timeLocation = gl.getUniformLocation(program, "u_time");
   let animation = 0;
   let lastGlFrame = 0;
+  let averageFrameTime = 16.67;
+  let effectScale = 1;
   const render = (time: number) => {
     const settings = activeQualitySettings(getQuality());
     const frameInterval = 1000 / settings.glFps;
@@ -774,9 +780,18 @@ export function startWebGlEffects(
       animation = requestAnimationFrame(render);
       return;
     }
+    if (lastGlFrame) {
+      const elapsed = Math.max(4, Math.min(80, time - lastGlFrame));
+      averageFrameTime = averageFrameTime * .9 + elapsed * .1;
+      const minScale = window.matchMedia("(pointer: coarse)").matches ? .58 : .68;
+      if (averageFrameTime > frameInterval * 1.28) effectScale = Math.max(minScale, effectScale - .055);
+      else if (averageFrameTime < frameInterval * 1.05) effectScale = Math.min(1, effectScale + .014);
+    }
     lastGlFrame = time;
     const rect = canvas.getBoundingClientRect();
-    const dpr = cappedPixelRatio(rect, Math.min(window.devicePixelRatio || 1, settings.glDpr), getResolution());
+    // Gameplay remains full resolution on its own canvas. Only the separate
+    // atmospheric WebGL layer adapts its internal resolution under pressure.
+    const dpr = cappedPixelRatio(rect, Math.min(window.devicePixelRatio || 1, settings.glDpr), getResolution()) * effectScale;
     const width = Math.max(1, Math.round(rect.width * dpr));
     const height = Math.max(1, Math.round(rect.height * dpr));
     if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }

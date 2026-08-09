@@ -78,6 +78,7 @@ export type World = {
   mechanicCooldown: number;
   bridgeCooldown: number;
   easyAssistsApplied: boolean;
+  variant: number;
 };
 
 
@@ -85,7 +86,7 @@ export function tileIsActive(tile: Tile, time: number) {
   return tile.alive && (tile.mode !== "phase" || Math.sin(time * 2.6 + tile.phaseOffset) > -0.38);
 }
 
-export function buildLevel(sector = 1): Pick<World, "tiles" | "enemies" | "chests" | "objectives"> {
+export function buildLevel(sector = 1, variant = 0): Pick<World, "tiles" | "enemies" | "chests" | "objectives"> {
   const tiles: Tile[] = [];
   const enemies: Enemy[] = [];
   const chests: Chest[] = [];
@@ -94,7 +95,9 @@ export function buildLevel(sector = 1): Pick<World, "tiles" | "enemies" | "chest
 
   for (let row = 0; row < LEVEL_FLOORS; row++) {
     const y = FLOOR_BASE_Y - row * FLOOR_SPACING;
-    const gapStart = row === 0 ? -10 : (row * 5 + 2) % 11;
+    // Three deterministic layouts per sector: varied but always retain both
+    // edge supports and the same fair, reachable gap width.
+    const gapStart = row === 0 ? -10 : (row * 5 + 2 + variant * 3 + (row % 3 === 0 ? variant : 0)) % 11;
     const rowTiles: Tile[] = [];
     for (let col = 0; col < 15; col++) {
       const safeEdge = col === 0 || col === 14;
@@ -122,7 +125,7 @@ export function buildLevel(sector = 1): Pick<World, "tiles" | "enemies" | "chest
     }
     const powerUp = chestSpawns.get(row);
     if (powerUp) {
-      const preferredX = (2 + ((row * 7 + 3) % 11)) * TILE;
+      const preferredX = (2 + ((row * 7 + 3 + variant * 2) % 11)) * TILE;
       const support = rowTiles.reduce((closest, tile) =>
         Math.abs(tile.x - preferredX) < Math.abs(closest.x - preferredX) ? tile : closest,
       );
@@ -199,12 +202,14 @@ export function makeWorld(): World {
     roamingChestMoves: 0,
     roamingChestSector: 1,
     collectedRoamingChestSectors: Array(LEVEL_COUNT).fill(false),
+    variant: 0,
   };
 }
 
-export function placeWorldAtLevel(world: World, level: number) {
+export function placeWorldAtLevel(world: World, level: number, variant = world.variant) {
   const targetLevel = Math.min(LEVEL_COUNT, Math.max(1, Math.round(level)));
-  const levelData = buildLevel(targetLevel);
+  world.variant = variant;
+  const levelData = buildLevel(targetLevel, variant);
   world.tiles = levelData.tiles;
   world.enemies = levelData.enemies;
   world.chests = levelData.chests;

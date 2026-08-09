@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-**Aktuelle Version:** `v1.0.1-beta.2` · [Ausführlicher Changelog](docs/releases/1.0.1-beta.2.md) · [Alle Changelogs](CHANGELOG.md)
+**Aktuelle Version:** `v1.0.1-beta.3` · [Ausführlicher Changelog](docs/releases/1.0.1-beta.3.md) · [Alle Changelogs](CHANGELOG.md)
 
 Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Kämpfe dich durch vierzehn optisch eigenständige Level nach oben, durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus und erreiche den Sendeturm über der Megacity. Jedes Level besitzt eigene 2.5D-Plattformen, Kulisse, Effekte, Wächter und Musik.
 
@@ -23,7 +23,7 @@ Die Web-App funktioniert ohne Installation. Auf iPhone oder iPad kann sie in Saf
 
 Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protocol einmal die öffentlichen GitHub-Releases und zeigt einen Hinweis an, wenn eine neuere Beta- oder Final-Version verfügbar ist.
 
-**Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.2) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle vierzehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
+**Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.3) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle vierzehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
 
 ## Handbuch
 
@@ -113,10 +113,12 @@ Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
 
 | Stufe | Ziel | Effekte |
 |---|---|---|
-| Niedrig | ältere oder warme Mobilgeräte | 30 FPS, reduzierte Auflösung, WebGL-Effekte aus, wenig Regen und Nebel |
-| Mittel | schonende Smartphone-Einstellung | 40 FPS, WebGL-Nebel, reduzierte Partikel und Parallaxe |
-| Hoch | leistungsfähige Geräte | bis 60 FPS, hohe Auflösung und erweiterte Effekte |
-| Ultra | aktuelle Desktop- und Mobil-GPUs | vollständiges WebGPU-Post-Processing, optionales Mobile Ultra bis 120 FPS, F16-Shader, GPU-Instancing sowie adaptive Auflösung und Effekte; WebGL2-Fallback |
+| Niedrig | ältere oder warme Mobilgeräte | reduzierte Auflösung, WebGL-Effekte aus, wenig Regen und Nebel |
+| Mittel | schonende Smartphone-Einstellung | WebGL-Nebel, reduzierte Partikel und Parallaxe |
+| Hoch | leistungsfähige Geräte | hohe Auflösung und erweiterte Effekte |
+| Ultra | aktuelle Desktop- und Mobil-GPUs | vollständiges WebGPU-Post-Processing, F16-Shader, GPU-Instancing sowie adaptive Auflösung und Effekte; WebGL2-Fallback |
+
+Für jede Stufe steht dasselbe **Bildraten-Limit** bereit: 60 FPS, bis 120 FPS oder ohne Limit. Der integrierte **Benchmark** misst nach zwei Sekunden Aufwärmzeit 14 Sekunden lang dieselbe Szene und zeigt Stufe, Auflösung, Limit, FPS, Framezeit sowie Update- und Zeichenzeit ausschließlich lokal an.
 
 > [!WARNING]
 > **Auf einem iPhone 17 Pro erreichte „Ultra + 1080p“ 60 FPS. 4K Ultra ist ein extrem aufwendiger Qualitäts- und Screenshot-Modus und nicht für 60 FPS auf Mobilgeräten vorgesehen. Ultra kann das Gerät dennoch erwärmen; bei hohen Umgebungstemperaturen, direkter Sonne oder starker Erwärmung auf „Mittel“ oder „Niedrig“ wechseln.**
@@ -125,9 +127,13 @@ Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
 
 Ultra ergänzt eine vollständige WebGPU-Pipeline und fordert die **Hochleistungs-GPU** des Browsers an. Unter macOS wird WebGPU vom Browser auf Metal abgebildet; auf aktuellen NVIDIA- und AMD-Systemen kommt die native GPU-Anbindung des Browsers zum Einsatz. Gegenüber Hoch bietet Ultra dichteren mehrschichtigen Nebel und Regen, Energiegitter, animierte Lichtstrahlen, stärkeren Bloom, bildschirmbasierte Neonreflexionen, chromatische Bearbeitung, Tone-Mapping und eine höhere Auflösung bis 4K.
 
-Plattformen, Gegner, Trümmer, Spielpartikel und Regen erhalten GPU-instanzierte Verstärkungsebenen. Ein eigener Web Worker berechnet atmosphärische Instanzen und wertet die Bildzeiten außerhalb des Hauptthreads aus. Auf geeigneten Desktop-Bildschirmen wählt der Renderer automatisch 60, 90 oder bis zu 120 FPS und passt die Auflösung zwischen 62 und 100 Prozent an.
+Plattformen, Gegner, Trümmer, Spielpartikel und Regen erhalten GPU-instanzierte Verstärkungsebenen. Vorbereitete Sprites, zwischengespeicherte Hintergrundebenen und Sichtbarkeits-Culling vermeiden wiederholte Canvas-Arbeit. Ein eigener Web Worker berechnet atmosphärische Instanzen und wertet die Bildzeiten außerhalb des Hauptthreads aus. Das 60-FPS-, Bis-120-FPS- oder unbegrenzte Bildraten-Limit kann für jede Grafikstufe gewählt werden.
 
-Wenn verfügbar, verwendet Ultra effiziente 16-Bit-Shader-Berechnungen für das Tone-Mapping und andernfalls den kompatiblen 32-Bit-Pfad. **Mobile Ultra** lässt sich vom schonenderen Standard mit 60 FPS auf adaptive 60/90/120 FPS für Bildschirme mit hoher Bildrate umstellen. Browser stellen keinen Temperatursensor bereit. Deshalb erkennt eine lokale Leistungssteuerung anhaltend schlechtere Bildzeiten als Hinweis auf Wärme- oder Leistungsdrosselung und reduziert stufenweise Bloom-Abtastungen, Reflexionen, Post-Processing und Renderauflösung. Messwerte verlassen das Gerät nicht.
+Wenn verfügbar, verwendet Ultra effiziente 16-Bit-Shader-Berechnungen für das Tone-Mapping und andernfalls den kompatiblen 32-Bit-Pfad. Ein Mac Studio M4 Max erreichte in Safari bei 4K Ultra auf einem 120-Hz-Display **120 FPS**, nachdem die Safari-Seitenrender-Voreinstellung angepasst wurde. Browser stellen keinen Temperatursensor bereit. Deshalb erkennt eine lokale Leistungssteuerung anhaltend schlechtere Bildzeiten als Hinweis auf Wärme- oder Leistungsdrosselung und reduziert stufenweise Bloom-Abtastungen, Reflexionen, Post-Processing und Renderauflösung. Messwerte verlassen das Gerät nicht.
+
+### 120-Hz-Browser unter macOS
+
+Der Bildschirm muss selbst auf 120 Hz oder höher eingestellt sein. Safari kann Webseiten trotzdem auf etwa 60 FPS bevorzugen: **Safari → Einstellungen → Erweitert → Feature Flags** öffnen, nach **„Prefer Page Rendering Updates near 60fps“** suchen, den Eintrag deaktivieren, Safari anschließend mit `⌘Q` vollständig beenden und neu öffnen. Das Safari-Fenster muss auf dem schnellen Bildschirm liegen. Chrome und Firefox verwenden normalerweise die Bildwiederholrate des Bildschirms und besitzen keine entsprechende Spieleinstellung; begrenzt werden können sie dennoch durch Bildschirm, Stromsparmodus, Hintergrund-Tabs oder Browserlast.
 
 Bei fehlender WebGPU-Unterstützung oder einem Softwareadapter werden automatisch der vorhandene WebGL2- und Canvas-Renderer verwendet.
 

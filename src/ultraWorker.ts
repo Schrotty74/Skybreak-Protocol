@@ -2,7 +2,7 @@ type UltraTick = {
   type: "tick";
   time: number;
   frameDelta: number;
-  allowHighRefresh: boolean;
+  frameRateMode: "60" | "120" | "unlimited";
   mobile: boolean;
   rainCount: number;
 };
@@ -27,12 +27,13 @@ self.onmessage = (event: MessageEvent<UltraTick>) => {
   averageFrameTime = averageFrameTime * 0.9 + measured * 0.1;
   const refreshEstimate = 1000 / averageFrameTime;
 
-  if (message.allowHighRefresh && refreshEstimate >= 108 && renderScale >= 0.78) targetFps = 120;
-  else if (message.allowHighRefresh && refreshEstimate >= 82 && renderScale >= 0.72) targetFps = 90;
+  if (message.frameRateMode === "unlimited") targetFps = 0;
+  else if (message.frameRateMode === "120" && refreshEstimate >= 108 && renderScale >= 0.78) targetFps = 120;
+  else if (message.frameRateMode === "120" && refreshEstimate >= 82 && renderScale >= 0.72) targetFps = 90;
   else targetFps = 60;
-  peakFps = Math.max(peakFps, targetFps);
+  peakFps = Math.max(peakFps, targetFps || Math.min(240, Math.round(refreshEstimate)));
 
-  const targetFrameTime = 1000 / targetFps;
+  const targetFrameTime = targetFps > 0 ? 1000 / targetFps : Math.min(16.67, 1000 / Math.max(60, refreshEstimate));
   if (averageFrameTime > targetFrameTime * 1.2) renderScale = Math.max(0.62, renderScale - 0.045);
   else if (averageFrameTime < targetFrameTime * 1.04) renderScale = Math.min(1, renderScale + 0.012);
 
@@ -40,13 +41,16 @@ self.onmessage = (event: MessageEvent<UltraTick>) => {
   // used as a local proxy for thermal or power throttling.
   const sustainedStress = averageFrameTime > targetFrameTime * 1.16
     || renderScale <= 0.7
-    || (peakFps >= 120 && targetFps < 120);
+    || (message.frameRateMode === "120" && peakFps >= 120 && targetFps < 120);
   performancePressure = Math.max(0, Math.min(1,
     performancePressure + (sustainedStress ? (message.mobile ? 0.035 : 0.022) : -0.012),
   ));
   postQuality = performancePressure > 0.72 ? 0 : performancePressure > 0.34 ? 1 : 2;
 
-  const count = Math.max(48, Math.min(240, message.rainCount));
+  // Keep the gameplay canvas untouched. Under sustained GPU pressure the
+  // worker reduces only atmospheric instances before lowering post quality.
+  const density = postQuality === 2 ? 1 : postQuality === 1 ? .68 : .42;
+  const count = Math.max(32, Math.min(240, Math.round(message.rainCount * density)));
   const instances = new Float32Array(count * 8);
   const seconds = message.time * 0.001;
   for (let index = 0; index < count; index += 1) {

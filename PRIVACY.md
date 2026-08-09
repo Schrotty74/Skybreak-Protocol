@@ -20,7 +20,7 @@ Dependencies (`node_modules`) are not published. The automatically generated loc
 
 ## Processing in the browser
 
-Skybreak Protocol stores only eight technically non-personal values in the local storage of the current browser:
+Skybreak Protocol stores only ten technically non-personal values in the local storage of the current browser:
 
 | Key | Content | Purpose | Transmission |
 |---|---|---|---|
@@ -28,10 +28,14 @@ Skybreak Protocol stores only eight technically non-personal values in the local
 | `skybreak-quality` | selected graphics level | retain the device setting | none |
 | `skybreak-render-resolution` | selected internal render resolution | retain the device setting | none |
 | `skybreak-level-difficulties` | difficulty selected for each level | retain the game setting | none |
-| `skybreak-mobile-ultra-120` | optional mobile high-refresh setting | retain the device setting | none |
+| `skybreak-ultra-frame-rate` | selected 60 FPS, up-to-120 FPS, or Unlimited limit | retain the device setting | none |
 | `skybreak-show-fps` | visibility of the local FPS display | retain the device setting | none |
 | `skybreak-unlocked-level` | highest level number unlocked locally | enable level selection after a run | none |
 | `skybreak-key-bindings` | custom desktop key assignments | retain the controls | none |
+| `skybreak-unlocked-robot-profiles` | level-specific robot models unlocked locally | enable cosmetic robot selection | none |
+| `skybreak-cosmetic-loadout` | selected ice-pick style, avatar, and robot model | retain the cosmetic selection | none |
+
+Older browser data can additionally contain the former `skybreak-mobile-ultra-120` or `skybreak-ultra-120` compatibility keys. They are read only to preserve an existing setting and are not transmitted.
 
 These values never leave the device. They can be removed by deleting the site's browser data.
 

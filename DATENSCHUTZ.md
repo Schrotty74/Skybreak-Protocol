@@ -20,7 +20,7 @@ Abhängigkeiten (`node_modules`) werden nicht veröffentlicht. Der automatisch e
 
 ## Verarbeitung im Browser
 
-Skybreak Protocol speichert nur acht technisch nicht personenbezogene Werte im lokalen Speicher des jeweiligen Browsers:
+Skybreak Protocol speichert nur zehn technisch nicht personenbezogene Werte im lokalen Speicher des jeweiligen Browsers:
 
 | Schlüssel | Inhalt | Zweck | Übertragung |
 |---|---|---|---|
@@ -28,10 +28,14 @@ Skybreak Protocol speichert nur acht technisch nicht personenbezogene Werte im l
 | `skybreak-quality` | gewählte Grafikstufe | Geräteeinstellung beibehalten | keine |
 | `skybreak-render-resolution` | gewählte interne Renderauflösung | Geräteeinstellung beibehalten | keine |
 | `skybreak-level-difficulties` | je Level gewählte Schwierigkeit | Spieleinstellung beibehalten | keine |
-| `skybreak-mobile-ultra-120` | optionale Einstellung für hohe mobile Bildrate | Geräteeinstellung beibehalten | keine |
+| `skybreak-ultra-frame-rate` | gewähltes Limit 60 FPS, bis 120 FPS oder ohne Limit | Geräteeinstellung beibehalten | keine |
 | `skybreak-show-fps` | Sichtbarkeit der lokalen FPS-Anzeige | Geräteeinstellung beibehalten | keine |
 | `skybreak-unlocked-level` | höchste lokal freigeschaltete Levelnummer | Levelauswahl nach einem Lauf ermöglichen | keine |
 | `skybreak-key-bindings` | selbst gewählte Desktop-Tastenbelegung | Steuerung beibehalten | keine |
+| `skybreak-unlocked-robot-profiles` | lokal freigeschaltete levelabhängige Robotermodelle | kosmetische Roboterauswahl ermöglichen | keine |
+| `skybreak-cosmetic-loadout` | gewähltes Eispickel-Design, Avatar und Robotermodell | kosmetische Auswahl beibehalten | keine |
+
+Ältere Browserdaten können zusätzlich die früheren Kompatibilitäts-Schlüssel `skybreak-mobile-ultra-120` oder `skybreak-ultra-120` enthalten. Sie werden nur gelesen, um eine vorhandene Einstellung zu übernehmen, und nicht übertragen.
 
 Diese Werte verlassen das Gerät nicht. Sie können durch Löschen der Websitedaten im Browser entfernt werden.
 
