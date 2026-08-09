@@ -18,6 +18,16 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      if (new URLSearchParams(location.search).has("reset-profile")) {
+        sessionStorage.setItem("skybreak-profile-reset", "1");
+        for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+          const key = localStorage.key(i);
+          if (key?.startsWith("skybreak-") || key === "neon-ascent-highscore") localStorage.removeItem(key);
+        }
+        history.replaceState(null, "", location.pathname + location.hash);
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

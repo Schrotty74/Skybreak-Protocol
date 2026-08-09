@@ -39,6 +39,7 @@ export type Player = {
   pickaxeStyle: number;
   invulnerable: number;
   shield: number;
+  shieldTime: number;
   overdrive: number;
   damage: number;
   avatar: "robot" | "bikini";
@@ -78,6 +79,8 @@ export type World = {
   mechanicCooldown: number;
   bridgeCooldown: number;
   easyAssistsApplied: boolean;
+  showcaseBenchmark: boolean;
+  showcaseLastBurst: number;
   variant: number;
 };
 
@@ -168,6 +171,7 @@ export function makeWorld(): World {
       pickaxeStyle: 1,
       invulnerable: 0,
       shield: 0,
+      shieldTime: 0,
       overdrive: 0,
       damage: 0,
       avatar: "robot",
@@ -197,6 +201,8 @@ export function makeWorld(): World {
     mechanicCooldown: 0,
     bridgeCooldown: 0,
     easyAssistsApplied: false,
+    showcaseBenchmark: false,
+    showcaseLastBurst: -1,
     roamingChest: null,
     roamingChestTimer: 0,
     roamingChestMoves: 0,
@@ -217,6 +223,11 @@ export function placeWorldAtLevel(world: World, level: number, variant = world.v
   world.sector = targetLevel;
   world.highestSector = targetLevel;
   world.roamingChestSector = targetLevel;
+  // A level has its own world coordinates. Keeping the previous camera offset
+  // would show the new player at the right spawn point but the view far above
+  // it after selecting an upgrade.
+  world.cameraX = 0;
+  world.cameraY = 0;
   world.mechanicCooldown = 0;
   world.bridgeCooldown = 0;
   world.celebrationTime = 0;

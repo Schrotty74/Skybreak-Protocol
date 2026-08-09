@@ -15,7 +15,7 @@ from reportlab.pdfgen import canvas
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "manual"
 ICON = ROOT / "public" / "icon-512.png"
-START_SHOT = ROOT / "docs" / "screenshots" / "mobile-start.jpeg"
+START_SHOT = ROOT / "docs" / "screenshots" / "desktop-start-ultra.jpeg"
 GAME_SHOT = ROOT / "docs" / "screenshots" / "mobile-gameplay.jpeg"
 VERSION = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["version"]
 
@@ -82,6 +82,7 @@ TEXT = {
             ("RESUME / WEITER", "Setzt ein pausiertes Spiel fort."),
             ("VIEW / ANSEHEN", "Öffnet ein verfügbares Update; X schließt den Hinweis."),
             ("GOT IT / VERSTANDEN", "Schließt den iPhone-App-Modus-Hinweis."),
+            ("SPIELSTAND ZURÜCKSETZEN", "Löscht den gesamten lokalen Spielstand, Freischaltungen, Rekord und Einstellungen. RESET KEYS setzt dagegen nur die Tasten zurück."),
         ],
         "controls": "STEUERUNG UND BUTTONS",
         "controls_intro": "Die Handy-Schaltflächen sind im Screenshot links sichtbar. Tastatur und Touch lösen dieselben Aktionen aus.",
@@ -94,10 +95,10 @@ TEXT = {
             ("FPS AN/AUS", "Leistungsanzeige", "Zeigt oder verbirgt FPS und Framezeit lokal. Auf Desktop erscheinen zusätzlich CPU-Werte."),
             ("FULLSCREEN", "Vollbild", "Vollbild starten; auf iPhone erklärt APP-MODUS die Installation."),
             ("PAUSE", "Pause", "Spiel anhalten oder fortsetzen. Tastatur: P oder Esc."),
-            ("GRAPHICS", "Grafik", "Niedrig, Mittel, Hoch oder Ultra auswählen. Daneben 720p, 1080p oder 4K für die interne Renderauflösung wählen. Das Bildraten-Limit gilt für jede Grafikstufe."),
+            ("GRAPHICS", "Grafik", "Niedrig, Mittel, Hoch oder Ultra auswählen. Grafik, Auflösung, Bildraten-Limit und Showcase stehen im Startmenü direkt über dem lokalen Spielstand-Reset."),
             ("RESOLUTION", "Auflösung", "iPhone 17 Pro: Ultra erreicht 60 FPS bei 1080p. 4K Ultra ist kein 60-FPS-Mobilmodus."),
             ("FRAME RATE LIMIT", "Bildraten-Limit", "60 FPS, bis 120 FPS oder ohne Limit wählen. Höhere Bildraten erhöhen Last und Stromverbrauch."),
-            ("BENCHMARK", "Benchmark", "Misst dieselbe Szene nach zwei Sekunden Aufwärmen 14 Sekunden lang. Das Ergebnis zeigt Stufe, Auflösung, Limit, FPS, Framezeit sowie Update- und Zeichenzeit nur lokal."),
+            ("SHOWCASE", "Desktop-Benchmark", "Startet einen 30-Sekunden-Showcase mit autonom kletterndem Roboter, zerstörten Blöcken und hohen Effektbudgets. Das Ergebnis bleibt ausschließlich lokal."),
             ("DIFFICULTY", "Schwierigkeit", "Steht direkt bei der Startlevel-Wahl. Leicht, Mittel oder Schwer wählen; die Wahl wird in den nächsten Level übernommen."),
             ("TASTENBELEGUNG", "Desktop-Tasten", "Aktion anklicken und neue Taste drücken. Standard stellt A, D, SPACE und X wieder her."),
         ],
@@ -105,7 +106,7 @@ TEXT = {
         "systems_cards": [
             ("PLATTFORMEN", "Neben stabilen und brüchigen Modulen gibt es bewegliche, vereiste, zeitweise phasenverschobene und Rift-Plattformen. Beschädigte Module lassen sich von unten oder mit dem Eispickel zerstören. Unsichtbare Phasenplattformen tragen nicht."),
             ("GEGNER & GEFAHREN", "Patrouille, Sprungangriff und Richtungswechsel bilden die drei Gegner-Archetypen; Schild-, Schützen- und Schwebegner ergänzen sie. Energiesplitter, Seitenlaser und Energiepulse kosten ein Leben. Von oben getroffene Drohnen werden ausgeschaltet."),
-            ("TRUHEN", "Truhen bieten sieben wählbare Belohnungen: Schild, Leben, Datenbonus, Overdrive, Jackpot, Reparatur plus Schild oder sieben Sekunden Phasenpanzerung. Leicht: dauerhaft alle 2-3 Etagen. Mittel: ab der Hälfte 8 Sekunden sichtbar. Schwer: ab 2/3 nur 4,5 Sekunden und häufig versetzt."),
+            ("TRUHEN", "Truhen bieten sieben wählbare Belohnungen: Schild, Leben, Datenbonus, Overdrive, Jackpot, Reparatur plus Schild oder sieben Sekunden Phasenpanzerung. Ein Schild hält 8 Sekunden auf Leicht, 6 auf Mittel und 4 auf Schwer oder endet beim Treffer. Leicht: dauerhaft alle 2-3 Etagen. Mittel: ab der Hälfte 8 Sekunden sichtbar. Schwer: ab 2/3 nur 4,5 Sekunden und häufig versetzt."),
             ("ZIELE & EISPICKEL", "Je zwei Energiezellen oder Zugangsschalter müssen vor dem Levelziel aktiviert werden. Der Eispickel löst gegnerische Projektile auf und knackt Schilde. Ein erster Treffer friert einen normalen Gegner ein, der nächste schaltet ihn aus. Ab Kraft 4 entsteht kurz eine Eisbrücke."),
             ("WÄCHTER & LEVEL", "Jedes Level hat 15 Etagen, eigene Regeln, ein Eispickel-Grundmodell und einen Wächter. Dessen Schüsse unterscheiden sich je Level und werden bei der letzten Integritätsstufe schneller. Nach Sieg folgt die nächste Upgrade-Vorschau."),
             ("ABSCHLUSS & SIEG", "Nach jedem Levelziel zeigt der Roboter fünf Sekunden SKYBREAK DANCE vor Upgrade oder Finale. Beim kosmetischen Bikini-Avatar erscheint stattdessen eine levelabhängige Look-Präsentation. Nach Level 14 aktiviert sich der Sendeturm; Cheat-Läufe ändern den Rekord nicht."),
@@ -134,7 +135,7 @@ TEXT = {
             ("SCHWIERIGKEIT", "Leicht ist der Einstiegsmodus: 8 Leben, keine normalen Gegner, ein Pflichtziel, stabile Plattformen sowie kein Wind und keine Umweltgefahren. Der Wächter hat 1 Trefferpunkt und schießt langsamer. Mittel ist ausgewogen; Schwer erhöht Gegner, Gefahren und Punkte."),
             ("GRAFIK", "Auf einem iPhone 17 Pro erreicht Ultra bei 1080p 60 FPS. 4K Ultra ist kein 60-FPS-Mobilmodus. Ultra kann das Gerät dennoch erwärmen. Zerstörte Blöcke explodieren in Ultra passend zur Welt; Hoch nutzt weniger Fragmente. Bei Hitze, Sonne oder Erwärmung Mittel oder Niedrig wählen."),
             ("BILDRATEN-LIMIT", "Für jede Grafikstufe 60 FPS, bis 120 FPS oder ohne Limit wählen. Höhere Bildraten erhöhen Wärme und Akkuverbrauch; der adaptive Wärmeschutz kann Effekte reduzieren."),
-            ("BENCHMARK", "Nach zwei Sekunden Aufwärmen wird dieselbe Szene 14 Sekunden lang gemessen. Das lokale Ergebnis nennt Grafikstufe, Auflösung, Limit, FPS, Framezeit sowie Update- und Zeichenzeit."),
+            ("SHOWCASE", "Nur am Desktop: Nach zwei Sekunden Aufwärmen läuft ein 30-Sekunden-Showcase mit autonomem Roboter und besonders hoher Effektlast. Das lokale Ergebnis nennt Grafikstufe, Auflösung, Limit, FPS, Framezeit, CPU- und – sofern vom Browser verfügbar – GPU-Zeit."),
             ("SAFARI 120 HZ", "Bei einem 120-Hz-Bildschirm: Safari-Einstellungen, Erweitert, Feature Flags; Prefer Page Rendering Updates near 60fps deaktivieren, Safari vollständig beenden und neu öffnen. Chrome und Firefox folgen normalerweise der Bildwiederholrate des Bildschirms."),
             ("AUDIO", "Jedes Level besitzt einen eigenen Track. MUSIC und SFX lassen sich vollständig getrennt schalten."),
             ("OFFLINE", "Das Release-ZIP entpacken und den Starter für macOS, Windows oder Linux öffnen. Alle vierzehn Musikstücke sind enthalten."),
@@ -145,12 +146,12 @@ TEXT = {
             ("KRAFT 1 BIS 10", "Jede Kraftstufe erhöht die Reichweite um 8. P1-2 zerstört 1, P3-4 2, P5-6 3, P7-8 4 und P9-10 5 benachbarte Plattformmodule pro Schlag."),
             ("DESIGN 1 BIS 10", "Gold Kurve, Cyan Klinge, Pink Spitze, Grün Kurve, Orange Klinge, Violett Spitze, Eis Kurve, Lila Klinge, Weiß Spitze und Sonne Kurve. Die Vorschau nennt die nächste Stufe."),
             ("LEVEL-MODELLE", "Jedes Level verwendet unabhängig vom Design-Upgrade ein eigenes Eispickel-Grundmodell, eigene Gegner- und Wächterform sowie seine Farbwelt."),
-            ("FPS / BENCHMARK", "FPS AN/AUS schaltet die lokale Live-Anzeige. Der Benchmark liefert einen reproduzierbaren 14-Sekunden-Vergleich für die gewählte Grafik, Auflösung und Bildrate."),
+            ("FPS / SHOWCASE", "FPS AN/AUS schaltet die lokale Live-Anzeige. Der Desktop-Showcase liefert einen reproduzierbaren 30-Sekunden-Vergleich für die gewählte Grafik, Auflösung und Bildrate."),
             ("AUFLÖSUNG", "720p spart Leistung, 1080p ist der empfohlene Mobile-Ultra-Modus auf dem getesteten iPhone 17 Pro. 4K ist ein Qualitäts- und Screenshot-Modus."),
             ("FORTSCHRITT", "Erreichte Level werden lokal freigeschaltet. Im Startmenü ein freigeschaltetes Startlevel wählen; die Schwierigkeit wird beim nächsten Level übernommen."),
         ],
         "cheats": "GEHEIME CHEAT-CODES",
-        "cheat_intro": "Cheats funktionieren mit Touch und Tastatur. Sie gelten nur für den aktuellen Lauf. Ein Lauf mit Cheat aktualisiert den lokalen Highscore nicht. Der Bikini-Avatar ist ein zusätzlicher Musik-Schalter-Cheat und benötigt keinen CHEAT-LINK.",
+        "cheat_intro": "Die Steuerungs-Cheats funktionieren mit Touch und Tastatur und gelten nur für den aktuellen Lauf; ein solcher Lauf aktualisiert den lokalen Highscore nicht. Der Profil-Freischaltcode benötigt keinen CHEAT-LINK und schaltet Inhalte nur lokal frei.",
         "cheat_steps": [
             "Einen Lauf starten.",
             "Das SP-Symbol links oben fünfmal schnell antippen oder anklicken.",
@@ -159,10 +160,10 @@ TEXT = {
         ],
         "codes": [
             ("UNSTERBLICH", "← → ← → JUMP PICK", "Blockiert Treffer und Stürze im aktuellen Level. Endet beim nächsten Level."),
-            ("DOPPELSCHILD", "JUMP JUMP ← → PICK", "Gewährt sofort zwei Schildladungen."),
+            ("DOPPELSCHILD", "JUMP JUMP ← → PICK", "Gewährt sofort zwei Schildladungen: 8 Sekunden auf Leicht, 6 auf Mittel, 4 auf Schwer."),
             ("30-S-OVERDRIVE", "PICK JUMP PICK JUMP ← →", "Maximale Eispickel-Verstärkung für 30 Sekunden."),
             ("EXTRALEBEN", "← ← → → JUMP PICK", "Gibt ein zusätzliches Leben, maximal neun Leben."),
-            ("BIKINI-AVATAR", "MUSIC AUS/AN ×2", "Während eines aktiven Laufs MUSIC innerhalb von 5 Sekunden zweimal aus- und wieder einschalten. Rein kosmetisch, nur für den Lauf; zeigt eine Bestätigung und levelabhängige Look-Präsentationen."),
+            ("ALLES FREISCHALTEN", "SFX AUS/AN ×2, MUSIC AUS", "SFX innerhalb von 5 Sekunden zweimal aus- und einschalten, dann innerhalb von 5 Sekunden MUSIC ausschalten. Schaltet alle Level, Roboter-Modelle und den Hologramm-Avatar dauerhaft nur im lokalen Profil frei."),
         ],
         "cheat_note": "CHEAT-LAUF // NUR LOKAL // KEIN HIGHSCORE-EINTRAG",
         "footer": "Skybreak Protocol // Handbuch DE",
@@ -192,6 +193,7 @@ TEXT = {
             ("RESUME / WEITER", "Continues a paused game."),
             ("VIEW / ANSEHEN", "Opens an available update; X dismisses the notice."),
             ("GOT IT / VERSTANDEN", "Closes the iPhone app-mode notice."),
+            ("RESET LOCAL PROFILE", "Deletes all local progress, unlocks, record, and settings. RESET KEYS only restores the key assignments."),
         ],
         "controls": "CONTROLS AND BUTTONS",
         "controls_intro": "The mobile controls are visible in the screenshot on the left. Keyboard and touch trigger the same actions.",
@@ -204,10 +206,10 @@ TEXT = {
             ("FPS ON/OFF", "Performance display", "Shows or hides local FPS and frame time. Desktop also shows CPU values."),
             ("FULLSCREEN", "Fullscreen", "Enter fullscreen; on iPhone, APP MODE explains installation."),
             ("PAUSE", "Pause", "Pause or resume the game. Keyboard: P or Esc."),
-            ("GRAPHICS", "Graphics", "Select Low, Medium, High, or Ultra. Next to it, select 720p, 1080p, or 4K for the internal render resolution. The frame-rate limit applies to every graphics preset."),
+            ("GRAPHICS", "Graphics", "Select Low, Medium, High, or Ultra. Graphics, resolution, frame-rate limit, and Showcase are grouped in the start menu directly above the local-profile reset."),
             ("RESOLUTION", "Resolution", "iPhone 17 Pro: Ultra reaches 60 FPS at 1080p. 4K Ultra is not a 60 FPS mobile mode."),
             ("FRAME RATE LIMIT", "Frame rate limit", "Choose 60 FPS, up to 120 FPS, or Unlimited. Higher frame rates increase load and power use."),
-            ("BENCHMARK", "Benchmark", "After a two-second warm-up, it measures the same scene for 14 seconds. The local result shows preset, resolution, limit, FPS, frame time, update time, and draw time."),
+            ("SHOWCASE", "Desktop benchmark", "Starts a 30-second showcase with an autonomous climbing robot, block destruction, and high effect budgets. The result remains entirely local."),
             ("DIFFICULTY", "Difficulty", "Located directly next to the start-level choice. Select Easy, Medium, or Hard; the choice carries into the next level."),
             ("KEY BINDINGS", "Desktop keys", "Select an action and press a new key. Reset restores A, D, SPACE, and X."),
         ],
@@ -215,7 +217,7 @@ TEXT = {
         "systems_cards": [
             ("PLATFORMS", "Alongside stable and fragile modules, there are moving, icy, temporarily phased, and rift platforms. Damaged modules can be destroyed from below or with the ice pick. Invisible phase platforms do not support the robot."),
             ("ENEMIES & HAZARDS", "Patrol, leap attack, and direction change form the three enemy archetypes; shield, shooter, and hover enemies add roles. Energy fragments, side lasers, and energy pulses cost a life. Landing on a drone disables it."),
-            ("CHESTS", "Chests offer seven selectable rewards: shield, life, data bonus, overdrive, jackpot, repair plus shield, or seven seconds of phase armor. Easy: persistent every 2-3 floors. Medium: after halfway for 8 seconds. Hard: after two thirds for 4.5 seconds and frequently relocated."),
+            ("CHESTS", "Chests offer seven selectable rewards: shield, life, data bonus, overdrive, jackpot, repair plus shield, or seven seconds of phase armor. A shield lasts 8 seconds on Easy, 6 on Medium, and 4 on Hard, or ends on a hit. Easy: persistent every 2-3 floors. Medium: after halfway for 8 seconds. Hard: after two thirds for 4.5 seconds and frequently relocated."),
             ("OBJECTIVES & ICE PICK", "Two energy cells or access switches must be activated before the level goal. The ice pick dissolves enemy projectiles and breaks shields. A first hit freezes a normal enemy; the next disables it. From power 4, it briefly creates an ice bridge."),
             ("GUARDIANS & LEVELS", "Each level has 15 floors, unique rules, an ice-pick base model, and a guardian. Its shots vary by level and become faster at the final integrity stage. The next upgrade preview follows a win."),
             ("COMPLETION & VICTORY", "After every level goal, the robot shows SKYBREAK DANCE for five seconds before the upgrade or finale. The cosmetic bikini avatar instead shows a level-specific look presentation. After level 14, the tower activates; cheat runs do not change the record."),
@@ -244,7 +246,7 @@ TEXT = {
             ("DIFFICULTY", "Easy is the onboarding mode: 8 lives, no regular enemies, one required objective, stable platforms, and no drafts or environmental hazards. The guardian has 1 hit point and fires more slowly. Medium is balanced; Hard increases enemies, hazards, and points."),
             ("GRAPHICS", "On an iPhone 17 Pro, Ultra reaches 60 FPS at 1080p. 4K Ultra is not a 60 FPS mobile mode. Ultra can still warm the device. Destroyed blocks use world-specific explosions in Ultra; High uses fewer fragments. In heat, sunlight, or when warm, choose Medium or Low."),
             ("FRAME RATE LIMIT", "For every graphics preset, choose 60 FPS, up to 120 FPS, or Unlimited. Higher frame rates increase heat and battery use; adaptive thermal protection can reduce effects."),
-            ("BENCHMARK", "After a two-second warm-up, the same scene is measured for 14 seconds. The local result lists graphics preset, resolution, limit, FPS, frame time, update time, and draw time."),
+            ("SHOWCASE", "Desktop only: after a two-second warm-up, a 30-second showcase runs an autonomous robot with especially high effect load. The local result lists graphics preset, resolution, limit, FPS, frame time, CPU time and, when exposed by the browser, GPU time."),
             ("SAFARI 120 HZ", "For Safari on a 120 Hz display: Settings, Advanced, Feature Flags; disable Prefer Page Rendering Updates near 60fps, then quit Safari fully and reopen it. Chrome and Firefox normally follow the display refresh rate."),
             ("AUDIO", "Every level has its own track. MUSIC and SFX are completely independent."),
             ("OFFLINE", "Extract the release ZIP and open the starter for macOS, Windows, or Linux. All fourteen music tracks are included."),
@@ -255,12 +257,12 @@ TEXT = {
             ("POWER 1 TO 10", "Every power level adds 8 reach. P1-2 breaks 1, P3-4 2, P5-6 3, P7-8 4, and P9-10 5 adjacent platform modules per strike."),
             ("STYLE 1 TO 10", "Gold Curve, Cyan Blade, Pink Spike, Green Curve, Orange Blade, Violet Spike, Ice Curve, Lilac Blade, White Spike, and Sun Curve. The preview names the next level."),
             ("LEVEL MODELS", "Independently from the style upgrade, every level uses its own ice-pick base model, enemy and guardian form, and color world."),
-            ("FPS / BENCHMARK", "FPS ON/OFF toggles the live local display. The Benchmark provides a reproducible 14-second comparison for the selected graphics, resolution, and frame-rate limit."),
+            ("FPS / SHOWCASE", "FPS ON/OFF toggles the live local display. The desktop Showcase provides a reproducible 30-second comparison for the selected graphics, resolution, and frame-rate limit."),
             ("RESOLUTION", "720p saves performance, 1080p is the recommended Mobile Ultra mode on the tested iPhone 17 Pro. 4K is a quality and screenshot mode."),
             ("PROGRESS", "Completed levels unlock locally. Choose an unlocked start level from the start menu; difficulty carries into the next level."),
         ],
         "cheats": "SECRET CHEAT CODES",
-        "cheat_intro": "Cheats work with touch and keyboard. They apply only to the current run. A run using a cheat does not update the local high score. The bikini avatar is an additional music-toggle cheat and needs no CHEAT LINK.",
+        "cheat_intro": "Control cheats work with touch and keyboard and apply only to the current run; such a run does not update the local high score. The profile-unlock code needs no CHEAT LINK and unlocks content locally only.",
         "cheat_steps": [
             "Start a run.",
             "Quickly tap or click the SP symbol at the top left five times.",
@@ -269,10 +271,10 @@ TEXT = {
         ],
         "codes": [
             ("IMMORTAL", "← → ← → JUMP PICK", "Blocks hits and falls in the current level. Ends at the next level."),
-            ("DOUBLE SHIELD", "JUMP JUMP ← → PICK", "Immediately grants two shield charges."),
+            ("DOUBLE SHIELD", "JUMP JUMP ← → PICK", "Immediately grants two shield charges: 8 seconds on Easy, 6 on Medium, and 4 on Hard."),
             ("30-S OVERDRIVE", "PICK JUMP PICK JUMP ← →", "Maximum ice-pick enhancement for 30 seconds."),
             ("EXTRA LIFE", "← ← → → JUMP PICK", "Adds one life, up to a maximum of nine."),
-            ("BIKINI AVATAR", "MUSIC OFF/ON ×2", "During an active run, switch MUSIC off and on twice within 5 seconds. Cosmetic only and only for that run; shows a confirmation and level-specific look presentations."),
+            ("UNLOCK ALL", "SFX OFF/ON ×2, MUSIC OFF", "Switch SFX off and on twice within 5 seconds, then turn MUSIC off within 5 seconds. Permanently unlocks all levels, robot models, and the hologram avatar in the local profile only."),
         ],
         "cheat_note": "CHEAT RUN // LOCAL ONLY // NO HIGH-SCORE ENTRY",
         "footer": "Skybreak Protocol // Manual EN",
@@ -393,7 +395,7 @@ def draw_cover(c, data):
     c.setFont("SkyMonoBold", 13)
     c.drawString(MARGIN, PAGE_H - 280, data["manual"])
     draw_wrapped(c, data["subtitle"], MARGIN, PAGE_H - 304, 250, size=10, leading=14, fill=MUTED)
-    c.drawImage(optimized_image(str(START_SHOT), 360, True), PAGE_W - 220, PAGE_H - 565, 170, 370, preserveAspectRatio=True, anchor="c")
+    c.drawImage(optimized_image(str(START_SHOT), 500, True), PAGE_W - 250, PAGE_H - 340, 215, 121, preserveAspectRatio=True, anchor="c")
     y = draw_wrapped(c, data["intro"], MARGIN, PAGE_H - 365, 275, size=10, leading=15, fill=WHITE)
     y -= 18
     for heading, body in data["facts"]:
@@ -447,7 +449,7 @@ def draw_controls(c, data, page_no):
     draw_wrapped(c, data["controls_intro"], MARGIN, PAGE_H - 87, PAGE_W - 2 * MARGIN, size=9, leading=13, fill=MUTED)
     c.drawImage(optimized_image(str(GAME_SHOT), 360, True), MARGIN, 78, 190, 414, preserveAspectRatio=True, anchor="c")
     x, y, width = 245, PAGE_H - 112, PAGE_W - 245 - MARGIN
-    for index, (button, heading, body) in enumerate(data["buttons"]):
+    for index, (button, heading, body) in enumerate(data["buttons"][:8]):
         accent = [CYAN, YELLOW, PINK][index % 3]
         c.setFillColor(color(PANEL))
         c.setStrokeColor(color(accent))
@@ -460,6 +462,26 @@ def draw_controls(c, data, page_no):
         c.drawString(x + 100, y - 23, heading)
         draw_wrapped(c, body, x + 10, y - 39, width - 20, size=7.5, leading=10, fill=MUTED, max_lines=2)
         y -= 55
+    c.showPage()
+
+
+def draw_controls_more(c, data, page_no):
+    page_base(c, data, page_no, data["controls"])
+    draw_wrapped(c, "Start menu settings and desktop tools are described below." if data["file"].endswith("EN.pdf") else "Startmenü-Einstellungen und Desktop-Werkzeuge sind unten beschrieben.", MARGIN, PAGE_H - 87, PAGE_W - 2 * MARGIN, size=9, leading=13, fill=MUTED)
+    x, y, width = MARGIN, PAGE_H - 120, PAGE_W - 2 * MARGIN
+    for index, (button, heading, body) in enumerate(data["buttons"][8:]):
+        accent = [PINK, CYAN, YELLOW][index % 3]
+        c.setFillColor(color(PANEL))
+        c.setStrokeColor(color(accent))
+        c.roundRect(x, y - 70, width, 64, 5, fill=1, stroke=1)
+        c.setFillColor(color(accent))
+        c.setFont("SkyMonoBold", 8.5)
+        c.drawString(x + 12, y - 25, button)
+        c.setFillColor(color(WHITE))
+        c.setFont("SkySansBold", 9)
+        c.drawString(x + 142, y - 25, heading)
+        draw_wrapped(c, body, x + 12, y - 43, width - 24, size=8, leading=10.5, fill=MUTED, max_lines=2)
+        y -= 76
     c.showPage()
 
 
@@ -538,13 +560,14 @@ def build(lang):
     draw_cover(c, data)
     draw_quick_start(c, data, 2)
     draw_controls(c, data, 3)
-    draw_cards_page(c, data, 4, data["systems"], data["systems_cards"])
-    draw_levels(c, data, 5, data["levels_a"], data["levels"][:5])
-    draw_levels(c, data, 6, data["levels_b"], data["levels"][5:10])
-    draw_levels(c, data, 7, data["levels_c"], data["levels"][10:])
-    draw_cards_page(c, data, 8, data["settings"], data["settings_cards"])
-    draw_cards_page(c, data, 9, data["upgrades"], data["upgrade_cards"])
-    draw_cheats(c, data, 10)
+    draw_controls_more(c, data, 4)
+    draw_cards_page(c, data, 5, data["systems"], data["systems_cards"])
+    draw_levels(c, data, 6, data["levels_a"], data["levels"][:5])
+    draw_levels(c, data, 7, data["levels_b"], data["levels"][5:10])
+    draw_levels(c, data, 8, data["levels_c"], data["levels"][10:])
+    draw_cards_page(c, data, 9, data["settings"], data["settings_cards"])
+    draw_cards_page(c, data, 10, data["upgrades"], data["upgrade_cards"])
+    draw_cheats(c, data, 11)
     c.save()
     print(target)
 

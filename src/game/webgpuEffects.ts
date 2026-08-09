@@ -18,6 +18,7 @@ export async function startWebGpuEffects(
   getSceneInstances: () => Float32Array,
   getResolution: () => RenderResolution,
   getAtmosphereIntensity: () => number,
+  updateGpuFrameMs?: (milliseconds: number | null) => void,
 ): Promise<EffectCleanup | null> {
   const gpu = (navigator as Navigator & { gpu?: any }).gpu;
   if (!gpu) return null;
@@ -26,7 +27,13 @@ export async function startWebGpuEffects(
   if (!adapter) return null;
   if (adapter.info?.isFallbackAdapter) return null;
   const maxTextureSize = Math.min(Number(adapter.limits?.maxTextureDimension2D || 4096), 4096);
-  const device = await adapter.requestDevice();
+  const supportsTimestampQuery = Boolean(adapter.features?.has?.("timestamp-query"));
+  let device: any;
+  try {
+    device = await adapter.requestDevice(supportsTimestampQuery ? { requiredFeatures: ["timestamp-query"] } : undefined);
+  } catch {
+    device = await adapter.requestDevice();
+  }
   const format = gpu.getPreferredCanvasFormat();
   const shader = device.createShaderModule({
     label: "Skybreak Ultra atmosphere",
@@ -116,6 +123,58 @@ export async function startWebGpuEffects(
         let alpha = clamp(max(max(color.r, color.g), color.b) * 1.75, 0.0, 0.34);
         return vec4f(color, alpha);
       }
+
+      // Showcase-only GPU stress pass. It deliberately combines multi-octave
+      // turbulence, cell noise, chromatic wave fronts and a soft vignette in
+      // one shader; normal gameplay never selects this entry point.
+      fn fbm(p0: vec2f) -> f32 {
+        var p = p0;
+        var value = 0.0;
+        var amplitude = 0.5;
+        for (var octave: i32 = 0; octave < 8; octave = octave + 1) {
+          value += noise(p) * amplitude;
+          p = p * 2.03 + vec2f(17.3, 9.2);
+          amplitude *= 0.5;
+        }
+        return value;
+      }
+
+      fn cellular(p: vec2f) -> f32 {
+        let cell = floor(p);
+        let local = fract(p);
+        var nearest = 1.0;
+        for (var y: i32 = -2; y <= 2; y = y + 1) {
+          for (var x: i32 = -2; x <= 2; x = x + 1) {
+            let offset = vec2f(f32(x), f32(y));
+            let point = vec2f(hash(cell + offset), hash(cell + offset + vec2f(31.7, 11.9)));
+            nearest = min(nearest, length(offset + point - local));
+          }
+        }
+        return nearest;
+      }
+
+      @fragment fn showcaseFragment(@builtin(position) position: vec4f) -> @location(0) vec4f {
+        let uv = position.xy / uniforms.resolution;
+        var p = uv * 2.0 - 1.0;
+        p.x *= uniforms.resolution.x / uniforms.resolution.y;
+        let t = uniforms.time;
+        let flow = fbm(p * 2.8 + vec2f(t * 0.10, -t * 0.07));
+        let detail = fbm(p * 8.6 - vec2f(t * 0.18, t * 0.13));
+        let cells = cellular(p * 9.0 + vec2f(t * 0.12, -t * 0.09));
+        let core = vec2f(sin(t * 0.19) * 0.28, cos(t * 0.16) * 0.18);
+        let distance = length(p - core);
+        let ringA = exp(-68.0 * abs(distance - (0.22 + flow * 0.10)));
+        let ringB = exp(-96.0 * abs(distance - (0.48 + detail * 0.05)));
+        let rays = pow(max(0.0, sin(atan2(p.y, p.x) * 12.0 + t * 1.7 + flow * 5.0)), 13.0);
+        let cellEdge = smoothstep(0.18, 0.035, cells) * (0.25 + detail * 0.75);
+        let vignette = smoothstep(1.35, 0.22, length(p));
+        var color = vec3f(0.0, 0.72, 1.0) * (ringA * 0.22 + cellEdge * 0.075);
+        color += vec3f(1.0, 0.02, 0.42) * (ringB * 0.16 + rays * 0.065);
+        color += vec3f(1.0, 0.52, 0.03) * exp(-12.0 * distance) * (0.05 + flow * 0.08);
+        color *= vignette * uniforms.intensity;
+        let alpha = clamp(max(max(color.r, color.g), color.b) * 1.35, 0.0, 0.24);
+        return vec4f(color, alpha);
+      }
     `,
   });
   const pipeline = device.createRenderPipeline({
@@ -125,6 +184,23 @@ export async function startWebGpuEffects(
     fragment: {
       module: shader,
       entryPoint: "fragmentMain",
+      targets: [{
+        format,
+        blend: {
+          color: { srcFactor: "src-alpha", dstFactor: "one", operation: "add" },
+          alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
+        },
+      }],
+    },
+    primitive: { topology: "triangle-list" },
+  });
+  const showcasePipeline = device.createRenderPipeline({
+    label: "Skybreak Showcase postprocessing pipeline",
+    layout: "auto",
+    vertex: { module: shader, entryPoint: "vertexMain" },
+    fragment: {
+      module: shader,
+      entryPoint: "showcaseFragment",
       targets: [{
         format,
         blend: {
@@ -162,6 +238,15 @@ export async function startWebGpuEffects(
     layout: pipeline.getBindGroupLayout(0),
     entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
   });
+  const showcaseUniformBuffers = Array.from({ length: 7 }, (_, index) => device.createBuffer({
+    label: `Skybreak Showcase postprocess uniforms ${index + 1}`,
+    size: 16,
+    usage: (usage?.UNIFORM ?? 0x40) | (usage?.COPY_DST ?? 0x08),
+  }));
+  const showcaseBindGroups = showcaseUniformBuffers.map((buffer) => device.createBindGroup({
+    layout: showcasePipeline.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer } }],
+  }));
   const quadBuffer = device.createBuffer({
     label: "Skybreak instance quad",
     size: 48,
@@ -171,7 +256,7 @@ export async function startWebGpuEffects(
     -0.5, -0.5, 0.5, -0.5, -0.5, 0.5,
     -0.5, 0.5, 0.5, -0.5, 0.5, 0.5,
   ]));
-  const instanceCapacity = 800;
+  const instanceCapacity = 34000;
   const instanceBuffer = device.createBuffer({
     label: "Skybreak Ultra instances",
     size: instanceCapacity * 8 * 4,
@@ -239,8 +324,23 @@ export async function startWebGpuEffects(
   });
   const isMac = /Macintosh|Mac OS X/i.test(navigator.userAgent);
   updateRenderer(isMac ? "WEBGPU · METAL" : "WEBGPU · NATIVE GPU");
+  updateGpuFrameMs?.(null);
+  const timestampEnabled = supportsTimestampQuery && device.features?.has?.("timestamp-query");
+  const querySet = timestampEnabled ? device.createQuerySet({ type: "timestamp", count: 2 }) : null;
+  const timestampResolveBuffer = timestampEnabled ? device.createBuffer({
+    label: "Skybreak Showcase GPU timestamp resolve",
+    size: 16,
+    usage: (usage?.QUERY_RESOLVE ?? 0x200) | (usage?.COPY_SRC ?? 0x04),
+  }) : null;
+  const timestampReadBuffer = timestampEnabled ? device.createBuffer({
+    label: "Skybreak Showcase GPU timestamp readback",
+    size: 16,
+    usage: (usage?.COPY_DST ?? 0x08) | (usage?.MAP_READ ?? 0x01),
+  }) : null;
   let active = true;
   let animation = 0;
+  let timestampPending = false;
+  let lastTimestampSample = 0;
 
   void device.lost.then(() => {
     if (active) updateRenderer("WEBGPU LOST");
@@ -263,15 +363,25 @@ export async function startWebGpuEffects(
       canvas.height = height;
     }
 
-    device.queue.writeBuffer(uniformBuffer, 0, new Float32Array([width, height, time * 0.001, getAtmosphereIntensity()]));
+    const atmosphereIntensity = getAtmosphereIntensity();
+    const showcaseActive = atmosphereIntensity > 1.2;
+    const shaderTime = time * 0.001;
+    const sampleTimestamp = Boolean(showcaseActive && querySet && timestampResolveBuffer && timestampReadBuffer && !timestampPending && time - lastTimestampSample >= 750);
+    device.queue.writeBuffer(uniformBuffer, 0, new Float32Array([width, height, shaderTime, atmosphereIntensity]));
     const encoder = device.createCommandEncoder({ label: "Skybreak Ultra frame" });
+    const frameView = context.getCurrentTexture().createView();
     const pass = encoder.beginRenderPass({
       colorAttachments: [{
-        view: context.getCurrentTexture().createView(),
+        view: frameView,
         clearValue: { r: 0, g: 0, b: 0, a: 0 },
         loadOp: "clear",
         storeOp: "store",
       }],
+      timestampWrites: sampleTimestamp
+        ? showcaseActive
+          ? { querySet, beginningOfPassWriteIndex: 0 }
+          : { querySet, beginningOfPassWriteIndex: 0, endOfPassWriteIndex: 1 }
+        : undefined,
     });
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
@@ -286,7 +396,47 @@ export async function startWebGpuEffects(
       pass.draw(6, instanceCount);
     }
     pass.end();
+    if (showcaseActive) {
+      for (let passIndex = 0; passIndex < showcaseBindGroups.length; passIndex += 1) {
+        // Three serial passes intentionally compound different turbulence phases.
+        device.queue.writeBuffer(
+          showcaseUniformBuffers[passIndex],
+          0,
+          new Float32Array([width, height, shaderTime + passIndex * 4.73, atmosphereIntensity * (1 + passIndex * .16)]),
+        );
+        const postPass = encoder.beginRenderPass({
+          colorAttachments: [{ view: frameView, loadOp: "load", storeOp: "store" }],
+          timestampWrites: sampleTimestamp && passIndex === showcaseBindGroups.length - 1
+            ? { querySet, endOfPassWriteIndex: 1 }
+            : undefined,
+        });
+        postPass.setPipeline(showcasePipeline);
+        postPass.setBindGroup(0, showcaseBindGroups[passIndex]);
+        postPass.draw(3);
+        postPass.end();
+      }
+    }
+    if (sampleTimestamp && querySet && timestampResolveBuffer && timestampReadBuffer) {
+      encoder.resolveQuerySet(querySet, 0, 2, timestampResolveBuffer, 0);
+      encoder.copyBufferToBuffer(timestampResolveBuffer, 0, timestampReadBuffer, 0, 16);
+      timestampPending = true;
+      lastTimestampSample = time;
+    }
     device.queue.submit([encoder.finish()]);
+    if (sampleTimestamp && timestampReadBuffer) {
+      void timestampReadBuffer.mapAsync((globalThis as any).GPUMapMode?.READ ?? 1)
+        .then(() => {
+          const values = new BigUint64Array(timestampReadBuffer.getMappedRange().slice(0));
+          const milliseconds = Number(values[1] - values[0]) / 1_000_000;
+          timestampReadBuffer.unmap();
+          if (Number.isFinite(milliseconds) && milliseconds >= 0) updateGpuFrameMs?.(Math.round(milliseconds * 10) / 10);
+        })
+        .catch(() => {
+          try { timestampReadBuffer.unmap(); } catch { /* not mapped */ }
+          updateGpuFrameMs?.(null);
+        })
+        .finally(() => { timestampPending = false; });
+    }
     canvas.classList.add("fx-ready");
     animation = requestAnimationFrame(render);
   };
@@ -295,6 +445,10 @@ export async function startWebGpuEffects(
     active = false;
     cancelAnimationFrame(animation);
     uniformBuffer.destroy();
+    showcaseUniformBuffers.forEach((buffer) => buffer.destroy());
+    querySet?.destroy();
+    timestampResolveBuffer?.destroy();
+    timestampReadBuffer?.destroy();
     quadBuffer.destroy();
     instanceBuffer.destroy();
     device.destroy();
@@ -354,7 +508,7 @@ export async function startWebGpuUltraRenderer(
     -0.5, -0.5, 0.5, -0.5, -0.5, 0.5,
     -0.5, 0.5, 0.5, -0.5, 0.5, 0.5,
   ]));
-  const instanceCapacity = 1024;
+  const instanceCapacity = 1600;
   const instanceBuffer = device.createBuffer({
     label: "Skybreak Ultra instances",
     size: instanceCapacity * 8 * 4,

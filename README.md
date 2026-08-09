@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-**Current release:** `v1.0.1-beta.3` · [Detailed changelog](docs/releases/1.0.1-beta.3.en.md) · [All changelogs](CHANGELOG.md)
+**Current release:** `v1.0.1-beta.4` · [Detailed changelog](docs/releases/1.0.1-beta.4.en.md) · [All changelogs](CHANGELOG.md)
 
 An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through fourteen visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Every level has its own theme, 2.5D platform material, animated scenery, effects, guardian, and soundtrack.
 
@@ -23,7 +23,7 @@ The web app runs without installation. On iPhone or iPad, use **Share → Add to
 
 The current version is shown in the game. On startup, Skybreak Protocol checks the public GitHub releases once and displays a notice when a newer beta or final build is available.
 
-**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.3). Extract it and open the matching starter for macOS, Windows, or Linux. All fourteen music tracks are included; only the optional update check requires internet access.
+**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.4). Extract it and open the matching starter for macOS, Windows, or Linux. All fourteen music tracks are included; only the optional update check requires internet access.
 
 ## Manual
 
@@ -56,7 +56,7 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
 - Every level is a complete 15-floor ascent with a distinct animated environment, 2.5D platform material, enemy and guardian design, ice-pick base model, and soundtrack
 - Break platform modules from below
 - Use the robot's ice pick against enemies and nearby platform modules
-- Difficulty-aware chests: choose from seven rewards (shield, life, data bonus, overdrive, jackpot, repair plus shield, or phase armor). They are persistent every two to three floors on Easy, time-limited after halfway on Medium, and only after two thirds on Hard with faster relocations
+- Difficulty-aware chests: choose from seven rewards (shield, life, data bonus, overdrive, jackpot, repair plus shield, or phase armor). A shield lasts 8 seconds on Easy, 6 on Medium, and 4 on Hard, or ends when it absorbs a hit. Chests are persistent every two to three floors on Easy, time-limited after halfway on Medium, and only after two thirds on Hard with faster relocations
 - Defeat the level guardian, preview the next sector, then choose the concrete next ice-pick power or visual-style upgrade
 - Watch the robot show persistent armor damage, sensor flicker, and sparks when lives are lost
 - Permanently unlock reached levels locally and select any unlocked level as the next starting point after a run
@@ -73,7 +73,7 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
 | Pause | `P` or `Esc` | `PAUSE` |
 | Fullscreen | `FULLSCREEN` button | Native fullscreen or immersive Safari fallback |
 
-On desktop, use **Key bindings** below the game: select an action and then press the desired key. A duplicate assignment swaps the two bindings; **Reset** restores `A`, `D`, `Space`, and `X`.
+On desktop, use **Key bindings** below the game: select an action and then press the desired key. A duplicate assignment swaps the two bindings; **Reset keys** restores `A`, `D`, `Space`, and `X`. **Reset local profile** in the start menu deletes local progress, unlocks, record, and settings.
 
 ## Robot and ice-pick upgrades
 
@@ -118,7 +118,11 @@ The selected level is stored locally on the device.
 | High | powerful devices | high resolution and extended effects |
 | Ultra | current desktop and mobile GPUs | full-scene WebGPU post-processing, F16 shaders, GPU instancing, adaptive resolution and effects; WebGL2 fallback |
 
-Every preset has the same **Frame rate limit** choice: 60 FPS, up to 120 FPS, or Unlimited. The in-game **Benchmark** runs the same 14-second measurement after a two-second warm-up and records the selected preset, resolution, limit, FPS, frame time, update time, and draw time locally.
+Every preset has the same **Frame rate limit** choice: 60 FPS, up to 120 FPS, or Unlimited. The desktop-only **Showcase** runs for 30 seconds after a two-second warm-up, with an autonomous climbing robot, block destruction, and a deliberately high effect budget. It reports preset, resolution, limit, FPS, frame time, CPU time, and - where the browser exposes it - GPU time locally.
+
+## Local profile unlock code
+
+To unlock all levels, robot models, and the hologram avatar in the local browser profile, switch **SFX OFF/ON** twice within five seconds, then switch **MUSIC OFF** within five seconds. The confirmation is displayed directly over the start screen. It unlocks content locally only and does not send data anywhere.
 
 > [!WARNING]
 > **On an iPhone 17 Pro, “Ultra + 1080p” reached 60 FPS. 4K Ultra is an extremely demanding quality and screenshot mode, not a 60 FPS mobile mode. Ultra can still warm the device; in high ambient temperatures, direct sunlight, or when the phone becomes very warm, switch to Medium or Low.**

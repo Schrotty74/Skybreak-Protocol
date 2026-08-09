@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-**Aktuelle Version:** `v1.0.1-beta.3` · [Ausführlicher Changelog](docs/releases/1.0.1-beta.3.md) · [Alle Changelogs](CHANGELOG.md)
+**Aktuelle Version:** `v1.0.1-beta.4` · [Ausführlicher Changelog](docs/releases/1.0.1-beta.4.md) · [Alle Changelogs](CHANGELOG.md)
 
 Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Kämpfe dich durch vierzehn optisch eigenständige Level nach oben, durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus und erreiche den Sendeturm über der Megacity. Jedes Level besitzt eigene 2.5D-Plattformen, Kulisse, Effekte, Wächter und Musik.
 
@@ -23,7 +23,7 @@ Die Web-App funktioniert ohne Installation. Auf iPhone oder iPad kann sie in Saf
 
 Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protocol einmal die öffentlichen GitHub-Releases und zeigt einen Hinweis an, wenn eine neuere Beta- oder Final-Version verfügbar ist.
 
-**Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.3) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle vierzehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
+**Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.4) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle vierzehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
 
 ## Handbuch
 
@@ -56,7 +56,7 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 - Jedes Level ist ein vollständiger Aufstieg über 15 Etagen mit eigener animierter Umgebung, 2.5D-Plattformmaterial, Gegner- und Wächterdesign, Eispickel-Grundmodell und Soundtrack
 - Plattformmodule von unten durchbrechen
 - Gegner und nahe Plattformmodule mit dem Eispickel des Roboters angreifen
-- Truhen passend zur Schwierigkeit: aus sieben Belohnungen wählen – Schild, Leben, Datenbonus, Overdrive, Jackpot, Reparatur plus Schild oder Phasenpanzerung. Auf Leicht dauerhaft alle zwei bis drei Etagen, auf Mittel ab der Hälfte zeitlich begrenzt und auf Schwer erst ab zwei Dritteln mit schnellen Positionswechseln
+- Truhen passend zur Schwierigkeit: aus sieben Belohnungen wählen – Schild, Leben, Datenbonus, Overdrive, Jackpot, Reparatur plus Schild oder Phasenpanzerung. Ein Schild hält auf Leicht 8, auf Mittel 6 und auf Schwer 4 Sekunden oder endet beim abgefangenen Treffer. Auf Leicht dauerhaft alle zwei bis drei Etagen, auf Mittel ab der Hälfte zeitlich begrenzt und auf Schwer erst ab zwei Dritteln mit schnellen Positionswechseln
 - Wächterdrohne ausschalten, den nächsten Sektor als Vorschau sehen und danach die konkrete Kraft- oder Designstufe des Eispickels auswählen
 - Sichtbare Roboterschäden, Sensorflackern und Funken bei verlorenen Leben erleben
 - Erreichte Level dauerhaft lokal freischalten und nach einem Lauf direkt als neues Startlevel auswählen
@@ -73,7 +73,7 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 | Pause | `P` oder `Esc` | `PAUSE` |
 | Vollbild | Schaltfläche `FULLSCREEN` | natives Vollbild oder immersiver Safari-Fallback |
 
-Am Desktop befindet sich unter dem Spiel die **Tastenbelegung**. Eine Aktion anklicken und anschließend die gewünschte Taste drücken. Bereits verwendete Tasten werden automatisch getauscht; **Standard** stellt `A`, `D`, `Leertaste` und `X` wieder her.
+Am Desktop befindet sich unter dem Spiel die **Tastenbelegung**. Eine Aktion anklicken und anschließend die gewünschte Taste drücken. Bereits verwendete Tasten werden automatisch getauscht; **Tasten Standard** stellt `A`, `D`, `Leertaste` und `X` wieder her. **Spielstand zurücksetzen** im Startmenü löscht Fortschritt, Freischaltungen, Rekord und Einstellungen nur lokal.
 
 ## Roboter und Eispickel-Upgrades
 
@@ -118,7 +118,11 @@ Die gewählte Stufe wird lokal auf dem Gerät gespeichert.
 | Hoch | leistungsfähige Geräte | hohe Auflösung und erweiterte Effekte |
 | Ultra | aktuelle Desktop- und Mobil-GPUs | vollständiges WebGPU-Post-Processing, F16-Shader, GPU-Instancing sowie adaptive Auflösung und Effekte; WebGL2-Fallback |
 
-Für jede Stufe steht dasselbe **Bildraten-Limit** bereit: 60 FPS, bis 120 FPS oder ohne Limit. Der integrierte **Benchmark** misst nach zwei Sekunden Aufwärmzeit 14 Sekunden lang dieselbe Szene und zeigt Stufe, Auflösung, Limit, FPS, Framezeit sowie Update- und Zeichenzeit ausschließlich lokal an.
+Für jede Stufe steht dasselbe **Bildraten-Limit** bereit: 60 FPS, bis 120 FPS oder ohne Limit. Der nur am Desktop verfügbare **Showcase** läuft nach zwei Sekunden Aufwärmzeit 30 Sekunden lang mit autonom kletterndem Roboter, Blockzerstörung und absichtlich hoher Effektlast. Er zeigt Stufe, Auflösung, Limit, FPS, Framezeit, CPU-Zeit und – sofern der Browser sie bereitstellt – GPU-Zeit ausschließlich lokal an.
+
+## Lokaler Profil-Freischaltcode
+
+Um alle Level, Roboter-Modelle und den Hologramm-Avatar im lokalen Browserprofil freizuschalten, **SFX AUS/AN** innerhalb von fünf Sekunden zweimal schalten und danach innerhalb von fünf Sekunden **MUSIK AUS** wählen. Die Bestätigung erscheint direkt über dem Startbildschirm. Der Code schaltet nur lokal frei und überträgt keine Daten.
 
 > [!WARNING]
 > **Auf einem iPhone 17 Pro erreichte „Ultra + 1080p“ 60 FPS. 4K Ultra ist ein extrem aufwendiger Qualitäts- und Screenshot-Modus und nicht für 60 FPS auf Mobilgeräten vorgesehen. Ultra kann das Gerät dennoch erwärmen; bei hohen Umgebungstemperaturen, direkter Sonne oder starker Erwärmung auf „Mittel“ oder „Niedrig“ wechseln.**

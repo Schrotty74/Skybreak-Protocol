@@ -341,19 +341,26 @@ canvas {
   backdrop-filter: blur(3px);
 }
 
-.game-logo {
+.content-unlock-notice {
   position: absolute;
-  top: clamp(16px, 3.5vh, 38px);
+  z-index: 20001;
+  top: clamp(92px, 15vh, 150px);
   left: 50%;
-  width: clamp(72px, 9vw, 116px);
-  height: auto;
-  border: 1px solid rgba(0, 240, 255, .5);
-  border-radius: 22%;
-  box-shadow:
-    0 0 0 1px rgba(255, 31, 176, .28),
-    0 0 32px rgba(0, 240, 255, .3),
-    0 14px 42px rgba(0, 0, 0, .56);
+  width: min(720px, calc(100% - 44px));
+  padding: 13px 18px;
+  border: 1px solid rgba(0, 240, 255, .82);
+  background: rgba(2, 10, 23, .94);
+  color: var(--cyan);
+  font-size: clamp(10px, 1.1vw, 14px);
+  font-weight: 900;
+  letter-spacing: .13em;
+  line-height: 1.45;
+  text-align: center;
+  text-transform: uppercase;
+  display: block;
+  box-shadow: 0 0 0 2px rgba(255, 31, 176, .18), 0 0 34px rgba(0, 240, 255, .3);
   transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .language-link,
@@ -442,6 +449,16 @@ canvas {
   letter-spacing: .32em;
 }
 
+.game-overlay > .eyebrow {
+  margin: 17px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ff75b9;
+  line-height: 1.35;
+  text-shadow: 0 0 14px rgba(255, 43, 138, .48);
+}
+
 .game-overlay h1 {
   margin: 0;
   color: var(--white);
@@ -454,6 +471,22 @@ canvas {
     -3px 0 var(--pink),
     3px 0 var(--cyan),
     0 0 38px rgba(0, 240, 255, .2);
+}
+
+.game-overlay h1.start-title {
+  font-size: clamp(42px, 7vw, 104px);
+  letter-spacing: -.065em;
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, .32));
+}
+
+.start-title > span:first-child {
+  color: var(--pink);
+  text-shadow: 0 0 3px #ffd3ed, 0 0 10px #ff2b8a, 0 0 24px rgba(255, 43, 138, .9), 0 0 52px rgba(255, 43, 138, .52);
+}
+
+.start-title > span:last-child {
+  color: var(--white);
+  text-shadow: 0 0 3px #fff, 0 0 10px var(--cyan), 0 0 24px rgba(0, 240, 255, .85), 0 0 52px rgba(0, 240, 255, .46);
 }
 
 .game-overlay h1.upgrade-title {
@@ -490,6 +523,24 @@ canvas {
 .primary-button:hover {
   transform: translateY(-2px);
   background: #7ff9ff;
+}
+
+.reset-profile-button {
+  display: inline-block;
+  margin-top: 14px;
+  border: 1px solid color-mix(in srgb, var(--warning) 72%, transparent);
+  background: color-mix(in srgb, var(--warning) 10%, #03050d);
+  color: var(--warning);
+  padding: 9px 13px;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.reset-profile-button:hover {
+  background: color-mix(in srgb, var(--warning) 20%, #03050d);
 }
 
 .start-level-picker {
@@ -678,6 +729,20 @@ canvas {
   grid-column: 1 / -1;
 }
 
+.start-graphics-settings {
+  width: min(900px, calc(100% - 34px));
+  margin-top: 15px;
+  padding: 10px 12px;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  border: 1px solid rgba(0, 240, 255, .2);
+  background: rgba(3, 12, 25, .7);
+}
+
+.start-graphics-settings .mobile-ultra-picker small {
+  display: none;
+}
+
 .quality-picker,
 .mobile-ultra-picker,
 .difficulty-picker {
@@ -832,7 +897,9 @@ kbd {
 }
 
 .key-binding-panel {
-  grid-column: 1 / -1;
+  grid-column: auto;
+  width: fit-content;
+  justify-self: start;
   display: flex;
   align-items: stretch;
   gap: 8px;
@@ -1130,11 +1197,6 @@ kbd {
 
   .game-overlay h1 {
     font-size: 52px;
-  }
-
-  .game-logo {
-    top: 8px;
-    width: 58px;
   }
 
   .mission-grid {

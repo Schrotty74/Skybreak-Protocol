@@ -5,7 +5,14 @@ import { checkForUpdate, type AvailableUpdate } from "./updateCheck";
 import { applyPowerUp, buildChestSpawns, ROAMING_CHEST_RULES, type PowerUpKind, type RoamingChestDifficulty } from "./powerUps";
 import { detectCheat, type CheatId } from "./cheats";
 import { actionForCode, DEFAULT_KEY_BINDINGS, displayKey, normalizeKeyBindings, rebindKey, type BindableAction, type KeyBindings } from "./keyBindings";
-import { getStoredItem, setStoredItem } from "./storage";
+import { clearStoredProfile, getStoredItem, setStoredItem } from "./storage";
+
+// A navigation-based reset runs before React restores any saved progression.
+// It is deliberately independent of the in-game click/state lifecycle.
+if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("reset-profile")) {
+  clearStoredProfile();
+  window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
+}
 import { createAudio } from "./gameAudio";
 import { drawLevelBackgroundAnimation } from "./game/renderBackground";
 import { drawAnimatedBikiniAvatar, drawHologramDancer, drawLevelRobot, getPreparedChestSprite, getPreparedEnemySprite, getPreparedParticleSprite } from "./game/renderEntities";
@@ -19,11 +26,14 @@ type ChallengeMode = "standard" | "noDamage" | "scoreRush";
 type RenderResolution = "720p" | "1080p" | "4k";
 type Difficulty = "easy" | "medium" | "hard";
 type FrameRateMode = "60" | "120" | "unlimited";
-type BenchmarkResult = { fps: number; frameMs: number; updateMs: number; drawMs: number; quality: Quality; resolution: RenderResolution; frameRate: FrameRateMode };
+type BenchmarkResult = { fps: number; frameMs: number; updateMs: number; drawMs: number; gpuMs: number | null; quality: Quality; resolution: RenderResolution; frameRate: FrameRateMode };
 type CosmeticLoadout = { style: number; avatar: Player["avatar"]; robotProfile: number };
 
 const APP_VERSION = __APP_VERSION__;
 const APP_BUILD_CHANNEL = __APP_BUILD_CHANNEL__;
+// Local-only comparison switch. Set this to false to restore the original
+// Level 1 Ultra presentation without touching the showcase implementation.
+const LOCAL_LEVEL_ONE_ULTRA_STRESS_TEST = false;
 const CHANGELOG_BASE_URL = "https://github.com/Schrotty74/Skybreak-Protocol/blob/main/docs/releases";
 
 const DIFFICULTY_SETTINGS: Record<Difficulty, { enemy: number; hazards: number; hazardSpeed: number; score: number }> = {
@@ -31,6 +41,8 @@ const DIFFICULTY_SETTINGS: Record<Difficulty, { enemy: number; hazards: number; 
   medium: { enemy: 1, hazards: 1, hazardSpeed: 1, score: 1 },
   hard: { enemy: 1.28, hazards: 1.42, hazardSpeed: 1.3, score: 1.35 },
 };
+
+const SHIELD_DURATION_SECONDS: Record<Difficulty, number> = { easy: 8, medium: 6, hard: 4 };
 
 const QUALITY_SETTINGS: Record<Quality, {
   fps: number;
@@ -43,22 +55,33 @@ const QUALITY_SETTINGS: Record<Quality, {
   rain: number;
   fog: number;
 }> = {
-  low: { fps: 30, dpr: 1, glFps: 12, glDpr: 0.7, webgl: false, traffic: 0, layers: 0, rain: 0, fog: 0 },
-  medium: { fps: 40, dpr: 1.5, glFps: 30, glDpr: 1, webgl: true, traffic: 10, layers: 2, rain: 38, fog: 2 },
-  high: { fps: 60, dpr: 2, glFps: 45, glDpr: 1.5, webgl: true, traffic: 18, layers: 3, rain: 65, fog: 3 },
-  ultra: { fps: 60, dpr: 4, glFps: 60, glDpr: 2.5, webgl: true, traffic: 38, layers: 5, rain: 170, fog: 7 },
+  low: { fps: 30, dpr: 1, glFps: 12, glDpr: 0.7, webgl: false, traffic: 10, layers: 3, rain: 30, fog: 5 },
+  medium: { fps: 40, dpr: 1.5, glFps: 30, glDpr: 1, webgl: true, traffic: 20, layers: 5, rain: 68, fog: 7 },
+  high: { fps: 60, dpr: 2, glFps: 45, glDpr: 1.5, webgl: true, traffic: 28, layers: 6, rain: 95, fog: 8 },
+  ultra: { fps: 60, dpr: 4, glFps: 60, glDpr: 2.5, webgl: true, traffic: 48, layers: 8, rain: 200, fog: 12 },
 };
+
+// Preserve the established mobile effect budgets. The expanded values above
+// are a desktop visual upgrade and must not add heat or battery load on phones.
+const MOBILE_EFFECT_BUDGETS = {
+  low: { traffic: 0, layers: 0, rain: 0, fog: 0 },
+  medium: { traffic: 10, layers: 2, rain: 38, fog: 2 },
+  high: { traffic: 18, layers: 3, rain: 65, fog: 3 },
+  ultra: { traffic: 38, layers: 5, rain: 170, fog: 7 },
+} as const;
 
 function activeQualitySettings(quality: Quality, ultraFallback = false, mobileHighThermalProtection = false) {
   const resolvedQuality = quality === "ultra" && ultraFallback ? "medium" : quality;
   const settings = QUALITY_SETTINGS[resolvedQuality];
+  const mobile = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
   // Mobile High keeps gameplay at 60 FPS, but reduces only the separate effect
   // renderer and the most expensive atmospheric layers.
-  if (resolvedQuality === "high" && typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches) {
+  if (resolvedQuality === "high" && mobile) {
     return mobileHighThermalProtection
       ? { ...settings, dpr: 1.25, glFps: 20, glDpr: 0.8, traffic: 8, layers: 1, rain: 24, fog: 1 }
       : { ...settings, dpr: 1.5, glFps: 30, glDpr: 1, traffic: 13, layers: 2, rain: 40, fog: 2 };
   }
+  if (mobile) return { ...settings, ...MOBILE_EFFECT_BUDGETS[resolvedQuality] };
   return settings;
 }
 
@@ -215,11 +238,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const mobileUltra120Ref = useRef(false);
   const ultraUnlimitedRef = useRef(false);
   const inGameBenchmarkRef = useRef({ active: false, startedAt: 0, frames: 0, totalFrameMs: 0, totalUpdateMs: 0, totalDrawMs: 0 });
+  const inGameBenchmarkTimeoutRef = useRef<number | null>(null);
   const ultraFallbackRef = useRef(false);
   const pickaxeLoadoutRef = useRef({ power: 1, style: 1 });
   const avatarRef = useRef<Player["avatar"]>("robot");
   const robotProfileRef = useRef(0);
-  const musicToggleCheatRef = useRef({ cycles: 0, lastCycle: 0, switchedOff: false });
+  const audioUnlockCheatRef = useRef({ cycles: 0, lastCycle: 0, awaitingMusicOff: false });
   const keyBindingsRef = useRef<KeyBindings>({ ...DEFAULT_KEY_BINDINGS });
   const bindingCaptureRef = useRef<BindableAction | null>(null);
   const unlockedLevelRef = useRef(1);
@@ -227,10 +251,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const challengeRef = useRef<ChallengeMode>("standard");
   const cheatArmRef = useRef({ taps: 0, lastTap: 0, armedUntil: 0 });
   const cheatSequenceRef = useRef<{ key: InputKey; time: number }[]>([]);
+  const contentUnlockNoticeTimeoutRef = useRef<number | null>(null);
   const renderViewRef = useRef({ width: VIEW_W, height: VIEW_H, portrait: false });
   const frameTelemetryRef = useRef({ frames: 0, totalFrameMs: 0, totalUpdateMs: 0, totalDrawMs: 0, lastSampleAt: 0 });
   const benchmarkStartedAtRef = useRef(0);
   const benchmarkReportedRef = useRef(false);
+  const gpuFrameMsRef = useRef<number | null>(null);
   const difficultiesRef = useRef<Difficulty[]>(Array(LEVEL_COUNT).fill("medium"));
   const [status, setStatus] = useState<GameStatus>("ready");
   const [score, setScore] = useState(0);
@@ -266,12 +292,30 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const [cosmeticLoadout, setCosmeticLoadout] = useState<CosmeticLoadout>({ style: 1, avatar: "robot", robotProfile: 0 });
   const [unlockedRobotProfiles, setUnlockedRobotProfiles] = useState<number[]>([1]);
   const [pendingChest, setPendingChest] = useState<Chest | null>(null);
+  const [contentUnlockNotice, setContentUnlockNotice] = useState<string | null>(null);
+
+  useEffect(() => () => {
+    if (contentUnlockNoticeTimeoutRef.current !== null) {
+      window.clearTimeout(contentUnlockNoticeTimeoutRef.current);
+    }
+  }, []);
 
   const syncHud = useCallback((world: World) => {
     setScore(world.score);
     setLives(world.lives);
     setSector(world.sector);
     setStatus(world.status);
+  }, []);
+
+  const showOverlayNotice = useCallback((message: string, duration: number) => {
+    setContentUnlockNotice(message);
+    if (contentUnlockNoticeTimeoutRef.current !== null) {
+      window.clearTimeout(contentUnlockNoticeTimeoutRef.current);
+    }
+    contentUnlockNoticeTimeoutRef.current = window.setTimeout(() => {
+      setContentUnlockNotice(null);
+      contentUnlockNoticeTimeoutRef.current = null;
+    }, duration);
   }, []);
 
   useEffect(() => {
@@ -307,6 +351,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const next = makeWorld();
     const variant = Math.floor((Date.now() / 1000 + selectedStartLevelRef.current) % 3);
     placeWorldAtLevel(next, selectedStartLevelRef.current, variant);
+    // A manually started level is always a clean run. Never carry defensive
+    // power-up state from a prior run, level transition, or showcase.
+    next.player.shield = 0;
+    next.player.shieldTime = 0;
+    next.player.overdrive = 0;
+    next.player.invulnerable = 0;
+    next.player.damage = 0;
     if ((difficultiesRef.current[selectedStartLevelRef.current - 1] || "medium") === "easy") applyEasyAssists(next);
     next.player.pickaxePower = pickaxeLoadoutRef.current.power;
     next.player.pickaxeStyle = pickaxeLoadoutRef.current.style;
@@ -343,10 +394,13 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       world.roamingChest = null;
       world.roamingChestTimer = 0;
     }
-    const difficulty = DIFFICULTY_SETTINGS[difficultiesRef.current[world.sector - 1] || "medium"];
+    const difficultyKey = difficultiesRef.current[world.sector - 1] || "medium";
+    const difficulty = DIFFICULTY_SETTINGS[difficultyKey];
     const reward = applyPowerUp(kind, { lives: world.lives, shield: world.player.shield, overdrive: world.player.overdrive, invulnerable: world.player.invulnerable, damage: world.player.damage, score: world.score }, difficulty.score);
     world.lives = reward.lives; world.score = reward.score; world.player.shield = reward.shield; world.player.overdrive = reward.overdrive; world.player.invulnerable = reward.invulnerable; world.player.damage = reward.damage;
-    world.powerUpMessage = reward.message === "shield" ? (isDe ? "SCHUTZSCHILD AKTIV" : "SHIELD ACTIVE") : reward.message === "life" ? (isDe ? "EXTRALEBEN ERHALTEN" : "EXTRA LIFE ACQUIRED") : reward.message === "life-full" ? `${isDe ? "LEBEN VOLL" : "LIVES FULL"} // +${reward.awardedScore}` : reward.message === "score" ? `${isDe ? "DATENBONUS" : "DATA BONUS"} // +${reward.awardedScore}` : reward.message === "jackpot" ? `${isDe ? "JACKPOT" : "JACKPOT"} // +${reward.awardedScore}` : reward.message === "repair" ? (isDe ? "REPARATUR UND SCHILD AKTIV" : "REPAIR AND SHIELD ACTIVE") : reward.message === "phase" ? (isDe ? "PHASENPANZERUNG // 7 SEKUNDEN" : "PHASE ARMOR // 7 SECONDS") : (isDe ? "EISPICKEL-OVERDRIVE // 12 SEKUNDEN" : "ICE PICK OVERDRIVE // 12 SECONDS");
+    const shieldSeconds = SHIELD_DURATION_SECONDS[difficultyKey];
+    if ((reward.message === "shield" || reward.message === "repair") && world.player.shield > 0) world.player.shieldTime = shieldSeconds;
+    world.powerUpMessage = reward.message === "shield" ? (isDe ? `SCHUTZSCHILD AKTIV // ${shieldSeconds} SEKUNDEN` : `SHIELD ACTIVE // ${shieldSeconds} SECONDS`) : reward.message === "life" ? (isDe ? "EXTRALEBEN ERHALTEN" : "EXTRA LIFE ACQUIRED") : reward.message === "life-full" ? `${isDe ? "LEBEN VOLL" : "LIVES FULL"} // +${reward.awardedScore}` : reward.message === "score" ? `${isDe ? "DATENBONUS" : "DATA BONUS"} // +${reward.awardedScore}` : reward.message === "jackpot" ? `${isDe ? "JACKPOT" : "JACKPOT"} // +${reward.awardedScore}` : reward.message === "repair" ? (isDe ? `REPARATUR UND SCHILD // ${shieldSeconds} SEKUNDEN` : `REPAIR AND SHIELD // ${shieldSeconds} SECONDS`) : reward.message === "phase" ? (isDe ? "PHASENPANZERUNG // 7 SEKUNDEN" : "PHASE ARMOR // 7 SECONDS") : (isDe ? "EISPICKEL-OVERDRIVE // 12 SEKUNDEN" : "ICE PICK OVERDRIVE // 12 SECONDS");
     world.powerUpMessageTime = 2.5; world.shake = 5; world.status = "playing";
     audioRef.current?.powerUp();
     setPendingChest(null); syncHud(world);
@@ -401,6 +455,28 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     setStoredItem("skybreak-cosmetic-loadout", JSON.stringify(next));
   }, []);
 
+  const unlockAllContent = useCallback(() => {
+    const allProfiles = Array.from({ length: LEVEL_COUNT }, (_, index) => index + 1);
+    unlockedLevelRef.current = LEVEL_COUNT;
+    setUnlockedLevel(LEVEL_COUNT);
+    setStoredItem("skybreak-unlocked-level", String(LEVEL_COUNT));
+    setUnlockedRobotProfiles(allProfiles);
+    setStoredItem("skybreak-unlocked-robot-profiles", JSON.stringify(allProfiles));
+    const world = worldRef.current;
+    world.cheatUsed = true;
+    const message = isDe
+      ? "CHEAT BESTÄTIGT // ALLE LEVEL, ROBOTER UND HOLOGRAMM-AVATAR FREIGESCHALTET"
+      : "CHEAT CONFIRMED // ALL LEVELS, ROBOTS, AND HOLOGRAM AVATAR UNLOCKED";
+    // The start menu covers the Canvas. There the dedicated HTML notice below
+    // is the single visible confirmation; during play retain the Canvas callout.
+    world.powerUpMessage = world.status === "playing" ? message : "";
+    world.powerUpMessageTime = world.status === "playing" ? 4 : 0;
+    world.shake = 5;
+    showOverlayNotice(message, 4000);
+    audioRef.current?.powerUp();
+    syncHud(world);
+  }, [isDe, showOverlayNotice, syncHud]);
+
   const beginKeyCapture = useCallback((action: BindableAction) => {
     bindingCaptureRef.current = action;
     setBindingCapture(action);
@@ -448,7 +524,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       world.powerUpMessage = isDe ? `CHEAT BESTÄTIGT // UNSTERBLICH IN LEVEL ${world.sector}` : `CHEAT CONFIRMED // IMMORTAL IN LEVEL ${world.sector}`;
     } else if (cheat === "shield") {
       world.player.shield = 2;
-      world.powerUpMessage = isDe ? "CHEAT BESTÄTIGT // DOPPELSCHILD AKTIV" : "CHEAT CONFIRMED // DOUBLE SHIELD ACTIVE";
+      const shieldSeconds = SHIELD_DURATION_SECONDS[difficultiesRef.current[world.sector - 1] || "medium"];
+      world.player.shieldTime = shieldSeconds;
+      world.powerUpMessage = isDe ? `CHEAT BESTÄTIGT // DOPPELSCHILD ${shieldSeconds} SEKUNDEN` : `CHEAT CONFIRMED // DOUBLE SHIELD ${shieldSeconds} SECONDS`;
     } else if (cheat === "overdrive") {
       world.player.overdrive = Math.max(world.player.overdrive, 30);
       world.powerUpMessage = isDe ? "CHEAT BESTÄTIGT // OVERDRIVE 30 SEKUNDEN" : "CHEAT CONFIRMED // OVERDRIVE 30 SECONDS";
@@ -500,8 +578,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   }, [registerCheatInput]);
 
   useEffect(() => {
+    const forceProfileReset = sessionStorage.getItem("skybreak-profile-reset") === "1";
     const saved = Number(getStoredItem("neon-ascent-highscore") || 0);
-    setHighScore(saved);
+    setHighScore(forceProfileReset ? 0 : saved);
     const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
     const storedQuality = getStoredItem("skybreak-quality") as Quality | null;
     const initialQuality = benchmarkQuality && benchmarkQuality in QUALITY_SETTINGS
@@ -553,7 +632,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     } catch {
       keyBindingsRef.current = { ...DEFAULT_KEY_BINDINGS };
     }
-    const storedUnlockedLevel = Number(getStoredItem("skybreak-unlocked-level") || 1);
+    const storedUnlockedLevel = forceProfileReset ? 1 : Number(getStoredItem("skybreak-unlocked-level") || 1);
     const savedUnlockedLevel = Number.isFinite(storedUnlockedLevel)
       ? Math.min(LEVEL_COUNT, Math.max(1, Math.round(storedUnlockedLevel)))
       : 1;
@@ -562,7 +641,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     setUnlockedLevel(savedUnlockedLevel);
     setSelectedStartLevel(savedUnlockedLevel);
     try {
-      const storedProfiles = JSON.parse(getStoredItem("skybreak-unlocked-robot-profiles") || "[1]");
+      const storedProfiles = forceProfileReset ? [1] : JSON.parse(getStoredItem("skybreak-unlocked-robot-profiles") || "[1]");
       const profiles = Array.isArray(storedProfiles)
         ? [...new Set(storedProfiles.filter((value): value is number => typeof value === "number" && value >= 1 && value <= LEVEL_COUNT).map(Math.round))].sort((a, b) => a - b)
         : [1];
@@ -576,6 +655,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       setCosmeticLoadout(cosmetics);
     } catch {
       // Ignore malformed cosmetic storage and retain the default robot loadout.
+    }
+    if (forceProfileReset) {
+      setStoredItem("skybreak-unlocked-level", "1");
+      setStoredItem("skybreak-unlocked-robot-profiles", "[1]");
+      setStoredItem("neon-ascent-highscore", "0");
+      sessionStorage.removeItem("skybreak-profile-reset");
     }
   }, []);
 
@@ -631,24 +716,75 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     setStoredItem("skybreak-ultra-frame-rate", next);
   };
 
+  const finishInGameBenchmark = useCallback((world: World) => {
+    const inGameBenchmark = inGameBenchmarkRef.current;
+    if (!inGameBenchmark.active) return;
+    inGameBenchmark.active = false;
+    if (inGameBenchmarkTimeoutRef.current !== null) {
+      window.clearTimeout(inGameBenchmarkTimeoutRef.current);
+      inGameBenchmarkTimeoutRef.current = null;
+    }
+    const frames = Math.max(1, inGameBenchmark.frames);
+    const measuredMs = Math.max(1, performance.now() - inGameBenchmark.startedAt - 2000);
+    const frameRate: FrameRateMode = ultraUnlimitedRef.current ? "unlimited" : mobileUltra120Ref.current ? "120" : "60";
+    setBenchmarkResult({
+      fps: Math.round((frames * 1000) / measuredMs),
+      frameMs: Math.round((inGameBenchmark.totalFrameMs / frames) * 10) / 10,
+      updateMs: Math.round((inGameBenchmark.totalUpdateMs / frames) * 10) / 10,
+      drawMs: Math.round((inGameBenchmark.totalDrawMs / frames) * 10) / 10,
+      gpuMs: gpuFrameMsRef.current,
+      quality: qualityRef.current,
+      resolution: renderResolutionRef.current,
+      frameRate,
+    });
+    world.showcaseBenchmark = false;
+    world.showcaseLastBurst = -1;
+    world.particles = [];
+    world.status = "ready";
+    world.powerUpMessage = isDe ? "SHOWCASE FERTIG // ERGEBNIS UNTEN" : "SHOWCASE COMPLETE // RESULT BELOW";
+    world.powerUpMessageTime = 3;
+    syncHud(world);
+  }, [isDe, syncHud]);
+
   const startInGameBenchmark = useCallback(() => {
-    const benchmarkLevel = 11;
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+    // A desktop-only, deterministic showcase: it uses the elemental core as
+    // a base but never participates in normal level progress or high scores.
+    const benchmarkLevel = 14;
     const next = makeWorld();
-    placeWorldAtLevel(next, benchmarkLevel, 0);
-    next.player.pickaxePower = pickaxeLoadoutRef.current.power;
-    next.player.pickaxeStyle = pickaxeLoadoutRef.current.style;
-    next.player.avatar = avatarRef.current;
+    placeWorldAtLevel(next, benchmarkLevel, 2);
+    next.showcaseBenchmark = true;
+    next.showcaseLastBurst = -1;
+    next.player.pickaxePower = 10;
+    next.player.pickaxeStyle = 10;
+    next.player.avatar = "robot";
     next.player.shield = 99;
+    next.enemies = next.enemies.concat(Array.from({ length: 38 }, (_, index) => ({
+      x: 34 + ((index * 137) % 870),
+      y: FLOOR_BASE_Y - 86 - ((index * 61) % 1180),
+      vx: index % 2 ? 96 : -96,
+      vy: 0,
+      alive: true,
+      grounded: false,
+      kind: index % 6,
+      attackTimer: .25 + (index % 5) * .12,
+      frozen: 0,
+    })));
     next.status = "playing";
-    next.powerUpMessage = isDe ? "BENCHMARK // 2 SEK. AUFWÄRMEN" : "BENCHMARK // 2 SEC WARM-UP";
+    next.powerUpMessage = isDe ? "SHOWCASE BENCHMARK // 2 SEK. AUFWÄRMEN" : "SHOWCASE BENCHMARK // 2 SEC WARM-UP";
     next.powerUpMessageTime = 2;
     worldRef.current = next;
     inputRef.current = { left: false, right: false, jump: false, attack: false };
     pressedRef.current = { left: false, right: false, jump: false, attack: false };
     inGameBenchmarkRef.current = { active: true, startedAt: performance.now(), frames: 0, totalFrameMs: 0, totalUpdateMs: 0, totalDrawMs: 0 };
+    gpuFrameMsRef.current = null;
+    if (inGameBenchmarkTimeoutRef.current !== null) window.clearTimeout(inGameBenchmarkTimeoutRef.current);
+    inGameBenchmarkTimeoutRef.current = window.setTimeout(() => {
+      finishInGameBenchmark(worldRef.current);
+    }, 32_750);
     setBenchmarkResult(null);
     syncHud(next);
-  }, [isDe, syncHud]);
+  }, [finishInGameBenchmark, isDe, syncHud]);
 
   const chooseDifficulty = (next: Difficulty, level = sector) => {
     const updated = [...difficultiesRef.current];
@@ -668,7 +804,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const view = renderViewRef.current;
     const instances: number[] = [];
     const add = (x: number, y: number, width: number, height: number, r: number, g: number, b: number, alpha: number) => {
-      if (x < -0.1 || x > 1.1 || y < -0.1 || y > 1.1 || instances.length >= 800 * 8) return;
+      if (x < -0.1 || x > 1.1 || y < -0.1 || instances.length >= 34000 * 8) return;
       instances.push(x, y, width, height, r, g, b, alpha);
     };
 
@@ -729,6 +865,37 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         Math.min(0.58, Math.max(0.12, particle.life * (particle.blockExplosion ? 0.48 : 0.34))),
       );
     }
+    const stressScene = world.showcaseBenchmark || (
+      LOCAL_LEVEL_ONE_ULTRA_STRESS_TEST
+      && world.status === "playing"
+      && world.sector === 1
+      && qualityRef.current === "ultra"
+    );
+    if (stressScene) {
+      // GPU-only swarm: thousands of compact instanced glows with deterministic
+      // movement. They exist solely in the desktop stress scene.
+      const t = world.fxTime;
+      const playerX = (world.player.x - world.cameraX + PLAYER_W / 2) / view.width;
+      const playerY = (world.player.y - world.cameraY + PLAYER_H / 2) / view.height;
+      for (let index = 0; index < 30000; index += 1) {
+        const lane = index % 200;
+        const band = Math.floor(index / 200);
+        const drift = (t * (0.11 + (index % 7) * .013) + index * .618) % 1;
+        let x = (lane + .5 + Math.sin(t * .9 + index) * .35) / 200;
+        let y = (band + drift + Math.sin(t * 1.2 + lane) * .22) / 150;
+        if (Math.abs(x - playerX) < .20 && Math.abs(y - playerY) < .28) {
+          // Relocate rather than remove: the instance count and GPU workload
+          // remain identical, while the player always has a readable window.
+          x = playerX < .5 ? .79 + (index % 17) * .007 : .09 + (index % 17) * .007;
+          y = playerY < .5 ? .76 + (index % 13) * .008 : .11 + (index % 13) * .008;
+        }
+        const size = .0018 + (index % 5) * .0008;
+        const phase = index % 3;
+        // Keep all 30,000 draws and blending operations, but do not let the
+        // additive stress cloud hide the robot beneath the GPU overlay.
+        add(x, y, size, size, phase === 0 ? 0 : 1, phase === 1 ? .12 : .82, phase === 2 ? 1 : .34, .008 + (index % 4) * .004);
+      }
+    }
     return new Float32Array(instances);
   }, []);
 
@@ -784,7 +951,15 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             setRenderer,
             useGpuSceneInstances ? getUltraSceneInstances : () => new Float32Array(0),
             () => renderResolutionRef.current,
-            () => [2, 7].includes(worldRef.current.sector) ? 0 : 1,
+            () => (
+              worldRef.current.showcaseBenchmark || (
+                LOCAL_LEVEL_ONE_ULTRA_STRESS_TEST
+                && worldRef.current.status === "playing"
+                && worldRef.current.sector === 1
+                && qualityRef.current === "ultra"
+              )
+            ) ? 2.2 : [2, 7].includes(worldRef.current.sector) ? 0 : 1,
+            (milliseconds) => { gpuFrameMsRef.current = milliseconds; },
           )
           : startFullSceneRenderer();
 
@@ -1185,13 +1360,15 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const explodeDestroyedBlock = (world: World, tile: Tile, fallbackColor: string, fallbackAmount: number) => {
       const quality = qualityRef.current;
       const ultra = quality === "ultra" && !ultraFallbackRef.current;
+      const desktopEffects = !window.matchMedia("(pointer: coarse)").matches;
       if (quality !== "high" && !ultra) {
-        burst(world, tile.x + TILE / 2, tile.y + 12, fallbackColor, fallbackAmount);
+        const particleCount = desktopEffects ? (quality === "medium" ? 30 : 20) : fallbackAmount;
+        burst(world, tile.x + TILE / 2, tile.y + 12, fallbackColor, particleCount);
         return;
       }
       const theme = LEVEL_THEMES[Math.max(0, Math.min(LEVEL_THEMES.length - 1, world.sector - 1))];
       const style = BLOCK_EXPLOSION_STYLES[theme.motif];
-      const count = ultra ? 20 : 10;
+      const count = ultra ? (desktopEffects ? 60 : 20) : (desktopEffects ? 50 : 10);
       const originX = tile.x + TILE / 2;
       const originY = tile.y + 12;
       for (let index = 0; index < count; index += 1) {
@@ -1213,7 +1390,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       }
       // Ultra gets a compact bright core, while High uses just the material fragments.
       if (ultra) {
-        for (let index = 0; index < 4; index += 1) {
+        for (let index = 0; index < (desktopEffects ? 10 : 4); index += 1) {
           const angle = index * Math.PI / 2 + Math.random() * .35;
           world.particles.push({
             x: originX,
@@ -1264,6 +1441,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       }
       if (p.shield > 0) {
         p.shield -= 1;
+        if (p.shield <= 0) p.shieldTime = 0;
         p.invulnerable = 0.8;
         world.shake = 8;
         world.powerUpMessage = isDe ? "SCHUTZSCHILD HAT DEN TREFFER ABGEFANGEN" : "SHIELD ABSORBED THE HIT";
@@ -1320,7 +1498,69 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const p = world.player;
       const input = inputRef.current;
       const pressed = pressedRef.current;
+      if (world.showcaseBenchmark) {
+        // A self-contained route keeps the robot visible while avoiding normal
+        // collisions, level completion and hazards during the stress test.
+        const elapsed = Math.max(0, world.fxTime - 2);
+        const cameraTravel = Math.min(-(WORLD_TOP + 150), elapsed * 29);
+        world.cameraY = -cameraTravel;
+        const wave = Math.sin(elapsed * 2.15);
+        p.x = 76 + ((elapsed * 128) % 790);
+        p.y = world.cameraY + Math.max(94, Math.min(view.height - 112, view.height * .58)) - PLAYER_H + wave * 10;
+        p.vx = Math.cos(elapsed * 2.15) * 128;
+        p.vy = 0;
+        p.grounded = false;
+        p.facing = p.vx >= 0 ? 1 : -1;
+        p.overdrive = 99;
+        input.left = false;
+        input.right = false;
+        input.jump = false;
+        input.attack = false;
+        const burstStep = Math.floor(elapsed * 4.5);
+        if (elapsed >= 0 && burstStep !== world.showcaseLastBurst) {
+          world.showcaseLastBurst = burstStep;
+          const targetY = p.y + 42 - ((burstStep % 3) * 24);
+          const target = world.tiles
+            .filter((tile) => tile.alive && tile.cracked)
+            .sort((a, b) => Math.abs(a.y - targetY) + Math.abs(a.x - p.x) - (Math.abs(b.y - targetY) + Math.abs(b.x - p.x)))[0];
+          if (target) {
+            target.alive = false;
+            world.score += 180;
+            world.shake = Math.max(world.shake, 9);
+            explodeDestroyedBlock(world, target, themeColor(world.sector, "accent"), 30);
+            burst(world, target.x + TILE / 2, target.y + 12, themeColor(world.sector, "warning"), 34);
+          }
+          p.attack = .22;
+        }
+        // Preserve visible enemy activity without allowing any enemy collision
+        // or objective state to interfere with the benchmark route.
+        for (const enemy of world.enemies) {
+          if (!enemy.alive) continue;
+          enemy.x += enemy.vx * dt;
+          if (enemy.x < 18) {
+            enemy.x = 18;
+            enemy.vx = Math.abs(enemy.vx);
+          } else if (enemy.x > VIEW_W - 54) {
+            enemy.x = VIEW_W - 54;
+            enemy.vx = -Math.abs(enemy.vx);
+          }
+        }
+        for (const tile of world.tiles) {
+          if (tile.mode === "moving") tile.x = tile.baseX + Math.sin(world.fxTime * tile.speed + tile.phaseOffset) * tile.travel;
+        }
+        for (const particle of world.particles) {
+          particle.life -= dt;
+          if (particle.hazard !== "laser") particle.vy += 560 * dt;
+          particle.x += particle.vx * dt;
+          particle.y += particle.vy * dt;
+          if (particle.spin) particle.rotation = (particle.rotation || 0) + particle.spin * dt;
+        }
+        world.particles = world.particles.filter((particle) => particle.life > 0);
+        return;
+      }
       p.invulnerable = Math.max(0, p.invulnerable - dt);
+      p.shieldTime = Math.max(0, p.shieldTime - dt);
+      if (p.shieldTime <= 0) p.shield = 0;
       p.attack = Math.max(0, p.attack - dt);
       p.overdrive = Math.max(0, p.overdrive - dt);
       world.powerUpMessageTime = Math.max(0, world.powerUpMessageTime - dt);
@@ -2938,6 +3178,79 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.restore();
       }
 
+      const stressScene = world.showcaseBenchmark || (
+        LOCAL_LEVEL_ONE_ULTRA_STRESS_TEST
+        && world.status === "playing"
+        && world.sector === 1
+        && qualityRef.current === "ultra"
+      );
+      if (stressScene) {
+        // Intentionally denser than normal play: this is the desktop visual
+        // stress scene, while the selected quality still controls its budget.
+        const showcaseDensity = qualityRef.current === "low" ? .22 : qualityRef.current === "medium" ? .48 : qualityRef.current === "high" ? .72 : 1;
+        if (world.showcaseBenchmark) {
+          // Simulate the heaviest weather levels as well as the Level 14 base
+          // scene. This keeps the benchmark above rain-heavy real gameplay.
+          ctx.save();
+          ctx.globalCompositeOperation = "screen";
+          ctx.lineCap = "round";
+          for (let rain = 0; rain < Math.round(200 * showcaseDensity); rain += 1) {
+            const speed = 380 + (rain % 11) * 38;
+            const x = (rain * 83 + world.fxTime * (88 + rain % 7 * 17)) % (view.width + 80) - 40;
+            const y = (rain * 131 + world.fxTime * speed) % (view.height + 140) - 70;
+            ctx.globalAlpha = .07 + (rain % 5) * .025;
+            ctx.strokeStyle = rain % 4 === 0 ? "#ff2b8a" : rain % 3 === 0 ? "#ffd84d" : "#00f0ff";
+            ctx.lineWidth = .65 + (rain % 4) * .24;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x - 6 - (rain % 4) * 2, y + 22 + (rain % 6) * 6);
+            ctx.stroke();
+          }
+          for (let fog = 0; fog < 12; fog += 1) {
+            const x = (fog * 149 + Math.sin(world.fxTime * (.35 + fog * .04) + fog) * 130 + view.width) % view.width;
+            const y = (fog * 83 + world.fxTime * (14 + fog * 2)) % (view.height + 130) - 65;
+            const mist = ctx.createRadialGradient(x, y, 4, x, y, 110 + (fog % 4) * 34);
+            mist.addColorStop(0, fog % 2 ? "rgba(255,43,138,.075)" : "rgba(0,240,255,.085)");
+            mist.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = mist;
+            ctx.fillRect(x - 170, y - 170, 340, 340);
+          }
+          ctx.restore();
+        }
+        const orbitCount = Math.round(96 * showcaseDensity);
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        ctx.translate(view.width / 2, view.height * .47);
+        for (let orbit = 0; orbit < orbitCount; orbit += 1) {
+          const angle = world.fxTime * (.55 + (orbit % 6) * .07) + orbit * 2.399;
+          const radius = 80 + (orbit % 18) * 17 + Math.sin(world.fxTime * 1.8 + orbit) * 16;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle * 1.37) * radius * .42;
+          const light = 2 + (orbit % 4) * 1.5;
+          ctx.globalAlpha = .10 + (orbit % 5) * .035;
+          ctx.fillStyle = orbit % 3 === 0 ? theme.warning : orbit % 2 ? theme.accent : theme.secondary;
+          ctx.shadowBlur = 10 + (orbit % 4) * 7;
+          ctx.shadowColor = ctx.fillStyle;
+          ctx.beginPath();
+          ctx.arc(x, y, light, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+        for (let beam = 0; beam < Math.round(22 * showcaseDensity); beam += 1) {
+          const angle = world.fxTime * (.18 + (beam % 4) * .04) + beam * Math.PI / 11;
+          ctx.rotate(angle * .012);
+          const beamGradient = ctx.createLinearGradient(-view.width * .7, 0, view.width * .7, 0);
+          beamGradient.addColorStop(0, "rgba(0,0,0,0)");
+          beamGradient.addColorStop(.48, beam % 2 ? "rgba(0,240,255,.10)" : "rgba(255,43,138,.10)");
+          beamGradient.addColorStop(.52, beam % 2 ? "rgba(0,240,255,.10)" : "rgba(255,43,138,.10)");
+          beamGradient.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = beamGradient;
+          ctx.fillRect(-view.width * .7, -1 - (beam % 3), view.width * 1.4, 2 + (beam % 3) * 2);
+        }
+        ctx.restore();
+      }
+
       if (world.status === "won" && world.sector === LEVEL_COUNT) {
         const sunrise = ctx.createLinearGradient(0, 0, 0, view.height);
         sunrise.addColorStop(0, "rgba(255,218,121,.34)");
@@ -3136,31 +3449,17 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         telemetry.totalDrawMs += drawMs;
       }
       const inGameBenchmark = inGameBenchmarkRef.current;
-      const benchmarkElapsed = time - inGameBenchmark.startedAt;
+      // Safari's rAF timestamp may use a document timeline with a different
+      // offset from performance.now(). Use one clock for start and finish.
+      const benchmarkElapsed = performance.now() - inGameBenchmark.startedAt;
       if (inGameBenchmark.active && renderedFrameMs > 0 && benchmarkElapsed >= 2000) {
         inGameBenchmark.frames += 1;
         inGameBenchmark.totalFrameMs += renderedFrameMs;
         inGameBenchmark.totalUpdateMs += updateMs;
         inGameBenchmark.totalDrawMs += drawMs;
       }
-      if (inGameBenchmark.active && benchmarkElapsed >= 16000) {
-        inGameBenchmark.active = false;
-        const frames = Math.max(1, inGameBenchmark.frames);
-        const measuredMs = Math.max(1, benchmarkElapsed - 2000);
-        const frameRate: FrameRateMode = ultraUnlimitedRef.current ? "unlimited" : mobileUltra120Ref.current ? "120" : "60";
-        setBenchmarkResult({
-          fps: Math.round((frames * 1000) / measuredMs),
-          frameMs: Math.round((inGameBenchmark.totalFrameMs / frames) * 10) / 10,
-          updateMs: Math.round((inGameBenchmark.totalUpdateMs / frames) * 10) / 10,
-          drawMs: Math.round((inGameBenchmark.totalDrawMs / frames) * 10) / 10,
-          quality: qualityRef.current,
-          resolution: renderResolutionRef.current,
-          frameRate,
-        });
-        world.status = "ready";
-        world.powerUpMessage = isDe ? "BENCHMARK FERTIG // ERGEBNIS UNTEN" : "BENCHMARK COMPLETE // RESULT BELOW";
-        world.powerUpMessageTime = 3;
-        syncHud(world);
+      if (inGameBenchmark.active && benchmarkElapsed >= 32000) {
+        finishInGameBenchmark(world);
       }
       const sampleDuration = time - telemetry.lastSampleAt;
       if (telemetry.frames > 0 && sampleDuration >= 1000) {
@@ -3200,7 +3499,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       observer.disconnect();
       window.removeEventListener("skybreak-quality", resize);
     };
-  }, [syncHud]);
+  }, [finishInGameBenchmark, syncHud]);
 
   useEffect(() => {
     const onVisibility = () => {
@@ -3225,7 +3524,23 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   };
 
   const toggleSound = () => {
+    const now = performance.now();
+    const unlockCheat = audioUnlockCheatRef.current;
     const next = !soundEnabledRef.current;
+    // Two completed SFX off/on cycles arm the code. Turning music off within
+    // five seconds confirms it and persists all cosmetic/content unlocks.
+    if (next) {
+      unlockCheat.cycles = now - unlockCheat.lastCycle <= 5000 ? unlockCheat.cycles + 1 : 1;
+      unlockCheat.lastCycle = now;
+      unlockCheat.awaitingMusicOff = unlockCheat.cycles >= 2;
+      if (unlockCheat.awaitingMusicOff) {
+        const world = worldRef.current;
+        const message = isDe ? "FREISCHALTCODE ERKANNT // MUSIK AUSSCHALTEN" : "UNLOCK CODE DETECTED // TURN MUSIC OFF";
+        world.powerUpMessage = world.status === "playing" ? message : "";
+        world.powerUpMessageTime = world.status === "playing" ? 2.5 : 0;
+        showOverlayNotice(message, 2500);
+      }
+    }
     soundEnabledRef.current = next;
     setSoundEnabled(next);
     audioRef.current ??= createAudio();
@@ -3234,26 +3549,17 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
   const toggleMusic = () => {
     const now = performance.now();
-    const musicCheat = musicToggleCheatRef.current;
+    const unlockCheat = audioUnlockCheatRef.current;
     const next = !musicEnabledRef.current;
-    if (!next) {
-      musicCheat.switchedOff = true;
-    } else if (musicCheat.switchedOff) {
-      musicCheat.cycles = now - musicCheat.lastCycle <= 5000 ? musicCheat.cycles + 1 : 1;
-      musicCheat.lastCycle = now;
-      musicCheat.switchedOff = false;
-    }
     musicEnabledRef.current = next;
     setMusicEnabled(next);
-    if (musicCheat.cycles >= 2 && worldRef.current.status === "playing") {
-      musicCheat.cycles = 0;
-      const world = worldRef.current;
-      avatarRef.current = "bikini";
-      world.player.avatar = "bikini";
-      world.powerUpMessage = isDe ? "CHEAT BESTÄTIGT // BIKINI-AVATAR AKTIV" : "CHEAT CONFIRMED // BIKINI AVATAR ACTIVE";
-      world.powerUpMessageTime = 3;
-      world.shake = 4;
-      audioRef.current?.powerUp();
+    if (!next && unlockCheat.awaitingMusicOff && now - unlockCheat.lastCycle <= 5000) {
+      unlockCheat.cycles = 0;
+      unlockCheat.awaitingMusicOff = false;
+      unlockAllContent();
+    } else if (!next) {
+      unlockCheat.cycles = 0;
+      unlockCheat.awaitingMusicOff = false;
     }
     if (!next) {
       audioRef.current?.pauseMusic();
@@ -3386,17 +3692,31 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           aria-hidden="true"
         />
         <canvas ref={canvasRef} aria-label={isDe ? "Spielansicht: Klettere durch die Cyberpunk-Megacity" : "Game view: climb through the cyberpunk megacity"} />
+        {contentUnlockNotice && status === "playing" && (
+          <output className="content-unlock-notice" role="status">
+            {contentUnlockNotice}
+          </output>
+        )}
         {status !== "playing" && status !== "celebration" && status !== "bikiniShowcase" && (
           <div className="game-overlay">
+            {contentUnlockNotice && (
+              <output className="content-unlock-notice" role="status">
+                {contentUnlockNotice}
+              </output>
+            )}
             {status === "ready" && (
               <>
-                <img className="game-logo" src={iconSrc} alt="Skybreak Protocol emblem" />
                 <a className="changelog-link" href={`${CHANGELOG_BASE_URL}/${APP_VERSION}${isDe ? "" : ".en"}.md`} target="_blank" rel="noopener">CHANGELOG ↗</a>
                 <a className="language-link" href={languageHref} lang={isDe ? "en" : "de"}>{isDe ? "ENGLISH" : "DEUTSCH"}</a>
               </>
             )}
-            <p className="eyebrow">{status === "ready" ? `NIGHT CITY // 03:17 // ${APP_BUILD_CHANNEL === "dev" ? "LOCAL TEST // " : APP_BUILD_CHANNEL === "beta" ? "BETA // " : "FINAL // "}v${APP_VERSION}` : status === "upgrade" ? `PICKAXE CORE // LEVEL ${sector}` : "NEURAL LINK STATUS"}</p>
-            <h1 className={status === "upgrade" ? "upgrade-title" : undefined}>{overlayTitle}</h1>
+            {status !== "ready" && <p className="eyebrow">{status === "upgrade" ? `PICKAXE CORE // LEVEL ${sector}` : "NEURAL LINK STATUS"}</p>}
+            {status === "ready" ? (
+              <h1 className="start-title"><span>SKYBREAK</span><span>PROTOCOL</span></h1>
+            ) : (
+              <h1 className={status === "upgrade" ? "upgrade-title" : undefined}>{overlayTitle}</h1>
+            )}
+            {status === "ready" && <p className="eyebrow">{`NIGHT CITY // 03:17 // ${APP_BUILD_CHANNEL === "dev" ? "LOCAL TEST // " : APP_BUILD_CHANNEL === "beta" ? "BETA // " : "FINAL // "}v${APP_VERSION}`}</p>}
             <p>{overlayCopy}</p>
             {status === "chestChoice" ? (
               <div className="transition-panel" style={{ "--next-accent": LEVEL_THEMES[sector - 1].accent, "--next-secondary": LEVEL_THEMES[sector - 1].secondary } as React.CSSProperties}>
@@ -3512,6 +3832,41 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
                     return <span key={theme.name} className={`${level === selectedStartLevel ? "selected" : ""}${level > unlockedLevel ? " locked" : ""}`} style={{ "--map-accent": theme.accent } as React.CSSProperties}>{level.toString().padStart(2, "0")}</span>;
                   })}
                 </div>
+                <div className="graphics-settings start-graphics-settings">
+                  <label className="quality-picker">
+                    <span>{isDe ? "GRAFIK" : "GRAPHICS"}</span>
+                    <select value={quality} onChange={(event) => chooseQuality(event.target.value as Quality)}>
+                      <option value="low">{isDe ? "Niedrig" : "Low"}</option>
+                      <option value="medium">{isDe ? "Mittel" : "Medium"}</option>
+                      <option value="high">{isDe ? "Hoch" : "High"}</option>
+                      <option value="ultra">Ultra</option>
+                    </select>
+                  </label>
+                  <label className="quality-picker">
+                    <span>{isDe ? "AUFLÖSUNG" : "RESOLUTION"}</span>
+                    <select value={renderResolution} onChange={(event) => chooseRenderResolution(event.target.value as RenderResolution)}>
+                      <option value="720p">720p</option>
+                      <option value="1080p">1080p</option>
+                      <option value="4k">4K</option>
+                    </select>
+                  </label>
+                  <label className="mobile-ultra-picker">
+                    <span>{isDe ? "BILDRATEN-LIMIT" : "FRAME RATE LIMIT"}</span>
+                    <select value={ultraUnlimited ? "unlimited" : mobileUltra120 ? "120" : "60"} onChange={(event) => chooseFrameRate(event.target.value as FrameRateMode)}>
+                      <option value="60">60 FPS</option>
+                      <option value="120">{isDe ? "Bis 120 FPS" : "Up to 120 FPS"}</option>
+                      <option value="unlimited">{isDe ? "Ohne Limit" : "Unlimited"}</option>
+                    </select>
+                  </label>
+                  {!mobileDevice && (
+                    <button className="benchmark-button" type="button" onClick={startInGameBenchmark} disabled={inGameBenchmarkRef.current.active}>
+                      {inGameBenchmarkRef.current.active ? (isDe ? "SHOWCASE LÄUFT" : "SHOWCASE RUNNING") : (isDe ? "SHOWCASE // 30 SEK." : "SHOWCASE // 30 SEC")}
+                    </button>
+                  )}
+                </div>
+                <a className="reset-profile-button" href="./reset.html">
+                  {isDe ? "SPIELSTAND ZURÜCKSETZEN" : "RESET LOCAL PROFILE"}
+                </a>
               </>
             )}
           </div>
@@ -3543,37 +3898,6 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           <button onClick={toggleFullscreen}>{iPhoneSafari ? (isDe ? "APP-MODUS" : "APP MODE") : fullscreenActive ? (isDe ? "BEENDEN" : "EXIT") : (isDe ? "VOLLBILD" : "FULLSCREEN")}</button>
           <button onClick={togglePause}>PAUSE</button>
         </div>
-        <div className="graphics-settings">
-          <label className="quality-picker">
-            <span>{isDe ? "GRAFIK" : "GRAPHICS"}</span>
-            <select value={quality} onChange={(event) => chooseQuality(event.target.value as Quality)}>
-              <option value="low">{isDe ? "Niedrig" : "Low"}</option>
-              <option value="medium">{isDe ? "Mittel" : "Medium"}</option>
-              <option value="high">{isDe ? "Hoch" : "High"}</option>
-              <option value="ultra">Ultra</option>
-            </select>
-          </label>
-          <label className="quality-picker">
-            <span>{isDe ? "AUFLÖSUNG" : "RESOLUTION"}</span>
-            <select value={renderResolution} onChange={(event) => chooseRenderResolution(event.target.value as RenderResolution)}>
-              <option value="720p">720p</option>
-              <option value="1080p">1080p</option>
-              <option value="4k">4K</option>
-            </select>
-          </label>
-          <label className="mobile-ultra-picker">
-            <span>{isDe ? "BILDRATEN-LIMIT" : "FRAME RATE LIMIT"}</span>
-            <select value={ultraUnlimited ? "unlimited" : mobileUltra120 ? "120" : "60"} onChange={(event) => chooseFrameRate(event.target.value as FrameRateMode)}>
-              <option value="60">60 FPS</option>
-              <option value="120">{isDe ? "Bis 120 FPS" : "Up to 120 FPS"}</option>
-              <option value="unlimited">{isDe ? "Ohne Limit" : "Unlimited"}</option>
-            </select>
-            <small>{isDe ? "Gilt für jede Grafikstufe. Höhere Bildraten erhöhen Last und Stromverbrauch." : "Applies to every graphics preset. Higher frame rates increase load and power use."}</small>
-          </label>
-          <button className="benchmark-button" type="button" onClick={startInGameBenchmark} disabled={inGameBenchmarkRef.current.active}>
-            {inGameBenchmarkRef.current.active ? (isDe ? "BENCHMARK LÄUFT" : "BENCHMARK RUNNING") : (isDe ? "BENCHMARK // 14 SEK." : "BENCHMARK // 14 SEC")}
-          </button>
-        </div>
         {quality === "ultra" && mobileDevice && (
           <p className="mobile-ultra-warning" role="alert">
             {isDe
@@ -3583,10 +3907,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         )}
         {benchmarkResult && (
           <div className="benchmark-result" role="status">
-            <strong>{isDe ? "BENCHMARK-ERGEBNIS" : "BENCHMARK RESULT"}</strong>
+            <strong>{isDe ? "SHOWCASE-BENCHMARK" : "SHOWCASE BENCHMARK"}</strong>
             <span>{benchmarkResult.quality.toUpperCase()} · {benchmarkResult.resolution.toUpperCase()} · {benchmarkResult.frameRate === "unlimited" ? (isDe ? "OHNE LIMIT" : "UNLIMITED") : `BIS ${benchmarkResult.frameRate} FPS`}</span>
-            <b>{benchmarkResult.fps} FPS · {benchmarkResult.frameMs} MS · CPU {benchmarkResult.updateMs}+{benchmarkResult.drawMs} MS</b>
-            {benchmarkResult.frameRate === "unlimited" && benchmarkResult.fps <= 62 && (
+            <b>{benchmarkResult.fps} FPS · {benchmarkResult.frameMs} MS · CPU {benchmarkResult.updateMs}+{benchmarkResult.drawMs} MS{benchmarkResult.gpuMs !== null ? ` · GPU ${benchmarkResult.gpuMs} MS` : ""}</b>
+            {benchmarkResult.gpuMs === null && <small>{isDe ? "DIREKTES GPU-TIMING VOM BROWSER NICHT FREIGEGEBEN" : "DIRECT GPU TIMING NOT EXPOSED BY BROWSER"}</small>}
+            {benchmarkResult.frameRate === "unlimited" && benchmarkResult.fps >= 57 && benchmarkResult.fps <= 62 && (
               <small>{isDe ? "BROWSER-ANZEIGE SYNCHRONISIERT MIT 60-HZ-DISPLAY" : "BROWSER DISPLAY SYNCHRONIZED TO 60 HZ"}</small>
             )}
           </div>
@@ -3604,7 +3929,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
                 <strong>{bindingCapture === action ? (isDe ? "TASTE DRÜCKEN" : "PRESS KEY") : displayKey(keyBindings[action])}</strong>
               </button>
             ))}
-            <button type="button" className="reset-keys" onClick={resetKeyBindings}>{isDe ? "STANDARD" : "RESET"}</button>
+            <button type="button" className="reset-keys" onClick={resetKeyBindings}>{isDe ? "TASTEN STANDARD" : "RESET KEYS"}</button>
           </div>
         )}
       </section>

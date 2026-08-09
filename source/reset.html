@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#02040d" />
+    <title>Skybreak Protocol – Profile reset</title>
+    <style>
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #02040d; color: #72ffef; font: 700 16px ui-monospace, Menlo, monospace; letter-spacing: .08em; }
+    </style>
+  </head>
+  <body>PROFILE RESET // RELOADING</body>
+  <script>
+    // This page has no game code. It clears the complete storage of the local
+    // Skybreak origin before returning to the start page.
+    localStorage.clear();
+    sessionStorage.clear();
+    setTimeout(() => location.replace("./"), 250);
+  </script>
+</html>

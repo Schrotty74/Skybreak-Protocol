@@ -2,6 +2,7 @@
 
 Every public beta and final build has its own detailed German and English release document.
 
+- **1.0.1-beta.4:** [Deutsch](docs/releases/1.0.1-beta.4.md) · [English](docs/releases/1.0.1-beta.4.en.md) – refreshed start screen, local profile reset and unlock sequence, timed shields, and updated manuals
 - **1.0.1-beta.3:** [Deutsch](docs/releases/1.0.1-beta.3.md) · [English](docs/releases/1.0.1-beta.3.en.md) – frame-rate limits and local benchmark for every graphics preset, performance improvements, 2.5D worlds, and cosmetic robot selection
 - **1.0.1-beta.2:** [Deutsch](docs/releases/1.0.1-beta.2.md) · [English](docs/releases/1.0.1-beta.2.en.md) – fourteen levels, elemental worlds, 2.5D platforms, expanded chest rewards, and four full music tracks
 - **1.0.1-beta.1:** [Deutsch](docs/releases/1.0.1-beta.1.md) · [English](docs/releases/1.0.1-beta.1.en.md) – clearer Easy mode, documented cosmetic avatar and dance completion, and unobstructed bikini-avatar presentation
