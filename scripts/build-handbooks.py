@@ -17,6 +17,8 @@ OUT = ROOT / "docs" / "manual"
 ICON = ROOT / "public" / "icon-512.png"
 START_SHOT = ROOT / "docs" / "screenshots" / "desktop-start-ultra.jpeg"
 GAME_SHOT = ROOT / "docs" / "screenshots" / "mobile-gameplay.jpeg"
+MOBILE_START_COMPACT_SHOT = ROOT / "docs" / "screenshots" / "mobile-start-compact.jpeg"
+MOBILE_START_OPTIONS_SHOT = ROOT / "docs" / "screenshots" / "mobile-start-options.jpeg"
 VERSION = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["version"]
 
 PAGE_W, PAGE_H = A4
@@ -85,6 +87,10 @@ TEXT = {
             ("SPIELSTAND ZURÜCKSETZEN", "Löscht den gesamten lokalen Spielstand, Freischaltungen, Rekord und Einstellungen. RESET KEYS setzt dagegen nur die Tasten zurück."),
         ],
         "controls": "STEUERUNG UND BUTTONS",
+        "mobile_menu": "KOMPAKTES HANDY-STARTMENÜ",
+        "mobile_menu_intro": "Die ersten beiden Auswahlfelder bleiben sofort sichtbar. Challenge und kosmetische Auswahl liegen unter WEITERE OPTIONEN; der lokale Spielstand-Reset bleibt am Ende des Startmenüs erreichbar.",
+        "mobile_menu_closed": "KOMPAKTE ANSICHT",
+        "mobile_menu_open": "ERWEITERTE OPTIONEN",
         "controls_intro": "Die Handy-Schaltflächen sind im Screenshot links sichtbar. Tastatur und Touch lösen dieselben Aktionen aus.",
         "buttons": [
             ("← / →", "Bewegen", "Standard A/D, am Desktop frei belegbar. Auf Touch gedrückt halten."),
@@ -196,6 +202,10 @@ TEXT = {
             ("RESET LOCAL PROFILE", "Deletes all local progress, unlocks, record, and settings. RESET KEYS only restores the key assignments."),
         ],
         "controls": "CONTROLS AND BUTTONS",
+        "mobile_menu": "COMPACT MOBILE START MENU",
+        "mobile_menu_intro": "The first two selectors remain visible immediately. Challenge and cosmetic choices are grouped under MORE OPTIONS; the local profile reset remains available at the end of the start menu.",
+        "mobile_menu_closed": "COMPACT VIEW",
+        "mobile_menu_open": "EXPANDED OPTIONS",
         "controls_intro": "The mobile controls are visible in the screenshot on the left. Keyboard and touch trigger the same actions.",
         "buttons": [
             ("← / →", "Move", "Default A/D, configurable on desktop. Hold the touch button."),
@@ -485,6 +495,23 @@ def draw_controls_more(c, data, page_no):
     c.showPage()
 
 
+def draw_mobile_start_menu(c, data, page_no):
+    page_base(c, data, page_no, data["mobile_menu"])
+    draw_wrapped(c, data["mobile_menu_intro"], MARGIN, PAGE_H - 87, PAGE_W - 2 * MARGIN, size=9, leading=13, fill=MUTED)
+    image_width, image_height = 190, 344
+    left_x = 62
+    right_x = PAGE_W - 62 - image_width
+    image_y = 165
+    c.drawImage(optimized_image(str(MOBILE_START_COMPACT_SHOT), 520, True), left_x, image_y, image_width, image_height, preserveAspectRatio=True, anchor="c")
+    c.drawImage(optimized_image(str(MOBILE_START_OPTIONS_SHOT), 520, True), right_x, image_y, image_width, image_height, preserveAspectRatio=True, anchor="c")
+    c.setFillColor(color(CYAN))
+    c.setFont("SkyMonoBold", 8)
+    c.drawCentredString(left_x + image_width / 2, image_y - 18, data["mobile_menu_closed"])
+    c.setFillColor(color(PINK))
+    c.drawCentredString(right_x + image_width / 2, image_y - 18, data["mobile_menu_open"])
+    c.showPage()
+
+
 def draw_cards_page(c, data, page_no, title, entries):
     page_base(c, data, page_no, title)
     width = (PAGE_W - 2 * MARGIN - 14) / 2
@@ -561,13 +588,14 @@ def build(lang):
     draw_quick_start(c, data, 2)
     draw_controls(c, data, 3)
     draw_controls_more(c, data, 4)
-    draw_cards_page(c, data, 5, data["systems"], data["systems_cards"])
-    draw_levels(c, data, 6, data["levels_a"], data["levels"][:5])
-    draw_levels(c, data, 7, data["levels_b"], data["levels"][5:10])
-    draw_levels(c, data, 8, data["levels_c"], data["levels"][10:])
-    draw_cards_page(c, data, 9, data["settings"], data["settings_cards"])
-    draw_cards_page(c, data, 10, data["upgrades"], data["upgrade_cards"])
-    draw_cheats(c, data, 11)
+    draw_mobile_start_menu(c, data, 5)
+    draw_cards_page(c, data, 6, data["systems"], data["systems_cards"])
+    draw_levels(c, data, 7, data["levels_a"], data["levels"][:5])
+    draw_levels(c, data, 8, data["levels_b"], data["levels"][5:10])
+    draw_levels(c, data, 9, data["levels_c"], data["levels"][10:])
+    draw_cards_page(c, data, 10, data["settings"], data["settings_cards"])
+    draw_cards_page(c, data, 11, data["upgrades"], data["upgrade_cards"])
+    draw_cheats(c, data, 12)
     c.save()
     print(target)
 
