@@ -23,12 +23,13 @@ export type PowerUpResult = PowerUpState & {
 const POWER_UP_ROTATION: PowerUpKind[] = ["shield", "life", "score", "overdrive", "jackpot", "repair", "phase"];
 
 export const ROAMING_CHEST_RULES: Record<RoamingChestDifficulty, {
+  count: number;
   unlockProgress: number;
   visibleSeconds: number;
   forceBelowEvery?: number;
 }> = {
-  medium: { unlockProgress: 0.5, visibleSeconds: 8, forceBelowEvery: 3 },
-  hard: { unlockProgress: 2 / 3, visibleSeconds: 4.5 },
+  medium: { count: 2, unlockProgress: 0.4, visibleSeconds: 8, forceBelowEvery: 3 },
+  hard: { count: 1, unlockProgress: 0.6, visibleSeconds: 4.5 },
 };
 
 export function buildChestSpawns(rowCount: number): ChestSpawn[] {

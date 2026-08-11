@@ -111,8 +111,9 @@ TEXT = {
         "systems": "SPIELSYSTEME",
         "systems_cards": [
             ("PLATTFORMEN", "Neben stabilen und brüchigen Modulen gibt es bewegliche, vereiste, zeitweise phasenverschobene und Rift-Plattformen. Beschädigte Module lassen sich von unten oder mit dem Eispickel zerstören. Unsichtbare Phasenplattformen tragen nicht."),
-            ("GEGNER & GEFAHREN", "Patrouille, Sprungangriff und Richtungswechsel bilden die drei Gegner-Archetypen; Schild-, Schützen- und Schwebegner ergänzen sie. Energiesplitter, Seitenlaser und Energiepulse kosten ein Leben. Von oben getroffene Drohnen werden ausgeschaltet."),
-            ("TRUHEN", "Truhen bieten sieben wählbare Belohnungen: Schild, Leben, Datenbonus, Overdrive, Jackpot, Reparatur plus Schild oder sieben Sekunden Phasenpanzerung. Ein Schild hält 8 Sekunden auf Leicht, 6 auf Mittel und 4 auf Schwer oder endet beim Treffer. Leicht: dauerhaft alle 2-3 Etagen. Mittel: ab der Hälfte 8 Sekunden sichtbar. Schwer: ab 2/3 nur 4,5 Sekunden und häufig versetzt."),
+            ("GEGNER & GEFAHREN", "Leicht enthält vier Patrouillen und einen Wächter, Mittel fünf Patrouillen und zwei Wächter, Schwer sechs Patrouillen und zwei Wächter. Nur ausgewählte Patrouillen schießen; Mittel und Schwer staffeln die Schüsse. Nur ein Wächter pro Begegnung wirft Bomben. Unter Laufstegen fallen sektorpassende, gut erkennbare Gefahren herab."),
+            ("TRUHEN & SCHILD", "Truhen bieten sieben wählbare Belohnungen. Leicht: fünf feste Truhen. Mittel: vier feste plus zwei wandernde Bonustruhen ab 40 Prozent Höhe. Schwer: zwei feste plus eine wandernde Bonustruhe ab 60 Prozent. Wandernde Truhen geben verstärkte Boni. Schild: 8 Sekunden und 3 Treffer auf Leicht, 6 Sekunden und 2 Treffer auf Mittel, 4 Sekunden und 1 Treffer auf Schwer."),
+            ("WÄNDE & DOPPELSTEGE", "Zerstörbare senkrechte Wände ergänzen den Weg: zwei auf Leicht, vier auf Mittel und sechs auf Schwer. Doppelstege sind über den Aufstieg verteilt; zuerst den unteren, dann mit einem zweiten Sprung den oberen Steg durchbrechen."),
             ("ZIELE & EISPICKEL", "Je zwei Energiezellen oder Zugangsschalter müssen vor dem Levelziel aktiviert werden. Der Eispickel löst gegnerische Projektile auf und knackt Schilde. Ein erster Treffer friert einen normalen Gegner ein, der nächste schaltet ihn aus. Ab Kraft 4 entsteht kurz eine Eisbrücke."),
             ("WÄCHTER & LEVEL", "Jedes Level hat 15 Etagen, eigene Regeln, ein Eispickel-Grundmodell und einen Wächter. Dessen Schüsse unterscheiden sich je Level und werden bei der letzten Integritätsstufe schneller. Nach Sieg folgt die nächste Upgrade-Vorschau."),
             ("ABSCHLUSS & SIEG", "Nach jedem Levelziel zeigt der Roboter fünf Sekunden SKYBREAK DANCE vor Upgrade oder Finale. Beim kosmetischen Bikini-Avatar erscheint stattdessen eine levelabhängige Look-Präsentation. Nach Level 14 aktiviert sich der Sendeturm; Cheat-Läufe ändern den Rekord nicht."),
@@ -138,7 +139,7 @@ TEXT = {
         ],
         "settings": "EINSTELLUNGEN, AUDIO UND OFFLINE-MODUS",
         "settings_cards": [
-            ("SCHWIERIGKEIT", "Leicht ist der Einstiegsmodus: 8 Leben, keine normalen Gegner, ein Pflichtziel, stabile Plattformen sowie kein Wind und keine Umweltgefahren. Der Wächter hat 1 Trefferpunkt und schießt langsamer. Mittel ist ausgewogen; Schwer erhöht Gegner, Gefahren und Punkte."),
+            ("SCHWIERIGKEIT", "Leicht ist der Einstiegsmodus mit 8 Leben, vier langsamen Patrouillen, einem Wächter mit zwei Treffern und wenigen Gefahren. Mittel nutzt fünf Patrouillen, zwei Wächter und gestaffelte Schüsse. Schwer nutzt sechs Patrouillen, zwei Wächter und mehr Gefahren. Die Schüsse der Patrouillen bleiben auf Mittel und Schwer absichtlich zeitlich getrennt."),
             ("GRAFIK", "Auf einem iPhone 17 Pro erreicht Ultra bei 1080p 60 FPS. 4K Ultra ist kein 60-FPS-Mobilmodus. Ultra kann das Gerät dennoch erwärmen. Zerstörte Blöcke explodieren in Ultra passend zur Welt; Hoch nutzt weniger Fragmente. Bei Hitze, Sonne oder Erwärmung Mittel oder Niedrig wählen."),
             ("BILDRATEN-LIMIT", "Für jede Grafikstufe 60 FPS, bis 120 FPS oder ohne Limit wählen. Höhere Bildraten erhöhen Wärme und Akkuverbrauch; der adaptive Wärmeschutz kann Effekte reduzieren."),
             ("SHOWCASE", "Nur am Desktop: Nach zwei Sekunden Aufwärmen läuft ein 30-Sekunden-Showcase mit autonomem Roboter und besonders hoher Effektlast. Das lokale Ergebnis nennt Grafikstufe, Auflösung, Limit, FPS, Framezeit, CPU- und – sofern vom Browser verfügbar – GPU-Zeit."),
@@ -226,8 +227,9 @@ TEXT = {
         "systems": "GAME SYSTEMS",
         "systems_cards": [
             ("PLATFORMS", "Alongside stable and fragile modules, there are moving, icy, temporarily phased, and rift platforms. Damaged modules can be destroyed from below or with the ice pick. Invisible phase platforms do not support the robot."),
-            ("ENEMIES & HAZARDS", "Patrol, leap attack, and direction change form the three enemy archetypes; shield, shooter, and hover enemies add roles. Energy fragments, side lasers, and energy pulses cost a life. Landing on a drone disables it."),
-            ("CHESTS", "Chests offer seven selectable rewards: shield, life, data bonus, overdrive, jackpot, repair plus shield, or seven seconds of phase armor. A shield lasts 8 seconds on Easy, 6 on Medium, and 4 on Hard, or ends on a hit. Easy: persistent every 2-3 floors. Medium: after halfway for 8 seconds. Hard: after two thirds for 4.5 seconds and frequently relocated."),
+            ("ENEMIES & HAZARDS", "Easy contains four patrols and one guardian, Medium five patrols and two guardians, and Hard six patrols and two guardians. Only selected patrols fire; Medium and Hard stagger their shots. Only one guardian per encounter throws bombs. Readable sector-specific hazards fall below walkways."),
+            ("CHESTS & SHIELD", "Chests offer seven selectable rewards. Easy: five fixed chests. Medium: four fixed plus two roaming bonus chests after 40 percent height. Hard: two fixed plus one roaming bonus chest after 60 percent. Roaming chests grant enhanced rewards. Shield: 8 seconds and 3 hits on Easy, 6 seconds and 2 hits on Medium, 4 seconds and 1 hit on Hard."),
+            ("WALLS & DOUBLE DECKS", "Destructible vertical walls extend the route: two on Easy, four on Medium, and six on Hard. Double decks are distributed through the ascent; break the lower deck first, then use a second jump to break the upper deck."),
             ("OBJECTIVES & ICE PICK", "Two energy cells or access switches must be activated before the level goal. The ice pick dissolves enemy projectiles and breaks shields. A first hit freezes a normal enemy; the next disables it. From power 4, it briefly creates an ice bridge."),
             ("GUARDIANS & LEVELS", "Each level has 15 floors, unique rules, an ice-pick base model, and a guardian. Its shots vary by level and become faster at the final integrity stage. The next upgrade preview follows a win."),
             ("COMPLETION & VICTORY", "After every level goal, the robot shows SKYBREAK DANCE for five seconds before the upgrade or finale. The cosmetic bikini avatar instead shows a level-specific look presentation. After level 14, the tower activates; cheat runs do not change the record."),
@@ -253,7 +255,7 @@ TEXT = {
         ],
         "settings": "SETTINGS, AUDIO, AND OFFLINE MODE",
         "settings_cards": [
-            ("DIFFICULTY", "Easy is the onboarding mode: 8 lives, no regular enemies, one required objective, stable platforms, and no drafts or environmental hazards. The guardian has 1 hit point and fires more slowly. Medium is balanced; Hard increases enemies, hazards, and points."),
+            ("DIFFICULTY", "Easy is the onboarding mode with 8 lives, four slow patrols, one two-hit guardian, and few hazards. Medium uses five patrols, two guardians, and staggered shots. Hard uses six patrols, two guardians, and more hazards. Patrol shots on Medium and Hard remain deliberately separated in time."),
             ("GRAPHICS", "On an iPhone 17 Pro, Ultra reaches 60 FPS at 1080p. 4K Ultra is not a 60 FPS mobile mode. Ultra can still warm the device. Destroyed blocks use world-specific explosions in Ultra; High uses fewer fragments. In heat, sunlight, or when warm, choose Medium or Low."),
             ("FRAME RATE LIMIT", "For every graphics preset, choose 60 FPS, up to 120 FPS, or Unlimited. Higher frame rates increase heat and battery use; adaptive thermal protection can reduce effects."),
             ("SHOWCASE", "Desktop only: after a two-second warm-up, a 30-second showcase runs an autonomous robot with especially high effect load. The local result lists graphics preset, resolution, limit, FPS, frame time, CPU time and, when exposed by the browser, GPU time."),
@@ -520,7 +522,8 @@ def draw_cards_page(c, data, page_no, title, entries):
         col = index % 2
         row = index // 2
         accent = [CYAN, PINK, YELLOW][index % 3]
-        card(c, MARGIN + col * (width + 14), y - row * 205, width, 188, heading, body, accent, 9)
+        # Four compact rows fit above the footer for the system/settings pages.
+        card(c, MARGIN + col * (width + 14), y - row * 160, width, 150, heading, body, accent, 8.5)
     c.showPage()
 
 

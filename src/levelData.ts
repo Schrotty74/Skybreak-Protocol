@@ -31,6 +31,9 @@ export const LEVEL_GAMEPLAY = [
 export type BlockExplosionStyle = "energy-bolt" | "cryo-shard" | "chrome-sliver" | "toxic-splinter" | "fire-spark" | "sea-droplet" | "plasma-crystal" | "solar-ray" | "ghost-fragment" | "rift-diamond" | "apex-star" | "magma-burst" | "bubble-spray" | "wind-shard" | "geode-fragment";
 export const BLOCK_EXPLOSION_STYLES: BlockExplosionStyle[] = ["energy-bolt", "chrome-sliver", "toxic-splinter", "fire-spark", "sea-droplet", "plasma-crystal", "solar-ray", "ghost-fragment", "rift-diamond", "apex-star", "magma-burst", "bubble-spray", "wind-shard", "geode-fragment"];
 
+/** A separate readable falling object for every sector's under-platform hazards. */
+export const FALLING_HAZARD_STYLES: BlockExplosionStyle[] = ["cryo-shard", "chrome-sliver", "toxic-splinter", "fire-spark", "sea-droplet", "plasma-crystal", "solar-ray", "ghost-fragment", "rift-diamond", "apex-star", "magma-burst", "bubble-spray", "wind-shard", "geode-fragment"];
+
 export const LEVEL_BACKDROP_FILES = [
   "neon-undercity-2.5d-bg-glow.png", "level-02-chrome-bazaar-bg.png", "level-03-toxic-transit-bg.png", "level-04-crimson-firewall-bg.png", "level-05-azure-data-sea-bg.png",
   "level-06-violet-reactor-bg.png", "level-07-solar-megagrid-bg.png", "level-08-ghost-network-bg.png", "level-09-quantum-rift-bg.png", "level-10-skybreak-apex-bg.png",

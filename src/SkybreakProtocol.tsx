@@ -17,7 +17,7 @@ import { createAudio } from "./gameAudio";
 import { drawLevelBackgroundAnimation } from "./game/renderBackground";
 import { drawAnimatedBikiniAvatar, drawHologramDancer, drawLevelRobot, getPreparedChestSprite, getPreparedEnemySprite, getPreparedParticleSprite } from "./game/renderEntities";
 import { startWebGlEffects, startWebGpuEffects, startWebGpuUltraRenderer, type EffectCleanup } from "./game/webgpuEffects";
-import { BLOCK_EXPLOSION_STYLES, type BlockExplosionStyle, LEVEL_BACKDROP_FILES, LEVEL_COUNT, LEVEL_GAMEPLAY, LEVEL_THEMES } from "./levelData";
+import { BLOCK_EXPLOSION_STYLES, FALLING_HAZARD_STYLES, type BlockExplosionStyle, LEVEL_BACKDROP_FILES, LEVEL_COUNT, LEVEL_GAMEPLAY, LEVEL_THEMES } from "./levelData";
 
 type GameStatus = "ready" | "playing" | "paused" | "chestChoice" | "celebration" | "bikiniShowcase" | "upgrade" | "gameover" | "won";
 type InputKey = BindableAction;
@@ -43,6 +43,13 @@ const DIFFICULTY_SETTINGS: Record<Difficulty, { enemy: number; hazards: number; 
 };
 
 const SHIELD_DURATION_SECONDS: Record<Difficulty, number> = { easy: 8, medium: 6, hard: 4 };
+const SHIELD_HIT_CAPACITY: Record<Difficulty, number> = { easy: 3, medium: 2, hard: 1 };
+
+const FALLING_HAZARD_SETTINGS: Record<Difficulty, { interval: [number, number]; count: number; speed: number; size: number }> = {
+  easy: { interval: [5.8, 7.2], count: 1, speed: .72, size: 11 },
+  medium: { interval: [3.5, 4.8], count: 1, speed: 1, size: 14 },
+  hard: { interval: [2.2, 3.3], count: 2, speed: 1.26, size: 17 },
+};
 
 const QUALITY_SETTINGS: Record<Quality, {
   fps: number;
@@ -110,7 +117,7 @@ function colorChannels(color: string): [number, number, number] {
   return [parseInt(match[1], 16) / 255, parseInt(match[2], 16) / 255, parseInt(match[3], 16) / 255];
 }
 
-import { applyEasyAssists, buildLevel, FLOOR_BASE_Y, FLOOR_SPACING, GRAVITY, JUMP_SPEED, levelProgress, makeWorld, MOVE_SPEED, PLAYER_H, PLAYER_W, placeWorldAtLevel, themeColor, TILE, tileIsActive, WORLD_TOP, type Chest, type Enemy, type Objective, type Particle, type Player, type Tile, type TileMode, type World } from "./game/world";
+import { addDestructibleWalls, addDoubleDecks, applyEasyAssists, buildLevel, FLOOR_BASE_Y, FLOOR_SPACING, GRAVITY, JUMP_SPEED, levelProgress, makeWorld, MOVE_SPEED, PLAYER_H, PLAYER_W, placeWorldAtLevel, setBossLayout, setChestLayout, setEnemyLayout, setGuardianIntegrity, themeColor, TILE, tileIsActive, WORLD_TOP, type Chest, type Enemy, type Objective, type Particle, type Player, type Tile, type TileMode, type World } from "./game/world";
 
 
 const CHEST_POWER_UPS: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
@@ -157,19 +164,20 @@ function pickaxeBreakCount(power: number) {
   return Math.min(5, 1 + Math.floor((Math.min(10, power) - 1) / 2));
 }
 
-function placeRoamingChest(world: World, difficulty: RoamingChestDifficulty, viewportHeight: number): boolean {
+function placeRoamingChest(world: World, difficulty: RoamingChestDifficulty, viewportHeight: number, slot: "primary" | "secondary"): boolean {
   const sector = world.sector;
-  const previous = world.roamingChest;
+  const existing = [world.roamingChest, world.roamingChestSecondary].filter((chest): chest is Chest => Boolean(chest));
   const validTiles = world.tiles.filter((tile) => tile.alive
     && tile.x >= TILE
     && tile.x <= VIEW_W - TILE * 2
-    && (!previous || Math.abs(tile.x + 13 - previous.x) > TILE || Math.abs(tile.y - 30 - previous.y) > 60));
+    && existing.every((chest) => Math.abs(tile.x + 13 - chest.x) > TILE || Math.abs(tile.y - 30 - chest.y) > 60));
   const available = difficulty === "hard"
     ? validTiles.filter((tile) => tile.y >= world.cameraY - 40 && tile.y <= world.cameraY + viewportHeight + 40)
     : validTiles.filter((tile) => tile.y <= Math.min(475, world.player.y + 320)
       && tile.y >= Math.max(WORLD_TOP, world.player.y - 360));
   if (!available.length) {
-    world.roamingChest = null;
+    if (slot === "primary") world.roamingChest = null;
+    else world.roamingChestSecondary = null;
     return false;
   }
   const rules = ROAMING_CHEST_RULES[difficulty];
@@ -182,14 +190,21 @@ function placeRoamingChest(world: World, difficulty: RoamingChestDifficulty, vie
   const pool = difficulty === "hard"
     ? (preferredHardTiles.length ? preferredHardTiles : available)
     : forceBelow && below.length ? below : available;
-  const chosen = pool[(sector * 11 + world.roamingChestMoves * 7) % pool.length];
-  world.roamingChest = {
+  const chosen = pool[(sector * 11 + world.roamingChestMoves * 7 + (slot === "secondary" ? 3 : 0)) % pool.length];
+  const chest: Chest = {
     x: chosen.x + 13,
     y: chosen.y - 30,
     opened: false,
-    powerUp: CHEST_POWER_UPS[(sector - 1) % CHEST_POWER_UPS.length],
+    roaming: true,
+    powerUp: CHEST_POWER_UPS[(sector - 1 + (slot === "secondary" ? 2 : 0)) % CHEST_POWER_UPS.length],
   };
-  world.roamingChestTimer = rules.visibleSeconds;
+  if (slot === "primary") {
+    world.roamingChest = chest;
+    world.roamingChestTimer = rules.visibleSeconds;
+  } else {
+    world.roamingChestSecondary = chest;
+    world.roamingChestSecondaryTimer = rules.visibleSeconds;
+  }
   return forceBelow && below.length > 0;
 }
 
@@ -358,7 +373,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     next.player.overdrive = 0;
     next.player.invulnerable = 0;
     next.player.damage = 0;
-    if ((difficultiesRef.current[selectedStartLevelRef.current - 1] || "medium") === "easy") applyEasyAssists(next);
+    const startingDifficulty = difficultiesRef.current[selectedStartLevelRef.current - 1] || "medium";
+    setEnemyLayout(next, startingDifficulty);
+    setBossLayout(next, startingDifficulty);
+    setGuardianIntegrity(next, startingDifficulty);
+    setChestLayout(next, startingDifficulty);
+    addDestructibleWalls(next, startingDifficulty);
+    addDoubleDecks(next, startingDifficulty);
+    if (startingDifficulty === "easy") applyEasyAssists(next);
     next.player.pickaxePower = pickaxeLoadoutRef.current.power;
     next.player.pickaxeStyle = pickaxeLoadoutRef.current.style;
     next.player.avatar = avatarRef.current;
@@ -389,18 +411,41 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     const world = worldRef.current;
     if (!chest || world.status !== "chestChoice") return;
     chest.opened = true;
-    if (chest === world.roamingChest) {
-      world.collectedRoamingChestSectors[world.sector - 1] = true;
-      world.roamingChest = null;
-      world.roamingChestTimer = 0;
+    if (chest === world.roamingChest || chest === world.roamingChestSecondary) {
+      world.collectedRoamingChestCounts[world.sector - 1] += 1;
+      if (chest === world.roamingChest) {
+        world.roamingChest = null;
+        world.roamingChestTimer = 0;
+      } else {
+        world.roamingChestSecondary = null;
+        world.roamingChestSecondaryTimer = 0;
+      }
     }
     const difficultyKey = difficultiesRef.current[world.sector - 1] || "medium";
     const difficulty = DIFFICULTY_SETTINGS[difficultyKey];
     const reward = applyPowerUp(kind, { lives: world.lives, shield: world.player.shield, overdrive: world.player.overdrive, invulnerable: world.player.invulnerable, damage: world.player.damage, score: world.score }, difficulty.score);
+    const roamingBonus = chest.roaming === true;
+    if (roamingBonus) {
+      if (kind === "score" || kind === "jackpot") {
+        reward.score += reward.awardedScore;
+        reward.awardedScore *= 2;
+      } else if (kind === "overdrive") {
+        reward.overdrive = Math.max(reward.overdrive, 24);
+      } else if (kind === "phase") {
+        reward.invulnerable = Math.max(reward.invulnerable, 14);
+      } else if (kind === "life" && reward.message === "life") {
+        reward.lives = Math.min(5, reward.lives + 1);
+      }
+    }
     world.lives = reward.lives; world.score = reward.score; world.player.shield = reward.shield; world.player.overdrive = reward.overdrive; world.player.invulnerable = reward.invulnerable; world.player.damage = reward.damage;
     const shieldSeconds = SHIELD_DURATION_SECONDS[difficultyKey];
-    if ((reward.message === "shield" || reward.message === "repair") && world.player.shield > 0) world.player.shieldTime = shieldSeconds;
-    world.powerUpMessage = reward.message === "shield" ? (isDe ? `SCHUTZSCHILD AKTIV // ${shieldSeconds} SEKUNDEN` : `SHIELD ACTIVE // ${shieldSeconds} SECONDS`) : reward.message === "life" ? (isDe ? "EXTRALEBEN ERHALTEN" : "EXTRA LIFE ACQUIRED") : reward.message === "life-full" ? `${isDe ? "LEBEN VOLL" : "LIVES FULL"} // +${reward.awardedScore}` : reward.message === "score" ? `${isDe ? "DATENBONUS" : "DATA BONUS"} // +${reward.awardedScore}` : reward.message === "jackpot" ? `${isDe ? "JACKPOT" : "JACKPOT"} // +${reward.awardedScore}` : reward.message === "repair" ? (isDe ? `REPARATUR UND SCHILD // ${shieldSeconds} SEKUNDEN` : `REPAIR AND SHIELD // ${shieldSeconds} SECONDS`) : reward.message === "phase" ? (isDe ? "PHASENPANZERUNG // 7 SEKUNDEN" : "PHASE ARMOR // 7 SECONDS") : (isDe ? "EISPICKEL-OVERDRIVE // 12 SEKUNDEN" : "ICE PICK OVERDRIVE // 12 SECONDS");
+    const shieldHits = SHIELD_HIT_CAPACITY[difficultyKey];
+    const appliedShieldSeconds = roamingBonus ? shieldSeconds * 2 : shieldSeconds;
+    if ((reward.message === "shield" || reward.message === "repair") && world.player.shield > 0) {
+      world.player.shield = shieldHits;
+      world.player.shieldTime = appliedShieldSeconds;
+    }
+    world.powerUpMessage = reward.message === "shield" ? (isDe ? `SCHUTZSCHILD // ${shieldHits} TREFFER // ${appliedShieldSeconds} SEKUNDEN` : `SHIELD // ${shieldHits} HITS // ${appliedShieldSeconds} SECONDS`) : reward.message === "life" ? (isDe ? (roamingBonus ? "2 EXTRALeben ERHALTEN" : "EXTRALEBEN ERHALTEN") : (roamingBonus ? "2 EXTRA LIVES ACQUIRED" : "EXTRA LIFE ACQUIRED")) : reward.message === "life-full" ? `${isDe ? "LEBEN VOLL" : "LIVES FULL"} // +${reward.awardedScore}` : reward.message === "score" ? `${isDe ? "DATENBONUS" : "DATA BONUS"} // +${reward.awardedScore}` : reward.message === "jackpot" ? `${isDe ? "JACKPOT" : "JACKPOT"} // +${reward.awardedScore}` : reward.message === "repair" ? (isDe ? `REPARATUR + SCHILD // ${shieldHits} TREFFER // ${appliedShieldSeconds} SEKUNDEN` : `REPAIR + SHIELD // ${shieldHits} HITS // ${appliedShieldSeconds} SECONDS`) : reward.message === "phase" ? (isDe ? `PHASENPANZERUNG // ${roamingBonus ? 14 : 7} SEKUNDEN` : `PHASE ARMOR // ${roamingBonus ? 14 : 7} SECONDS`) : (isDe ? `EISPICKEL-OVERDRIVE // ${roamingBonus ? 24 : 12} SEKUNDEN` : `ICE PICK OVERDRIVE // ${roamingBonus ? 24 : 12} SECONDS`);
     world.powerUpMessageTime = 2.5; world.shake = 5; world.status = "playing";
     audioRef.current?.powerUp();
     setPendingChest(null); syncHud(world);
@@ -503,7 +548,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       placeWorldAtLevel(world, nextSector, (world.variant + 1) % 3);
       unlockRobotProfile(nextSector);
       world.player.x = 463; world.player.y = 415; world.player.vx = 0; world.player.vy = 0; world.player.grounded = true;
-      if ((difficultiesRef.current[nextSector - 1] || "medium") === "easy") applyEasyAssists(world);
+      const nextDifficulty = difficultiesRef.current[nextSector - 1] || "medium";
+      setEnemyLayout(world, nextDifficulty);
+      setBossLayout(world, nextDifficulty);
+      setGuardianIntegrity(world, nextDifficulty);
+      setChestLayout(world, nextDifficulty);
+      addDestructibleWalls(world, nextDifficulty);
+      addDoubleDecks(world, nextDifficulty);
+      if (nextDifficulty === "easy") applyEasyAssists(world);
       world.status = "playing";
       world.powerUpMessage = isDe ? `VARIANTE ${world.variant + 1}/3 // LEVEL ${nextSector}` : `VARIANT ${world.variant + 1}/3 // LEVEL ${nextSector}`;
       world.powerUpMessageTime = 2;
@@ -523,8 +575,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       world.immortalSector = world.sector;
       world.powerUpMessage = isDe ? `CHEAT BESTÄTIGT // UNSTERBLICH IN LEVEL ${world.sector}` : `CHEAT CONFIRMED // IMMORTAL IN LEVEL ${world.sector}`;
     } else if (cheat === "shield") {
-      world.player.shield = 2;
-      const shieldSeconds = SHIELD_DURATION_SECONDS[difficultiesRef.current[world.sector - 1] || "medium"];
+      const difficultyKey = difficultiesRef.current[world.sector - 1] || "medium";
+      world.player.shield = SHIELD_HIT_CAPACITY[difficultyKey];
+      const shieldSeconds = SHIELD_DURATION_SECONDS[difficultyKey];
       world.player.shieldTime = shieldSeconds;
       world.powerUpMessage = isDe ? `CHEAT BESTÄTIGT // DOPPELSCHILD ${shieldSeconds} SEKUNDEN` : `CHEAT CONFIRMED // DOUBLE SHIELD ${shieldSeconds} SECONDS`;
     } else if (cheat === "overdrive") {
@@ -810,11 +863,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
     for (const tile of world.tiles) {
       if (!tile.alive || tile.x + TILE < world.cameraX - 72 || tile.x > world.cameraX + view.width + 72 || tile.y < world.cameraY - 80 || tile.y > world.cameraY + view.height + 60) continue;
+      const effectHeight = tile.mode === "wall" ? TILE : 5;
       add(
         (tile.x - world.cameraX + TILE * 0.5) / view.width,
-        (tile.y - world.cameraY + 4) / view.height,
+        (tile.y - world.cameraY + effectHeight * .5) / view.height,
         TILE / view.width,
-        5 / view.height,
+        effectHeight / view.height,
         tile.cracked ? 0 : 1,
         tile.cracked ? 0.88 : 0.76,
         tile.cracked ? 1 : 0.18,
@@ -834,8 +888,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         0.22,
       );
     }
-    const ultraChests = difficultiesRef.current[world.sector - 1] === "easy" ? [...world.chests] : [];
+    // Medium keeps the reliable fixed chests from Easy and additionally gains
+    // its roaming chest. Hard stays focused on the timed roaming reward.
+    const ultraChests = [...world.chests];
     if (world.roamingChest) ultraChests.push(world.roamingChest);
+    if (world.roamingChestSecondary) ultraChests.push(world.roamingChestSecondary);
     for (const chest of ultraChests) {
       if (chest.opened || chest.x + 42 < world.cameraX - 60 || chest.x > world.cameraX + view.width + 60 || chest.y < world.cameraY - 50 || chest.y > world.cameraY + view.height + 50) continue;
       add(
@@ -843,9 +900,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         (chest.y - world.cameraY + 14) / view.height,
         48 / view.width,
         36 / view.height,
-        1,
-        0.62,
-        0.08,
+        chest.roaming ? 1 : 1,
+        chest.roaming ? 0.12 : 0.62,
+        chest.roaming ? 0.9 : 0.08,
         0.25,
       );
     }
@@ -1579,30 +1636,54 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       if (world.roamingChestSector !== world.sector) {
         world.roamingChest = null;
         world.roamingChestTimer = 0;
+        world.roamingChestSecondary = null;
+        world.roamingChestSecondaryTimer = 0;
         world.roamingChestMoves = 0;
         world.roamingChestSector = world.sector;
       }
       if (difficultyLevel === "easy") {
         world.roamingChest = null;
         world.roamingChestTimer = 0;
+        world.roamingChestSecondary = null;
+        world.roamingChestSecondaryTimer = 0;
       } else {
         const roamingDifficulty = difficultyLevel as RoamingChestDifficulty;
         const rules = ROAMING_CHEST_RULES[roamingDifficulty];
         const unlocked = levelProgress(p.y) >= rules.unlockProgress;
-        const alreadyCollected = world.collectedRoamingChestSectors[world.sector - 1];
-        if (alreadyCollected) {
+        const collected = world.collectedRoamingChestCounts[world.sector - 1];
+        if (collected >= rules.count) {
           world.roamingChest = null;
           world.roamingChestTimer = 0;
-        } else if (!world.roamingChest && unlocked) {
-          placeRoamingChest(world, roamingDifficulty, renderViewRef.current.height);
-        } else if (world.roamingChest) {
+          world.roamingChestSecondary = null;
+          world.roamingChestSecondaryTimer = 0;
+        } else if (unlocked) {
+          const activeRoamingCount = (world.roamingChest ? 1 : 0) + (world.roamingChestSecondary ? 1 : 0);
+          if (!world.roamingChest && collected + activeRoamingCount < rules.count) {
+            placeRoamingChest(world, roamingDifficulty, renderViewRef.current.height, "primary");
+          }
+          if (rules.count > 1 && !world.roamingChestSecondary && collected + (world.roamingChest ? 1 : 0) < rules.count) {
+            placeRoamingChest(world, roamingDifficulty, renderViewRef.current.height, "secondary");
+          }
+          if (world.roamingChest) {
           world.roamingChestTimer -= dt;
           if (world.roamingChestTimer <= 0) {
             world.roamingChestMoves += 1;
-            const movedBelow = placeRoamingChest(world, roamingDifficulty, renderViewRef.current.height);
+              const movedBelow = placeRoamingChest(world, roamingDifficulty, renderViewRef.current.height, "primary");
             if (movedBelow) {
               world.powerUpMessage = isDe ? "TRUHE UNTER DIR NEU GEORTET" : "CHEST RELOCATED BELOW";
               world.powerUpMessageTime = 1.5;
+            }
+          }
+          }
+          if (world.roamingChestSecondary) {
+            world.roamingChestSecondaryTimer -= dt;
+            if (world.roamingChestSecondaryTimer <= 0) {
+              world.roamingChestMoves += 1;
+              const movedBelow = placeRoamingChest(world, roamingDifficulty, renderViewRef.current.height, "secondary");
+              if (movedBelow) {
+                world.powerUpMessage = isDe ? "TRUHE UNTER DIR NEU GEORTET" : "CHEST RELOCATED BELOW";
+                world.powerUpMessageTime = 1.5;
+              }
             }
           }
         }
@@ -1636,6 +1717,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       pressed.jump = false;
       pressed.attack = false;
 
+      const oldX = p.x;
       const oldY = p.y;
       p.vy += GRAVITY * dt;
       p.x += p.vx * dt;
@@ -1646,6 +1728,16 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
 
       for (const tile of world.tiles) {
         if (!tileIsActive(tile, world.fxTime)) continue;
+        if (tile.mode === "wall") {
+          const overlapsY = p.y + PLAYER_H - 5 > tile.y && p.y + 5 < tile.y + TILE;
+          if (overlapsY && p.vx > 0 && oldX + PLAYER_W <= tile.x + 3 && p.x + PLAYER_W >= tile.x) {
+            p.x = tile.x - PLAYER_W;
+            p.vx = 0;
+          } else if (overlapsY && p.vx < 0 && oldX >= tile.x + TILE - 3 && p.x <= tile.x + TILE) {
+            p.x = tile.x + TILE;
+            p.vx = 0;
+          }
+        }
         const intersectsX = p.x + PLAYER_W - 7 > tile.x && p.x + 7 < tile.x + TILE;
         if (!intersectsX) continue;
 
@@ -1658,7 +1750,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         } else if (p.vy < 0 && oldY >= tile.y + 16 && p.y <= tile.y + 30 && tile.cracked) {
           tile.alive = false;
           world.shake = 9;
-          p.vy *= 0.78;
+          // The lower part of a double deck catches the upward momentum so
+          // the upper deck requires a deliberate second jump to break.
+          p.vy = tile.doubleDeck === "lower" ? 0 : p.vy * .78;
           world.score += Math.round(100 * difficulty.score);
           explodeDestroyedBlock(world, tile, themeColor(world.sector, "accent"), 12);
           audioRef.current?.smash();
@@ -1697,9 +1791,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         }
       }
 
-      const collectableChests = difficultyLevel === "easy"
-        ? world.chests
-        : world.roamingChest ? [world.roamingChest] : [];
+      const collectableChests = [...world.chests, ...(world.roamingChest ? [world.roamingChest] : []), ...(world.roamingChestSecondary ? [world.roamingChestSecondary] : [])];
       for (const chest of collectableChests) {
         if (chest.opened) continue;
         const intersects = p.x + PLAYER_W > chest.x
@@ -1734,7 +1826,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
               enemy.integrity = Math.max(0, (enemy.integrity ?? 1) - 1);
               enemy.alive = enemy.integrity > 0;
               world.powerUpMessage = enemy.alive
-                ? (isDe ? `WÄCHTER-INTEGRITÄT ${enemy.integrity}/3` : `GUARDIAN INTEGRITY ${enemy.integrity}/3`)
+                ? (isDe ? `WÄCHTER-INTEGRITÄT ${enemy.integrity}/${enemy.integrityMax ?? 5}` : `GUARDIAN INTEGRITY ${enemy.integrity}/${enemy.integrityMax ?? 5}`)
                 : (isDe ? "WÄCHTER NEUTRALISIERT" : "GUARDIAN NEUTRALIZED");
               world.powerUpMessageTime = 1.4;
               world.shake = Math.max(world.shake, 11);
@@ -1799,16 +1891,19 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         }
       }
 
+      world.enemyShotCooldown = Math.max(0, world.enemyShotCooldown - dt);
       for (const enemy of world.enemies) {
         if (!enemy.alive) continue;
         const enemyOldY = enemy.y;
         const enemyArchetype = (enemy.kind + world.sector - 1) % 3;
         enemy.frozen = Math.max(0, enemy.frozen - dt);
+        enemy.bombTimer = Math.max(0, (enemy.bombTimer ?? 0) - dt);
         if (enemy.frozen > 0) continue;
         enemy.attackTimer -= dt;
-        if (enemy.guardian && enemy.attackTimer <= 0) {
+        if (enemy.guardian && enemy.canFire !== false && enemy.attackTimer <= 0) {
           const bossMode = world.sector - 1;
-          const bossPhase = 3 - (enemy.integrity ?? 3);
+          const guardianMaxIntegrity = enemy.integrityMax ?? 5;
+          const bossPhase = guardianMaxIntegrity - (enemy.integrity ?? guardianMaxIntegrity);
           const shotCounts = [1, 1, 2, 1, 2, 2, 1, 2, 1, 3];
           const shotSpeeds = [70, 92, 62, 156, 86, 122, 74, 118, 174, 102];
           const shotArcs = [115, 92, -42, 62, -108, 138, -78, 24, 172, -18];
@@ -1816,7 +1911,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           const baseShotCount = shotCounts[bossMode] ?? 2;
           const baseShotSpeed = shotSpeeds[bossMode] ?? 116;
           const baseShotArc = shotArcs[bossMode] ?? -32;
-          const shotCount = difficultyLevel === "easy" ? 1 : Math.min(4, baseShotCount + (bossPhase === 2 ? 1 : 0));
+          const shotCount = difficultyLevel === "easy" ? 1 : Math.min(5, baseShotCount + Math.floor(bossPhase / 2));
           for (let shot = 0; shot < shotCount; shot += 1) {
             const aimed = bossMode === 1 || bossMode === 5 || bossMode === 8;
             const direction = aimed ? Math.sign(p.x - enemy.x) || 1 : shotCount === 1 ? (bossMode % 2 === 0 ? -1 : 1) : shot - (shotCount - 1) / 2;
@@ -1828,18 +1923,70 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
               life: 3.2,
               color: themeColor(world.sector, "warning"),
               hazard: "boss",
+              hazardStyle: "energy-bolt",
+              size: 8,
+            });
+          }
+          // Only the designated guardian(s) throw bombs. They need a long
+          // independent cooldown, so their normal firing rhythm never turns
+          // into an unavoidable bomb stream.
+          if (enemy.canThrowBombs && (enemy.bombTimer ?? 0) <= 0) {
+            enemy.bombTimer = difficultyLevel === "hard" ? 4.8 : 6.5;
+            const bombDirection = Math.sign(p.x - enemy.x) || 1;
+            world.particles.push({
+              x: enemy.x + 19,
+              y: enemy.y + 8,
+              vx: bombDirection * (75 + world.sector * 7),
+              vy: -225 - Math.min(90, bossPhase * 14),
+              life: 3.8,
+              color: themeColor(world.sector, "secondary"),
+              hazard: "boss",
+              hazardStyle: "magma-burst",
+              size: 15,
+              rotation: Math.random() * Math.PI * 2,
+              spin: bombDirection * 5,
             });
           }
           burst(world, enemy.x + 19, enemy.y + 12, themeColor(world.sector, "warning"), 10 + world.sector);
+        } else if (!enemy.guardian && enemy.canShoot && enemy.attackTimer <= 0
+          && (difficultyLevel === "easy" || (world.enemyShotCooldown <= 0 && enemy.shooterSlot === world.nextEnemyShooterSlot))) {
+          enemy.attackTimer = 1.65 + (enemy.kind === 5 ? .25 : 0);
+          if (difficultyLevel !== "easy") {
+            // Prevent the expanded Medium/Hard patrol from synchronising all
+            // shooters into a single unavoidable volley.
+            world.enemyShotCooldown = difficultyLevel === "hard" ? 5 : 7;
+            const shooterCount = world.enemies.filter((candidate) => candidate.alive && !candidate.guardian && candidate.canShoot).length;
+            world.nextEnemyShooterSlot = (world.nextEnemyShooterSlot + 1) % Math.max(1, shooterCount);
+          }
+          const direction = Math.sign(p.x - enemy.x) || 1;
+          world.particles.push({
+            x: enemy.x + 19,
+            y: enemy.y + 5,
+            vx: direction * (104 + world.sector * 5) * difficulty.enemy,
+            vy: -18,
+            life: 3.1,
+            color: themeColor(world.sector, "warning"),
+            hazard: "boss",
+            hazardStyle: "energy-bolt",
+            size: 8,
+          });
         } else if (!enemy.guardian && enemyArchetype === 1 && enemy.grounded && enemy.attackTimer <= 0) {
           enemy.vy = -260 - world.sector * 8;
           enemy.attackTimer = 1.4;
         } else if (!enemy.guardian && enemyArchetype === 2 && enemy.attackTimer <= 0) {
-          enemy.vx = -enemy.vx;
+          // Sprinter accelerate briefly, but retain their patrol direction.
+          // Direction changes are decided at the end of the actual walkway.
+          enemy.vx *= 1.08;
           enemy.attackTimer = 1.1;
-        } else if (!enemy.guardian && enemy.kind === 3 && enemy.attackTimer <= 0) {
-          enemy.attackTimer = 1.7;
-          world.particles.push({ x: enemy.x + 19, y: enemy.y + 5, vx: (Math.sign(p.x - enemy.x) || 1) * 120, vy: 45, life: 3, color: "#ff2b8a", hazard: "boss" });
+        }
+        if (!enemy.guardian && enemy.grounded) {
+          const direction = Math.sign(enemy.vx) || 1;
+          const lookAheadX = enemy.x + direction * 34;
+          const walkwayContinues = world.tiles.some((tile) => tileIsActive(tile, world.fxTime)
+            && Math.abs(tile.y - (enemy.y + 32)) < 5
+            && lookAheadX + 34 > tile.x + 3
+            && lookAheadX + 4 < tile.x + TILE - 3);
+          if (!walkwayContinues) enemy.vx = -enemy.vx;
         }
         enemy.vy += GRAVITY * (enemy.kind === 5 ? 0.24 : enemyArchetype === 2 ? 0.4 : 0.78) * dt;
         enemy.x += enemy.vx * difficulty.enemy * levelPressure * (enemyArchetype === 2 ? 1.18 : 1) * dt;
@@ -1900,6 +2047,45 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           color: "#ff2b8a",
           hazard: levelRule.hazard,
         });
+      }
+
+      // Falling objects now visibly detach from the underside of the existing
+      // walkways. This complements the sector's laser/pulse rule rather than
+      // replacing it, so every level still keeps its own original danger.
+      world.fallingHazardTimer -= dt;
+      if (world.fallingHazardTimer <= 0) {
+        const falling = FALLING_HAZARD_SETTINGS[difficultyLevel];
+        world.fallingHazardTimer = (falling.interval[0] + Math.random() * (falling.interval[1] - falling.interval[0])) / (1 + (world.sector - 1) * .025);
+        const visibleTiles = world.tiles.filter((tile) => tile.alive
+          && tile.y >= world.cameraY + 24
+          && tile.y <= world.cameraY + view.height - 82);
+        const rows = new Map<number, Tile[]>();
+        for (const tile of visibleTiles) {
+          const row = Math.round(tile.y);
+          const tiles = rows.get(row) || [];
+          tiles.push(tile);
+          rows.set(row, tiles);
+        }
+        const availableRows = [...rows.values()];
+        const style = FALLING_HAZARD_STYLES[world.sector - 1];
+        for (let index = 0; index < falling.count && availableRows.length; index += 1) {
+          const row = availableRows.splice(Math.floor(Math.random() * availableRows.length), 1)[0];
+          const tile = row[Math.floor(Math.random() * row.length)];
+          const size = falling.size + Math.random() * 4;
+          world.particles.push({
+            x: tile.x + 12 + Math.random() * Math.max(12, TILE - 24),
+            y: tile.y + 31,
+            vx: (Math.random() - .5) * 28 * falling.speed,
+            vy: (115 + Math.random() * 72) * falling.speed,
+            life: 3.5 + Math.random() * .8,
+            color: index % 3 === 0 ? themeColor(world.sector, "warning") : index % 2 ? themeColor(world.sector, "accent") : themeColor(world.sector, "secondary"),
+            hazard: "fall",
+            hazardStyle: style,
+            size,
+            rotation: Math.random() * Math.PI * 2,
+            spin: (Math.random() - .5) * (3.5 + world.sector * .18),
+          });
+        }
       }
 
       for (const particle of world.particles) {
@@ -2238,9 +2424,43 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         return surface;
       };
       for (const tile of world.tiles) {
-        if (!tile.alive || !visible(tile.x, tile.y, TILE, 40)) continue;
+        if (!tile.alive || !visible(tile.x, tile.y, TILE, tile.mode === "wall" ? TILE : 40)) continue;
         const phaseActive = tileIsActive(tile, world.fxTime);
         const glow = tile.mode === "rift" ? theme.secondary : tile.mode === "phase" ? theme.warning : tile.cracked ? theme.accent : theme.warning;
+        if (tile.mode === "wall") {
+          const wallPulse = .56 + Math.sin(world.fxTime * 3.1 + tile.phaseOffset) * .2;
+          ctx.save();
+          ctx.globalAlpha = phaseActive ? 1 : .18;
+          ctx.shadowBlur = ultraActive ? 0 : 18;
+          ctx.shadowColor = glow;
+          const wallFace = ctx.createLinearGradient(tile.x, tile.y, tile.x + TILE, tile.y + TILE);
+          wallFace.addColorStop(0, platformMaterials[0]);
+          wallFace.addColorStop(.4, platformMaterials[1]);
+          wallFace.addColorStop(1, platformMaterials[2]);
+          ctx.fillStyle = wallFace;
+          ctx.strokeStyle = glow;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(tile.x + 7, tile.y);
+          ctx.lineTo(tile.x + TILE - 7, tile.y + 4);
+          ctx.lineTo(tile.x + TILE, tile.y + 14);
+          ctx.lineTo(tile.x + TILE - 8, tile.y + TILE);
+          ctx.lineTo(tile.x + 8, tile.y + TILE - 4);
+          ctx.lineTo(tile.x, tile.y + 13);
+          ctx.closePath();
+          ctx.fill(); ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = wallPulse;
+          ctx.strokeStyle = theme.secondary;
+          ctx.beginPath();
+          ctx.moveTo(tile.x + 13, tile.y + 12); ctx.lineTo(tile.x + 37, tile.y + 27); ctx.lineTo(tile.x + 23, tile.y + 49); ctx.lineTo(tile.x + 49, tile.y + 56);
+          ctx.stroke();
+          ctx.fillStyle = theme.warning;
+          ctx.fillRect(tile.x + 27, tile.y + 14, 8, 4);
+          ctx.fillRect(tile.x + 18, tile.y + 38, 28, 3);
+          ctx.restore();
+          continue;
+        }
         const hover = 2 + Math.sin(world.fxTime * 1.45 + tile.x * .05 + tile.y * .004) * 1.25;
         ctx.globalAlpha = phaseActive ? 1 : 0.18;
         // Contact shadow sits behind the cached slab and gives platforms a
@@ -2346,6 +2566,17 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.globalAlpha = 1;
         ctx.fillStyle = "rgba(225,249,255,.48)";
         ctx.fillRect(tile.x + 9, tile.y + 2, TILE - 19, 1);
+        if (tile.doubleDeck) {
+          ctx.globalAlpha = .88;
+          ctx.strokeStyle = tile.doubleDeck === "lower" ? theme.warning : theme.secondary;
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([4, 2]);
+          ctx.beginPath();
+          ctx.moveTo(tile.x + 8, tile.y + (tile.doubleDeck === "lower" ? 18 : 6));
+          ctx.lineTo(tile.x + TILE - 8, tile.y + (tile.doubleDeck === "lower" ? 18 : 6));
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
         if (tile.cracked) {
           ctx.strokeStyle = theme.accent;
           ctx.lineWidth = 1.15;
@@ -2420,8 +2651,9 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.restore();
       }
 
-      const visibleChests = difficultiesRef.current[world.sector - 1] === "easy" ? [...world.chests] : [];
+      const visibleChests = [...world.chests];
       if (world.roamingChest) visibleChests.push(world.roamingChest);
+      if (world.roamingChestSecondary) visibleChests.push(world.roamingChestSecondary);
       for (const chest of visibleChests) {
         if (!visible(chest.x, chest.y, 38, 36)) continue;
         ctx.save();
@@ -2431,13 +2663,14 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         if (!chest.opened) {
           // Static chest geometry is prepared once per palette. Only its lock
           // and roaming countdown remain dynamic in the hot loop.
-          ctx.drawImage(getPreparedChestSprite("#d59a42", "#8b5427"), -5, -2, 48, 36);
-          const lockColor = chest.powerUp === "shield" ? "#72ffef" : chest.powerUp === "life" ? "#ff5b95" : chest.powerUp === "score" || chest.powerUp === "jackpot" ? "#ffd84d" : chest.powerUp === "repair" ? "#84fff2" : chest.powerUp === "phase" ? "#9c6bff" : "#c65cff";
+          ctx.drawImage(getPreparedChestSprite(chest.roaming ? "#ff2bde" : "#d59a42", chest.roaming ? "#29105b" : "#8b5427"), -5, -2, 48, 36);
+          const lockColor = chest.roaming ? "#72ffef" : chest.powerUp === "shield" ? "#72ffef" : chest.powerUp === "life" ? "#ff5b95" : chest.powerUp === "score" || chest.powerUp === "jackpot" ? "#ffd84d" : chest.powerUp === "repair" ? "#84fff2" : chest.powerUp === "phase" ? "#9c6bff" : "#c65cff";
           ctx.fillStyle = lockColor;
           ctx.fillRect(15, 12, 8, 9);
-          if (chest === world.roamingChest) {
+          const roamingTimer = chest === world.roamingChest ? world.roamingChestTimer : chest === world.roamingChestSecondary ? world.roamingChestSecondaryTimer : null;
+          if (roamingTimer !== null) {
             const roamingDifficulty = difficultiesRef.current[world.sector - 1] as RoamingChestDifficulty;
-            const ratio = Math.max(0, Math.min(1, world.roamingChestTimer / ROAMING_CHEST_RULES[roamingDifficulty].visibleSeconds));
+            const ratio = Math.max(0, Math.min(1, roamingTimer / ROAMING_CHEST_RULES[roamingDifficulty].visibleSeconds));
             ctx.fillStyle = "rgba(255,255,255,.2)"; ctx.fillRect(0, 33, 38, 2);
             ctx.fillStyle = "#ff2b8a"; ctx.fillRect(0, 33, 38 * ratio, 2);
           }
@@ -2458,10 +2691,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           const lockColor = chest.powerUp === "shield" ? "#72ffef" : chest.powerUp === "life" ? "#ff5b95" : chest.powerUp === "score" || chest.powerUp === "jackpot" ? "#ffd84d" : chest.powerUp === "repair" ? "#84fff2" : chest.powerUp === "phase" ? "#9c6bff" : "#c65cff";
           ctx.fillStyle = lockColor; ctx.shadowBlur = ultraActive ? 0 : 12; ctx.shadowColor = lockColor; roundedRect(ctx, 15, 12, 8, 9, 2); ctx.fill();
         }
-        if (chest === world.roamingChest && !chest.opened) {
+        const roamingTimer = chest === world.roamingChest ? world.roamingChestTimer : chest === world.roamingChestSecondary ? world.roamingChestSecondaryTimer : null;
+        if (roamingTimer !== null && !chest.opened) {
           const roamingDifficulty = difficultiesRef.current[world.sector - 1] as RoamingChestDifficulty;
           const total = ROAMING_CHEST_RULES[roamingDifficulty].visibleSeconds;
-          const ratio = Math.max(0, Math.min(1, world.roamingChestTimer / total));
+          const ratio = Math.max(0, Math.min(1, roamingTimer / total));
           ctx.shadowBlur = 0;
           ctx.fillStyle = "rgba(255,255,255,.2)";
           ctx.fillRect(0, 33, 38, 2);
@@ -2492,11 +2726,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.globalAlpha = 1;
           ctx.fillStyle = theme.warning;
           ctx.font = "700 6px ui-monospace, monospace";
-          ctx.fillText("GUARDIAN " + (enemy.integrity ?? 0) + "/3", -20, -29);
+          ctx.fillText("GUARDIAN " + (enemy.integrity ?? 0) + "/" + (enemy.integrityMax ?? 5), -20, -29);
           ctx.fillStyle = "rgba(255,255,255,.16)";
           ctx.fillRect(-20, -26, 40, 3);
           ctx.fillStyle = theme.warning;
-          ctx.fillRect(-20, -26, 40 * ((enemy.integrity ?? 0) / 3), 3);
+          ctx.fillRect(-20, -26, 40 * ((enemy.integrity ?? 0) / (enemy.integrityMax ?? 5)), 3);
         }
         ctx.restore();
         continue;
@@ -2685,11 +2919,11 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           ctx.stroke();
           ctx.fillStyle = theme.warning;
           ctx.font = "700 6px ui-monospace, monospace";
-          ctx.fillText("GUARDIAN " + (enemy.integrity ?? 0) + "/3", -20, -29);
+          ctx.fillText("GUARDIAN " + (enemy.integrity ?? 0) + "/" + (enemy.integrityMax ?? 5), -20, -29);
           ctx.fillStyle = "rgba(255,255,255,.16)";
           ctx.fillRect(-20, -26, 40, 3);
           ctx.fillStyle = theme.warning;
-          ctx.fillRect(-20, -26, 40 * ((enemy.integrity ?? 0) / 3), 3);
+          ctx.fillRect(-20, -26, 40 * ((enemy.integrity ?? 0) / (enemy.integrityMax ?? 5)), 3);
         }
         ctx.restore();
       }
@@ -2711,7 +2945,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ctx.fillStyle = particle.color;
         ctx.shadowBlur = ultraActive ? 0 : 7;
         ctx.shadowColor = particle.color;
-        const particleKind = particle.blockExplosion || particle.hazard || "spark";
+        const particleKind = particle.blockExplosion || particle.hazardStyle || particle.hazard || "spark";
         const particleSize = particle.hazard === "laser" ? 1 : (particle.size || (particle.hazard ? 10 : 4));
         const particleSprite = getPreparedParticleSprite(particleKind, particle.color);
         ctx.save();

@@ -78,9 +78,19 @@ export function getPreparedParticleSprite(kind: string, color: string) {
     ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 2;
     if (kind === "laser") { ctx.fillRect(-16, -3, 32, 6); ctx.fillStyle = "#fff1a8"; ctx.fillRect(-16, -1, 32, 2); return; }
     if (kind === "energy-bolt") { ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-4, 13); ctx.lineTo(3, 2); ctx.lineTo(-2, -2); ctx.lineTo(7, -13); ctx.stroke(); return; }
+    if (kind === "cryo-shard") { ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(9, 12); ctx.lineTo(-9, 12); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#e9ffff"; ctx.fillRect(-1, -8, 2, 14); return; }
+    if (kind === "chrome-sliver") { ctx.rotate(.32); ctx.fillRect(-4, -14, 8, 28); ctx.fillStyle = "#ffffff"; ctx.fillRect(-1, -12, 2, 24); return; }
+    if (kind === "toxic-splinter") { ctx.beginPath(); ctx.arc(-4, 3, 7, 0, Math.PI * 2); ctx.arc(6, -5, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#d9ff8a"; ctx.beginPath(); ctx.arc(-5, 2, 2, 0, Math.PI * 2); ctx.fill(); return; }
+    if (kind === "fire-spark") { ctx.beginPath(); ctx.moveTo(-6, 12); ctx.quadraticCurveTo(-10, 1, 0, -14); ctx.quadraticCurveTo(10, 1, 6, 12); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#fff0a3"; ctx.beginPath(); ctx.moveTo(-2, 8); ctx.quadraticCurveTo(-4, 1, 0, -7); ctx.quadraticCurveTo(4, 1, 2, 8); ctx.fill(); return; }
+    if (kind === "sea-droplet") { ctx.beginPath(); ctx.moveTo(0, -14); ctx.bezierCurveTo(11, -1, 10, 10, 0, 13); ctx.bezierCurveTo(-10, 10, -11, -1, 0, -14); ctx.fill(); return; }
+    if (kind === "plasma-crystal" || kind === "rift-diamond") { ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(10, 0); ctx.lineTo(0, 14); ctx.lineTo(-10, 0); ctx.closePath(); ctx.fill(); ctx.globalAlpha = .5; ctx.strokeStyle = "#e9ffff"; ctx.stroke(); return; }
+    if (kind === "solar-ray") { ctx.fillRect(-3, -15, 6, 30); ctx.fillStyle = "#fff26b"; ctx.fillRect(-1, -15, 2, 30); return; }
+    if (kind === "ghost-fragment") { ctx.setLineDash([3, 2]); ctx.strokeRect(-10, -10, 20, 20); ctx.setLineDash([]); return; }
+    if (kind === "apex-star") { ctx.beginPath(); for (let point = 0; point < 8; point += 1) { const angle = -Math.PI / 2 + point * Math.PI / 4; const radius = point % 2 ? 5 : 14; const x = Math.cos(angle) * radius; const y = Math.sin(angle) * radius; if (point === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); } ctx.closePath(); ctx.fill(); return; }
     if (kind === "bubble-spray") { ctx.beginPath(); ctx.arc(-5, 3, 7, 0, Math.PI * 2); ctx.arc(6, -4, 5, 0, Math.PI * 2); ctx.stroke(); return; }
     if (kind === "magma-burst") { ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fff0a3"; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill(); return; }
     if (kind === "wind-shard") { ctx.beginPath(); ctx.moveTo(-13, 0); ctx.quadraticCurveTo(0, -7, 13, -2); ctx.quadraticCurveTo(0, 6, -13, 0); ctx.fill(); return; }
+    if (kind === "geode-fragment") { ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(11, -3); ctx.lineTo(6, 13); ctx.lineTo(-8, 10); ctx.lineTo(-12, -4); ctx.closePath(); ctx.fill(); ctx.globalAlpha = .48; ctx.fillStyle = "#e2ffc2"; ctx.fillRect(-1, -9, 3, 18); return; }
     ctx.beginPath(); ctx.moveTo(0, -13); ctx.lineTo(10, 0); ctx.lineTo(0, 13); ctx.lineTo(-10, 0); ctx.closePath(); ctx.fill();
   });
 }

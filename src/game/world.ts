@@ -16,16 +16,16 @@ export const MOVE_SPEED = 255;
 export const JUMP_SPEED = 610;
 export const WORLD_TOP = FLOOR_BASE_Y - (LEVEL_FLOORS - 1) * FLOOR_SPACING - PLAYER_H + 13;
 
-export type TileMode = "stable" | "fragile" | "phase" | "rift" | "moving" | "ice" | "bridge";
-export type Tile = { x: number; y: number; alive: boolean; cracked: boolean; mode: TileMode; phaseOffset: number; baseX: number; travel: number; speed: number; previousX: number; temporaryLife?: number };
+export type TileMode = "stable" | "fragile" | "phase" | "rift" | "moving" | "ice" | "bridge" | "wall";
+export type Tile = { x: number; y: number; alive: boolean; cracked: boolean; mode: TileMode; phaseOffset: number; baseX: number; travel: number; speed: number; previousX: number; temporaryLife?: number; doubleDeck?: "lower" | "upper" };
 export type Objective = { x: number; y: number; kind: "cell" | "switch"; active: boolean };
-export type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean; kind: number; attackTimer: number; frozen: number; guardian?: boolean; integrity?: number };
+export type Enemy = { x: number; y: number; vx: number; vy: number; alive: boolean; grounded: boolean; kind: number; attackTimer: number; frozen: number; guardian?: boolean; integrity?: number; integrityMax?: number; canFire?: boolean; canThrowBombs?: boolean; canShoot?: boolean; shooterSlot?: number; bombTimer?: number };
 export type Particle = {
   x: number; y: number; vx: number; vy: number; life: number; color: string;
   hazard?: "fall" | "laser" | "pulse" | "boss";
-  blockExplosion?: BlockExplosionStyle; size?: number; rotation?: number; spin?: number;
+  blockExplosion?: BlockExplosionStyle; hazardStyle?: BlockExplosionStyle; size?: number; rotation?: number; spin?: number;
 };
-export type Chest = { x: number; y: number; opened: boolean; powerUp: PowerUpKind };
+export type Chest = { x: number; y: number; opened: boolean; powerUp: PowerUpKind; roaming?: boolean };
 export type Player = {
   x: number;
   y: number;
@@ -53,9 +53,11 @@ export type World = {
   objectives: Objective[];
   roamingChest: Chest | null;
   roamingChestTimer: number;
+  roamingChestSecondary: Chest | null;
+  roamingChestSecondaryTimer: number;
   roamingChestMoves: number;
   roamingChestSector: number;
-  collectedRoamingChestSectors: boolean[];
+  collectedRoamingChestCounts: number[];
   particles: Particle[];
   cameraX: number;
   cameraY: number;
@@ -66,6 +68,9 @@ export type World = {
   lastTime: number;
   status: GameStatus;
   hazardTimer: number;
+  fallingHazardTimer: number;
+  enemyShotCooldown: number;
+  nextEnemyShooterSlot: number;
   fxTime: number;
   shake: number;
   powerUpMessage: string;
@@ -134,10 +139,9 @@ export function buildLevel(sector = 1, variant = 0): Pick<World, "tiles" | "enem
       );
       chests.push({ x: support.x + 13, y: y - 30, opened: false, powerUp });
     }
-    const enemyStep = Math.max(2, 5 - Math.floor(row / 11));
     if (row === LEVEL_FLOORS - 2) {
-      enemies.push({ x: VIEW_W / 2 - 28, y: y - 56, vx: 46, vy: 0, alive: true, grounded: true, kind: 0, attackTimer: 1.8, frozen: 0, guardian: true, integrity: 3 });
-    } else if (row > 2 && row % enemyStep === 1) {
+      enemies.push({ x: VIEW_W / 2 - 28, y: y - 56, vx: 46, vy: 0, alive: true, grounded: true, kind: 0, attackTimer: 1.8, frozen: 0, guardian: true, integrity: 5, integrityMax: 5 });
+    } else if (row > 0 && row < LEVEL_FLOORS - 2) {
       enemies.push({
         x: ((row * 137) % 720) + 110,
         y: y - 34,
@@ -188,6 +192,9 @@ export function makeWorld(): World {
     lastTime: 0,
     status: "ready",
     hazardTimer: 2.4,
+    fallingHazardTimer: 3.8,
+    enemyShotCooldown: 0,
+    nextEnemyShooterSlot: 0,
     fxTime: 0,
     shake: 0,
     powerUpMessage: "",
@@ -205,9 +212,11 @@ export function makeWorld(): World {
     showcaseLastBurst: -1,
     roamingChest: null,
     roamingChestTimer: 0,
+    roamingChestSecondary: null,
+    roamingChestSecondaryTimer: 0,
     roamingChestMoves: 0,
     roamingChestSector: 1,
-    collectedRoamingChestSectors: Array(LEVEL_COUNT).fill(false),
+    collectedRoamingChestCounts: Array(LEVEL_COUNT).fill(0),
     variant: 0,
   };
 }
@@ -223,6 +232,11 @@ export function placeWorldAtLevel(world: World, level: number, variant = world.v
   world.sector = targetLevel;
   world.highestSector = targetLevel;
   world.roamingChestSector = targetLevel;
+  world.roamingChest = null;
+  world.roamingChestTimer = 0;
+  world.roamingChestSecondary = null;
+  world.roamingChestSecondaryTimer = 0;
+  world.roamingChestMoves = 0;
   // A level has its own world coordinates. Keeping the previous camera offset
   // would show the new player at the right spawn point but the view far above
   // it after selecting an upgrade.
@@ -230,6 +244,8 @@ export function placeWorldAtLevel(world: World, level: number, variant = world.v
   world.cameraY = 0;
   world.mechanicCooldown = 0;
   world.bridgeCooldown = 0;
+  world.enemyShotCooldown = 0;
+  world.nextEnemyShooterSlot = 0;
   world.celebrationTime = 0;
   world.celebrationTarget = "upgrade";
   world.easyAssistsApplied = false;
@@ -241,14 +257,132 @@ export function applyEasyAssists(world: World) {
   // Easy is an onboarding mode: retain the visual world, but remove the
   // mechanics that create the largest frustration spikes.
   world.lives = Math.max(world.lives, 8);
-  // Regular enemies are omitted entirely in Easy. The guardian remains as a
-  // short, one-hit final encounter so the level objective still has meaning.
-  world.enemies = world.enemies.filter((enemy) => enemy.guardian).map((enemy) => ({ ...enemy, integrity: 1, attackTimer: 3.2 }));
+  // Easy keeps a sparse, slow patrol so the level still feels populated and
+  // teaches enemy behaviour. The guardian remains a short encounter.
+  world.enemies = world.enemies
+    .map((enemy) => enemy.guardian
+      ? { ...enemy, integrity: 2, integrityMax: 2, attackTimer: 3.2 }
+      : { ...enemy, vx: enemy.vx * .42, attackTimer: 3.5 });
   world.objectives = world.objectives.slice(0, 1);
   world.tiles = world.tiles.map((tile) => {
     if (!["moving", "phase", "ice", "fragile", "rift"].includes(tile.mode)) return tile;
     return { ...tile, mode: "stable", x: tile.baseX, travel: 0, previousX: tile.baseX };
   });
+}
+
+export function setGuardianIntegrity(world: World, difficulty: "easy" | "medium" | "hard") {
+  const integrity = difficulty === "easy" ? 2 : difficulty === "medium" ? 5 : 8;
+  world.enemies = world.enemies.map((enemy) => enemy.guardian
+    ? { ...enemy, integrity, integrityMax: integrity, attackTimer: difficulty === "easy" ? 3.2 : difficulty === "hard" ? 1.25 : 1.8 }
+    : enemy);
+}
+
+export function setEnemyLayout(world: World, difficulty: "easy" | "medium" | "hard") {
+  const target = difficulty === "easy" ? 4 : difficulty === "medium" ? 5 : 6;
+  const rangedCount = difficulty === "easy" ? 2 : difficulty === "medium" ? 2 : 3;
+  const normalEnemies = world.enemies.filter((enemy) => !enemy.guardian);
+  const guardians = world.enemies.filter((enemy) => enemy.guardian);
+  const shooterIndices = Array.from({ length: Math.min(rangedCount, target) }, (_, index) =>
+    rangedCount <= 1 ? 0 : Math.round(index * (target - 1) / (rangedCount - 1)),
+  );
+  const selected = Array.from({ length: Math.min(target, normalEnemies.length) }, (_, index) => {
+    const sourceIndex = target <= 1 ? 0 : Math.round(index * (normalEnemies.length - 1) / (target - 1));
+    const enemy = normalEnemies[sourceIndex];
+    const shooterSlot = shooterIndices.indexOf(index);
+    return {
+      ...enemy,
+      // Difficulty-specific ranged subset, staggered by the shared scheduler.
+      canShoot: shooterSlot >= 0,
+      shooterSlot: shooterSlot >= 0 ? shooterSlot : undefined,
+    };
+  });
+  world.enemies = [...selected, ...guardians];
+}
+
+export function setBossLayout(world: World, difficulty: "easy" | "medium" | "hard") {
+  const baseGuardian = world.enemies.find((enemy) => enemy.guardian);
+  if (!baseGuardian) return;
+  const count = difficulty === "easy" ? 1 : 2;
+  const bossTiles = world.tiles
+    .filter((tile) => tile.alive && Math.abs(tile.y - (baseGuardian.y + 56)) < 4)
+    .sort((a, b) => a.x - b.x);
+  const fractions = count === 1 ? [.5] : [.28, .72];
+  const positions = fractions.map((fraction) => {
+    const tile = bossTiles[Math.min(bossTiles.length - 1, Math.max(0, Math.round((bossTiles.length - 1) * fraction)))];
+    return tile ? tile.x + (TILE - 38) / 2 : VIEW_W / 2 - 28;
+  });
+  const guardians = positions.map((x, index) => ({
+    ...baseGuardian,
+    x,
+    vx: (index % 2 ? -1 : 1) * Math.abs(baseGuardian.vx),
+    attackTimer: baseGuardian.attackTimer + index * .45,
+    canFire: index === 0,
+    canThrowBombs: index === 0,
+    bombTimer: difficulty === "hard" ? 4.8 + index * 1.4 : 6.5,
+  }));
+  world.enemies = [...world.enemies.filter((enemy) => !enemy.guardian), ...guardians];
+}
+
+export function setChestLayout(world: World, difficulty: "easy" | "medium" | "hard") {
+  const count = difficulty === "easy" ? 5 : difficulty === "medium" ? 4 : 2;
+  world.chests = world.chests.slice(0, count);
+}
+
+export function addDestructibleWalls(world: World, difficulty: "easy" | "medium" | "hard") {
+  const wallCount = difficulty === "easy" ? 2 : difficulty === "medium" ? 4 : 6;
+  const rows = [2, 4, 6, 8, 10, 12];
+  for (let index = 0; index < wallCount; index += 1) {
+    const row = rows[index];
+    const baseY = FLOOR_BASE_Y - row * FLOOR_SPACING;
+    const height = index % 3 === 1 ? 3 : 2;
+    const column = 2 + ((world.sector * 3 + world.variant * 2 + index * 5) % 11);
+    const x = column * TILE;
+    for (let segment = 1; segment <= height; segment += 1) {
+      const y = baseY - segment * TILE;
+      if (y < WORLD_TOP + 18 || world.tiles.some((tile) => tile.x === x && Math.abs(tile.y - y) < 2)) continue;
+      world.tiles.push({
+        x,
+        y,
+        alive: true,
+        cracked: true,
+        mode: "wall",
+        phaseOffset: row * .73 + index * .41,
+        baseX: x,
+        travel: 0,
+        speed: 0,
+        previousX: x,
+      });
+    }
+  }
+}
+
+export function addDoubleDecks(world: World, difficulty: "easy" | "medium" | "hard") {
+  const deckCount = difficulty === "easy" ? 1 : difficulty === "medium" ? 2 : 3;
+  const rows = [3, 7, 11];
+  for (let index = 0; index < deckCount; index += 1) {
+    const y = FLOOR_BASE_Y - rows[index] * FLOOR_SPACING;
+    const rowTiles = world.tiles
+      .filter((tile) => tile.alive && tile.mode !== "wall" && Math.abs(tile.y - y) < 2)
+      .sort((a, b) => a.x - b.x);
+    if (!rowTiles.length) continue;
+    const spanStart = Math.max(0, Math.min(rowTiles.length - 4, 2 + ((world.sector + world.variant + index * 3) % Math.max(1, rowTiles.length - 3))));
+    for (const lower of rowTiles.slice(spanStart, spanStart + 4)) {
+      lower.doubleDeck = "lower";
+      const upperY = lower.y - TILE;
+      if (upperY < WORLD_TOP + 18 || world.tiles.some((tile) => tile.x === lower.x && Math.abs(tile.y - upperY) < 2)) continue;
+      world.tiles.push({
+        ...lower,
+        y: upperY,
+        baseX: lower.x,
+        previousX: lower.x,
+        travel: 0,
+        speed: 0,
+        mode: "stable",
+        cracked: true,
+        doubleDeck: "upper",
+      });
+    }
+  }
 }
 
 export function levelProgress(playerY: number): number {
