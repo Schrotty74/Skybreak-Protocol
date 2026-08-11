@@ -117,7 +117,7 @@ function colorChannels(color: string): [number, number, number] {
   return [parseInt(match[1], 16) / 255, parseInt(match[2], 16) / 255, parseInt(match[3], 16) / 255];
 }
 
-import { addDestructibleWalls, addDoubleDecks, applyEasyAssists, buildLevel, FLOOR_BASE_Y, FLOOR_SPACING, GRAVITY, JUMP_SPEED, levelProgress, makeWorld, MOVE_SPEED, PLAYER_H, PLAYER_W, placeWorldAtLevel, setBossLayout, setChestLayout, setEnemyLayout, setGuardianIntegrity, themeColor, TILE, tileIsActive, WORLD_TOP, type Chest, type Enemy, type Objective, type Particle, type Player, type Tile, type TileMode, type World } from "./game/world";
+import { addDestructibleWalls, addDoubleDecks, applyEasyAssists, buildLevel, FLOOR_BASE_Y, FLOOR_SPACING, GRAVITY, JUMP_SPEED, levelProgress, makeWorld, MOVE_SPEED, PLAYER_H, PLAYER_W, placeWorldAtLevel, setBossLayout, setChestLayout, setEnemyLayout, setGuardianIntegrity, setMovingBlockLayout, setPhaseBlockLayout, themeColor, TILE, tileIsActive, WORLD_TOP, type Chest, type Enemy, type Objective, type Particle, type Player, type Tile, type TileMode, type World } from "./game/world";
 
 
 const CHEST_POWER_UPS: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
@@ -380,6 +380,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
     setChestLayout(next, startingDifficulty);
     addDestructibleWalls(next, startingDifficulty);
     addDoubleDecks(next, startingDifficulty);
+    setPhaseBlockLayout(next, startingDifficulty);
+    setMovingBlockLayout(next, startingDifficulty);
     if (startingDifficulty === "easy") applyEasyAssists(next);
     next.player.pickaxePower = pickaxeLoadoutRef.current.power;
     next.player.pickaxeStyle = pickaxeLoadoutRef.current.style;
@@ -555,6 +557,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       setChestLayout(world, nextDifficulty);
       addDestructibleWalls(world, nextDifficulty);
       addDoubleDecks(world, nextDifficulty);
+      setPhaseBlockLayout(world, nextDifficulty);
+      setMovingBlockLayout(world, nextDifficulty);
       if (nextDifficulty === "easy") applyEasyAssists(world);
       world.status = "playing";
       world.powerUpMessage = isDe ? `VARIANTE ${world.variant + 1}/3 // LEVEL ${nextSector}` : `VARIANT ${world.variant + 1}/3 // LEVEL ${nextSector}`;
@@ -1547,8 +1551,6 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         ? "medium"
         : difficultiesRef.current[Math.max(0, world.sector - 1)] || "medium";
       const difficulty = DIFFICULTY_SETTINGS[difficultyLevel];
-      const levelRule = LEVEL_GAMEPLAY[world.sector - 1];
-      const levelPressure = 1 + (world.sector - 1) * 0.075;
       world.fxTime += dt;
       world.transition = Math.max(0, world.transition - dt);
       world.shake = Math.max(0, world.shake - dt * 38);
@@ -1692,18 +1694,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
       const standingTile = world.tiles.find((tile) => tileIsActive(tile, world.fxTime)
         && p.x + PLAYER_W - 7 > tile.x && p.x + 7 < tile.x + TILE && Math.abs(p.y + PLAYER_H - tile.y) < 5);
       if (standingTile?.mode === "moving") p.x += standingTile.x - standingTile.previousX;
-      const elementalIntensity = .45 + levelProgress(p.y) * .55;
-      const elementalWave = Math.sin(world.fxTime * (world.sector === 13 ? 1.35 : 1.05) + world.sector * 1.7);
-      const wetActive = world.sector === 12 && elementalWave > -.1;
-      const windActive = world.sector === 13 && elementalWave > .32;
-      const heatActive = world.sector === 11 && elementalWave > .48;
-      const earthActive = world.sector === 14 && elementalWave > .62;
-      const glide = standingTile?.mode === "ice" ? 0.08 : wetActive ? .12 : 0.002;
+      const glide = standingTile?.mode === "ice" ? 0.08 : 0.002;
       p.vx = input.left ? -MOVE_SPEED : input.right ? MOVE_SPEED : p.vx * Math.pow(glide, dt);
-      if (difficultyLevel !== "easy" && levelRule.drift && !input.left && !input.right) p.vx += levelRule.drift * dt;
-      if (windActive && !input.left && !input.right) p.vx += Math.sign(Math.sin(world.fxTime * .36)) * 42 * elementalIntensity * dt;
-      if (heatActive && !p.grounded) p.vy -= 42 * elementalIntensity * dt;
-      if (earthActive) world.shake = Math.max(world.shake, 1.4 + elementalIntensity * 1.2);
       if (p.vx) p.facing = Math.sign(p.vx);
       const activelyMoving = input.left || input.right || !p.grounded || Math.abs(p.vx) > 18;
       p.idleTime = activelyMoving || input.attack || input.jump ? 0 : p.idleTime + dt;
@@ -1901,25 +1893,17 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         if (enemy.frozen > 0) continue;
         enemy.attackTimer -= dt;
         if (enemy.guardian && enemy.canFire !== false && enemy.attackTimer <= 0) {
-          const bossMode = world.sector - 1;
           const guardianMaxIntegrity = enemy.integrityMax ?? 5;
           const bossPhase = guardianMaxIntegrity - (enemy.integrity ?? guardianMaxIntegrity);
-          const shotCounts = [1, 1, 2, 1, 2, 2, 1, 2, 1, 3];
-          const shotSpeeds = [70, 92, 62, 156, 86, 122, 74, 118, 174, 102];
-          const shotArcs = [115, 92, -42, 62, -108, 138, -78, 24, 172, -18];
-          enemy.attackTimer = (difficultyLevel === "easy" ? 2.6 : 1) * Math.max(1.15, 2.45 - Math.min(0.72, world.sector * 0.05) - bossPhase * 0.24);
-          const baseShotCount = shotCounts[bossMode] ?? 2;
-          const baseShotSpeed = shotSpeeds[bossMode] ?? 116;
-          const baseShotArc = shotArcs[bossMode] ?? -32;
-          const shotCount = difficultyLevel === "easy" ? 1 : Math.min(5, baseShotCount + Math.floor(bossPhase / 2));
+          enemy.attackTimer = (difficultyLevel === "easy" ? 2.6 : 1) * Math.max(1.15, 2.2 - bossPhase * 0.24);
+          const shotCount = difficultyLevel === "easy" ? 1 : Math.min(5, 1 + Math.floor(bossPhase / 2));
           for (let shot = 0; shot < shotCount; shot += 1) {
-            const aimed = bossMode === 1 || bossMode === 5 || bossMode === 8;
-            const direction = aimed ? Math.sign(p.x - enemy.x) || 1 : shotCount === 1 ? (bossMode % 2 === 0 ? -1 : 1) : shot - (shotCount - 1) / 2;
+            const direction = shotCount === 1 ? Math.sign(p.x - enemy.x) || 1 : shot - (shotCount - 1) / 2;
             world.particles.push({
               x: enemy.x + 19,
               y: enemy.y + 8,
-              vx: direction * (baseShotSpeed + world.sector * 6 + bossPhase * 18) * (difficultyLevel === "easy" ? 0.45 : 1),
-              vy: baseShotArc + shot * 34,
+              vx: direction * (110 + bossPhase * 18) * (difficultyLevel === "easy" ? 0.45 : 1),
+              vy: -32 + shot * 34,
               life: 3.2,
               color: themeColor(world.sector, "warning"),
               hazard: "boss",
@@ -1936,7 +1920,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             world.particles.push({
               x: enemy.x + 19,
               y: enemy.y + 8,
-              vx: bombDirection * (75 + world.sector * 7),
+              vx: bombDirection * 110,
               vy: -225 - Math.min(90, bossPhase * 14),
               life: 3.8,
               color: themeColor(world.sector, "secondary"),
@@ -1962,7 +1946,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           world.particles.push({
             x: enemy.x + 19,
             y: enemy.y + 5,
-            vx: direction * (104 + world.sector * 5) * difficulty.enemy,
+            vx: direction * 104 * difficulty.enemy,
             vy: -18,
             life: 3.1,
             color: themeColor(world.sector, "warning"),
@@ -1971,25 +1955,37 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             size: 8,
           });
         } else if (!enemy.guardian && enemyArchetype === 1 && enemy.grounded && enemy.attackTimer <= 0) {
-          enemy.vy = -260 - world.sector * 8;
+          enemy.vy = -260;
           enemy.attackTimer = 1.4;
         } else if (!enemy.guardian && enemyArchetype === 2 && enemy.attackTimer <= 0) {
-          // Sprinter accelerate briefly, but retain their patrol direction.
-          // Direction changes are decided at the end of the actual walkway.
-          enemy.vx *= 1.08;
+          // Keep the patrol archetype active without giving it a separate
+          // horizontal speed or allowing repeated actions to compound speed.
           enemy.attackTimer = 1.1;
         }
-        if (!enemy.guardian && enemy.grounded) {
+        if (enemy.grounded) {
           const direction = Math.sign(enemy.vx) || 1;
           const lookAheadX = enemy.x + direction * 34;
           const walkwayContinues = world.tiles.some((tile) => tileIsActive(tile, world.fxTime)
             && Math.abs(tile.y - (enemy.y + 32)) < 5
             && lookAheadX + 34 > tile.x + 3
             && lookAheadX + 4 < tile.x + TILE - 3);
-          if (!walkwayContinues) enemy.vx = -enemy.vx;
+          if (!walkwayContinues) {
+            if (!enemy.guardian) enemy.vx = -enemy.vx;
+            else {
+              const bossWalkway = world.tiles.filter((tile) => tileIsActive(tile, world.fxTime)
+                && Math.abs(tile.y - (enemy.y + 32)) < 5);
+              const edge = direction > 0
+                ? Math.max(...bossWalkway.map((tile) => tile.x + TILE))
+                : Math.min(...bossWalkway.map((tile) => tile.x));
+              const reachesOuterEdge = direction > 0
+                ? enemy.x + 34 >= edge - 3
+                : enemy.x + 4 <= edge + 3;
+              if (reachesOuterEdge) enemy.vx = -enemy.vx;
+            }
+          }
         }
         enemy.vy += GRAVITY * (enemy.kind === 5 ? 0.24 : enemyArchetype === 2 ? 0.4 : 0.78) * dt;
-        enemy.x += enemy.vx * difficulty.enemy * levelPressure * (enemyArchetype === 2 ? 1.18 : 1) * dt;
+        enemy.x += enemy.vx * difficulty.enemy * dt;
         enemy.y += enemy.vy * dt;
         if (enemy.x < 18) {
           enemy.x = 18;
@@ -2033,29 +2029,12 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         }
       }
 
-      world.hazardTimer -= dt;
-      if (difficultyLevel !== "easy" && world.hazardTimer <= 0 && (world.cameraY < -110 || levelRule.hazard === "laser")) {
-        world.hazardTimer = (levelRule.hazard === "laser" ? 1.7 : 2.3 + Math.random() * 2.2) / (difficulty.hazards * levelPressure);
-        const hazardY = world.cameraY + 70 + Math.random() * Math.max(90, view.height - 150);
-        const laserFromLeft = Math.random() > 0.5;
-        world.particles.push({
-          x: levelRule.hazard === "laser" ? (laserFromLeft ? -24 : VIEW_W + 24) : 50 + Math.random() * 860,
-          y: levelRule.hazard === "laser" ? hazardY : levelRule.hazard === "pulse" ? world.cameraY + 35 : world.cameraY - 30,
-          vx: levelRule.hazard === "laser" ? (laserFromLeft ? 260 : -260) * difficulty.hazardSpeed * levelPressure : (Math.random() - 0.5) * 35,
-          vy: levelRule.hazard === "pulse" ? 210 * difficulty.hazardSpeed * levelPressure : 360 * difficulty.hazardSpeed * levelPressure,
-          life: levelRule.hazard === "laser" ? 4.2 : 4,
-          color: "#ff2b8a",
-          hazard: levelRule.hazard,
-        });
-      }
-
       // Falling objects now visibly detach from the underside of the existing
-      // walkways. This complements the sector's laser/pulse rule rather than
-      // replacing it, so every level still keeps its own original danger.
+      // walkways. Their timing and count depend only on the selected difficulty.
       world.fallingHazardTimer -= dt;
       if (world.fallingHazardTimer <= 0) {
         const falling = FALLING_HAZARD_SETTINGS[difficultyLevel];
-        world.fallingHazardTimer = (falling.interval[0] + Math.random() * (falling.interval[1] - falling.interval[0])) / (1 + (world.sector - 1) * .025);
+        world.fallingHazardTimer = falling.interval[0] + Math.random() * (falling.interval[1] - falling.interval[0]);
         const visibleTiles = world.tiles.filter((tile) => tile.alive
           && tile.y >= world.cameraY + 24
           && tile.y <= world.cameraY + view.height - 82);
@@ -2083,7 +2062,7 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
             hazardStyle: style,
             size,
             rotation: Math.random() * Math.PI * 2,
-            spin: (Math.random() - .5) * (3.5 + world.sector * .18),
+            spin: (Math.random() - .5) * 4.5,
           });
         }
       }
@@ -2605,7 +2584,28 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
           }
           ctx.stroke();
         }
-        if (tile.mode === "rift") {
+        if (tile.mode === "phase") {
+          const phasePulse = 0.55 + Math.sin(world.fxTime * 6 + tile.phaseOffset) * 0.3;
+          const phaseCode = String(world.sector).padStart(2, "0");
+          ctx.globalAlpha = phaseActive ? 0.92 : 0.58;
+          ctx.fillStyle = phaseActive ? "rgba(112,247,255,.22)" : "rgba(255,43,138,.12)";
+          ctx.fillRect(tile.x + 6, tile.y + 3, TILE - 12, 19);
+          ctx.strokeStyle = phaseActive ? "#70f7ff" : "#ff2b8a";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([3, 2]);
+          ctx.strokeRect(tile.x + 6, tile.y + 3, TILE - 12, 19);
+          ctx.setLineDash([]);
+          ctx.globalAlpha = phaseActive ? phasePulse : 0.5;
+          ctx.strokeStyle = theme.warning;
+          ctx.lineWidth = 1;
+          for (let scan = 0; scan < 3; scan++) {
+            const y = tile.y + 7 + scan * 5;
+            ctx.beginPath(); ctx.moveTo(tile.x + 11, y); ctx.lineTo(tile.x + TILE - 11, y); ctx.stroke();
+          }
+          ctx.fillStyle = "#f4ffff";
+          ctx.font = "700 5px ui-monospace, monospace";
+          ctx.fillText(`PHASE ${phaseCode}`, tile.x + 11, tile.y + 16);
+        } else if (tile.mode === "rift") {
           ctx.globalAlpha = 0.9;
           ctx.strokeStyle = theme.secondary;
           ctx.lineWidth = 2;
@@ -3859,8 +3859,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
   const overlayCopy =
     status === "ready"
       ? (isDe
-        ? `Zielregel: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].de}. Durchbrich ${LEVEL_COUNT} Cyberpunk-Level und erreiche den Sendeturm.`
-        : `Level rule: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].en}. Break through 10 cyberpunk levels and reach the transmission tower.`)
+        ? `Sektorprofil: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].de}. Durchbrich ${LEVEL_COUNT} Cyberpunk-Level und erreiche den Sendeturm.`
+        : `Sector profile: ${LEVEL_GAMEPLAY[selectedStartLevel - 1].en}. Break through ${LEVEL_COUNT} cyberpunk levels and reach the transmission tower.`)
       : status === "paused"
         ? (isDe ? "Die Zeit steht still. Noch." : "Time stands still. For now.")
         : status === "chestChoice"

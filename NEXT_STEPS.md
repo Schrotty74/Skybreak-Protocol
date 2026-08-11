@@ -46,7 +46,3 @@ Diese Datei bei jeder größeren Änderung aktualisieren. Sie enthält nur tats�
 - Ultra kann auf Mobilgeräten deutlich Wärme und Akkuverbrauch erhöhen; 4K Ultra ist dort kein 60-FPS-Zielmodus.
 - Firefox kann bei fehlendem WebGPU den leichteren WebGL2-Fallback verwenden.
 - Für den lokalen macOS-Starter müssen projektlokale Node-Abhängigkeiten vorhanden sein; nach frischem Checkout `npm ci` ausführen.
-
-## Spätere Phase
-
-Eine native macOS-App ist erst nach Abschluss und stabiler Final-Veröffentlichung der Web-App vorgesehen. Der detaillierte, noch nicht begonnene Umfang steht in [`docs/UNRELEASED.md`](docs/UNRELEASED.md).

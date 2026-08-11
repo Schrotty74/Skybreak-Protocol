@@ -2,6 +2,7 @@
 
 Every public beta and final build has its own detailed German and English release document.
 
+- **1.0.1-beta.7:** [Deutsch](docs/releases/1.0.1-beta.7.md) · [English](docs/releases/1.0.1-beta.7.en.md) – consistent difficulty rules across all levels, distributed phase blocks, and restored moving routes
 - **1.0.1-beta.6:** [Deutsch](docs/releases/1.0.1-beta.6.md) · [English](docs/releases/1.0.1-beta.6.en.md) – difficulty-balanced patrols and guardians, level-specific falling hazards, destructible walls, double decks, and expanded chest rewards
 - **1.0.1-beta.5:** [Deutsch](docs/releases/1.0.1-beta.5.md) · [English](docs/releases/1.0.1-beta.5.en.md) – mobile start-menu bugfix, compact options, and updated mobile screenshots
 - **1.0.1-beta.4:** [Deutsch](docs/releases/1.0.1-beta.4.md) · [English](docs/releases/1.0.1-beta.4.en.md) – refreshed start screen, local profile reset and unlock sequence, timed shields, and updated manuals

@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-**Current release:** `v1.0.1-beta.6` · [Detailed changelog](docs/releases/1.0.1-beta.6.en.md) · [All changelogs](CHANGELOG.md)
+**Current release:** `v1.0.1-beta.7` · [Detailed changelog](docs/releases/1.0.1-beta.7.en.md) · [All changelogs](CHANGELOG.md)
 
 An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through fourteen visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Every level has its own theme, 2.5D platform material, animated scenery, effects, guardian, and soundtrack.
 
@@ -23,7 +23,7 @@ The web app runs without installation. On iPhone or iPad, use **Share → Add to
 
 The current version is shown in the game. On startup, Skybreak Protocol checks the public GitHub releases once and displays a notice when a newer beta or final build is available.
 
-**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.6). Extract it and open the matching starter for macOS, Windows, or Linux. All fourteen music tracks are included; only the optional update check requires internet access.
+**Play offline:** The versioned ZIP is available under **Assets** in the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.7). Extract it and open the matching starter for macOS, Windows, or Linux. All fourteen music tracks are included; only the optional update check requires internet access.
 
 ## Manual
 
@@ -52,12 +52,12 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
 
 ## Gameplay
 
-- Ascend through fourteen increasingly difficult cyberpunk and elemental levels
+- Ascend through fourteen visually distinct cyberpunk and elemental levels
 - Every level is a complete 15-floor ascent with a distinct animated environment, 2.5D platform material, enemy and guardian design, ice-pick base model, and soundtrack
 - Break platform modules from below
 - Use the robot's ice pick against enemies and nearby platform modules
-- Difficulty-aware patrols, guardians, chests, and falling hazards: Easy uses four patrols and one guardian; Medium uses five patrols and two guardians; Hard uses six patrols and two guardians. Only selected patrols shoot, and Medium/Hard stagger their volleys.
-- Break destructible vertical walls and double decks that require two upward jumps. Every sector uses its own readable falling object beneath its walkways.
+- Difficulty-aware patrols, guardians, chests, and falling hazards use the same rules in every level: Easy uses four patrols and one guardian; Medium uses five patrols and two guardians; Hard uses six patrols and two guardians. Only selected patrols shoot, and Medium/Hard stagger their volleys.
+- Break destructible vertical walls and double decks that require two upward jumps. Phase blocks support the robot only while active and are clearly marked `PHASE 01` through `PHASE 14`; Easy/Medium/Hard distribute four/eight/twelve blocks across separate floors. Four/six/eight routes also move sideways through the ascent.
 - Difficulty-aware chests: choose from seven rewards (shield, life, data bonus, overdrive, jackpot, repair plus shield, or phase armor). Easy has five fixed chests; Medium has four fixed chests plus two roaming bonus chests after 40% height; Hard has two fixed chests plus one roaming bonus chest after 60%. Roaming chests grant enhanced bonuses.
 - A shield lasts 8 seconds and absorbs three hits on Easy, 6 seconds and two hits on Medium, or 4 seconds and one hit on Hard.
 - Defeat the level guardian, preview the next sector, then choose the concrete next ice-pick power or visual-style upgrade
@@ -199,11 +199,11 @@ Hardware ray-tracing cores cannot currently be addressed directly by this web ap
 | 9 | Quantum Rift | purple-blue dimensional zone with a moving quantum path |
 | 10 | Skybreak Apex | bright cyan summit with rotating transmission rays |
 | 11 | Inferno Foundry | lava cavern with unstable heat haze and forge eruptions |
-| 12 | Abyssal Data Ocean | deep ocean with manta rays and visibly wet, slippery platforms |
+| 12 | Abyssal Data Ocean | deep ocean with manta rays and visibly wet platform shine |
 | 13 | Stratosphere Relay | high-altitude storm with turbines and visible gusts |
 | 14 | Terra Core Citadel | mineral core cavern with levitating rocks and tremors |
 
-Enemy density and environmental hazards increase from level to level. Every level can independently use **Easy**, **Medium**, or **Hard**; the selected setting changes enemy speed, hazard frequency, hazard speed, and score multiplier. Choices are stored only in the browser on the device.
+Every level can independently use **Easy**, **Medium**, or **Hard**. Each setting uses the same enemy, guardian, shot, and hazard values in all fourteen levels; only scenery, music, colours, and platform appearance differ. Choices are stored only in the browser on the device.
 
 ## Local development
 

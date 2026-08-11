@@ -155,6 +155,25 @@ export function buildLevel(sector = 1, variant = 0): Pick<World, "tiles" | "enem
       });
     }
   }
+  // Every sector keeps at least one phase block in addition to its
+  // sector-specific rift, ice, or fragile mechanics.
+  if (!tiles.some((tile) => tile.mode === "phase")) {
+    const phaseTile = tiles.find((tile) => tile.mode === "stable"
+      && tile.y <= FLOOR_BASE_Y - 3 * FLOOR_SPACING
+      && tile.y >= FLOOR_BASE_Y - 11 * FLOOR_SPACING);
+    if (phaseTile) phaseTile.mode = "phase";
+  }
+  // Every sector also keeps at least one lateral moving route.
+  if (!tiles.some((tile) => tile.mode === "moving")) {
+    const movingTile = tiles.find((tile) => tile.mode === "stable"
+      && tile.y <= FLOOR_BASE_Y - 3 * FLOOR_SPACING
+      && tile.y >= FLOOR_BASE_Y - 11 * FLOOR_SPACING);
+    if (movingTile) {
+      movingTile.mode = "moving";
+      movingTile.travel = 58;
+      movingTile.speed = 1.08;
+    }
+  }
   return { tiles, enemies, chests, objectives };
 }
 
@@ -254,8 +273,8 @@ export function placeWorldAtLevel(world: World, level: number, variant = world.v
 export function applyEasyAssists(world: World) {
   if (world.easyAssistsApplied) return;
   world.easyAssistsApplied = true;
-  // Easy is an onboarding mode: retain the visual world, but remove the
-  // mechanics that create the largest frustration spikes.
+  // Easy is an onboarding mode: retain its readable moving and phase routes,
+  // but remove the remaining mechanics that create the largest frustration spikes.
   world.lives = Math.max(world.lives, 8);
   // Easy keeps a sparse, slow patrol so the level still feels populated and
   // teaches enemy behaviour. The guardian remains a short encounter.
@@ -265,7 +284,7 @@ export function applyEasyAssists(world: World) {
       : { ...enemy, vx: enemy.vx * .42, attackTimer: 3.5 });
   world.objectives = world.objectives.slice(0, 1);
   world.tiles = world.tiles.map((tile) => {
-    if (!["moving", "phase", "ice", "fragile", "rift"].includes(tile.mode)) return tile;
+    if (!["ice", "fragile", "rift"].includes(tile.mode)) return tile;
     return { ...tile, mode: "stable", x: tile.baseX, travel: 0, previousX: tile.baseX };
   });
 }
@@ -326,6 +345,50 @@ export function setBossLayout(world: World, difficulty: "easy" | "medium" | "har
 export function setChestLayout(world: World, difficulty: "easy" | "medium" | "hard") {
   const count = difficulty === "easy" ? 5 : difficulty === "medium" ? 4 : 2;
   world.chests = world.chests.slice(0, count);
+}
+
+export function setPhaseBlockLayout(world: World, difficulty: "easy" | "medium" | "hard") {
+  const phaseRows = difficulty === "easy"
+    ? [2, 5, 8, 11]
+    : difficulty === "medium"
+      ? [1, 3, 4, 6, 8, 9, 11, 12]
+      : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  for (const tile of world.tiles.filter((tile) => tile.mode === "phase")) {
+    tile.mode = "stable";
+    tile.travel = 0;
+  }
+  for (let index = 0; index < phaseRows.length; index += 1) {
+    const rowY = FLOOR_BASE_Y - phaseRows[index] * FLOOR_SPACING;
+    const rowTiles = world.tiles
+      .filter((tile) => tile.mode === "stable" && !tile.doubleDeck && Math.abs(tile.y - rowY) < 2)
+      .sort((left, right) => left.x - right.x);
+    const phaseTile = rowTiles[(world.sector + world.variant + index * 3) % rowTiles.length];
+    if (phaseTile) phaseTile.mode = "phase";
+  }
+}
+
+export function setMovingBlockLayout(world: World, difficulty: "easy" | "medium" | "hard") {
+  const movingRows = difficulty === "easy"
+    ? [1, 5, 9, 12]
+    : difficulty === "medium"
+      ? [1, 3, 5, 7, 9, 11]
+      : [1, 2, 4, 5, 7, 8, 10, 12];
+  for (const tile of world.tiles.filter((tile) => tile.mode === "moving")) {
+    tile.mode = "stable";
+    tile.travel = 0;
+  }
+  for (let index = 0; index < movingRows.length; index += 1) {
+    const rowY = FLOOR_BASE_Y - movingRows[index] * FLOOR_SPACING;
+    const rowTiles = world.tiles
+      .filter((tile) => tile.mode === "stable" && !tile.doubleDeck && Math.abs(tile.y - rowY) < 2)
+      .sort((left, right) => left.x - right.x);
+    const movingTile = rowTiles[(world.sector + world.variant + index * 4) % rowTiles.length];
+    if (movingTile) {
+      movingTile.mode = "moving";
+      movingTile.travel = 58;
+      movingTile.speed = 1.08;
+    }
+  }
 }
 
 export function addDestructibleWalls(world: World, difficulty: "easy" | "medium" | "hard") {

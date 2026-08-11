@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-**Aktuelle Version:** `v1.0.1-beta.6` · [Ausführlicher Changelog](docs/releases/1.0.1-beta.6.md) · [Alle Changelogs](CHANGELOG.md)
+**Aktuelle Version:** `v1.0.1-beta.7` · [Ausführlicher Changelog](docs/releases/1.0.1-beta.7.md) · [Alle Changelogs](CHANGELOG.md)
 
 Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Kämpfe dich durch vierzehn optisch eigenständige Level nach oben, durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus und erreiche den Sendeturm über der Megacity. Jedes Level besitzt eigene 2.5D-Plattformen, Kulisse, Effekte, Wächter und Musik.
 
@@ -23,7 +23,7 @@ Die Web-App funktioniert ohne Installation. Auf iPhone oder iPad kann sie in Saf
 
 Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protocol einmal die öffentlichen GitHub-Releases und zeigt einen Hinweis an, wenn eine neuere Beta- oder Final-Version verfügbar ist.
 
-**Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.6) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle vierzehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
+**Offline spielen:** Das versionierte ZIP steht beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.7) unter **Assets** bereit. Nach dem Entpacken den passenden Starter für macOS, Windows oder Linux öffnen. Alle vierzehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
 
 ## Handbuch
 
@@ -52,12 +52,12 @@ Die aktuelle Version wird im Spiel angezeigt. Beim Start prüft Skybreak Protoco
 
 ## Spielprinzip
 
-- Durch vierzehn zunehmend schwierigere Cyberpunk- und Element-Level aufsteigen
+- Durch vierzehn optisch eigenständige Cyberpunk- und Element-Level aufsteigen
 - Jedes Level ist ein vollständiger Aufstieg über 15 Etagen mit eigener animierter Umgebung, 2.5D-Plattformmaterial, Gegner- und Wächterdesign, Eispickel-Grundmodell und Soundtrack
 - Plattformmodule von unten durchbrechen
 - Gegner und nahe Plattformmodule mit dem Eispickel des Roboters angreifen
-- Gegner, Wächter, Truhen und herabfallende Gefahren skalieren mit der Schwierigkeit: Leicht vier Patrouillen und ein Wächter, Mittel fünf Patrouillen und zwei Wächter, Schwer sechs Patrouillen und zwei Wächter. Nur ausgewählte Patrouillen schießen; Mittel und Schwer staffeln diese Schüsse.
-- Zerstörbare senkrechte Wände und Doppelstege durchbrechen, die zwei Sprünge nach oben erfordern. Jeder Sektor besitzt eigene, gut erkennbare fallende Objekte unter seinen Laufstegen.
+- Gegner, Wächter, Truhen und herabfallende Gefahren folgen in jedem Level denselben Schwierigkeitsregeln: Leicht vier Patrouillen und ein Wächter, Mittel fünf Patrouillen und zwei Wächter, Schwer sechs Patrouillen und zwei Wächter. Nur ausgewählte Patrouillen schießen; Mittel und Schwer staffeln diese Schüsse.
+- Zerstörbare senkrechte Wände und Doppelstege durchbrechen, die zwei Sprünge nach oben erfordern. Phasenblöcke tragen nur in ihrer aktiven Phase und sind klar mit `PHASE 01` bis `PHASE 14` markiert; Leicht/Mittel/Schwer verteilen vier/acht/zwölf Blöcke über verschiedene Etagen. Zusätzlich bewegen sich vier/sechs/acht Stege seitlich über den Aufstieg.
 - Truhen passend zur Schwierigkeit: aus sieben Belohnungen wählen – Schild, Leben, Datenbonus, Overdrive, Jackpot, Reparatur plus Schild oder Phasenpanzerung. Leicht bietet fünf feste Truhen; Mittel vier feste plus zwei wandernde Bonustruhen ab 40 % Höhe; Schwer zwei feste plus eine wandernde Bonustruhe ab 60 %. Wandernde Truhen geben verstärkte Boni.
 - Ein Schild hält auf Leicht 8 Sekunden und drei Treffer aus, auf Mittel 6 Sekunden und zwei Treffer, auf Schwer 4 Sekunden und einen Treffer.
 - Wächterdrohne ausschalten, den nächsten Sektor als Vorschau sehen und danach die konkrete Kraft- oder Designstufe des Eispickels auswählen
@@ -199,11 +199,11 @@ Die Hardware-Raytracing-Kerne können von dieser Web-App derzeit nicht direkt an
 | 9 | Quantum Rift | violett-blaue Dimensionszone mit bewegtem Quantenpfad |
 | 10 | Skybreak Apex | leuchtend-cyanfarbener Gipfel mit rotierenden Sendestrahlen |
 | 11 | Inferno-Schmiede | Lavahöhle mit instabilem Hitzeflimmern und Schmiedeausbrüchen |
-| 12 | Abyssales Datenmeer | tiefer Ozean mit Mantarochen und sichtbar nassen, rutschigen Plattformen |
+| 12 | Abyssales Datenmeer | tiefer Ozean mit Mantarochen und sichtbar nassem Plattformglanz |
 | 13 | Stratosphären-Relais | Höhensturm mit Turbinen und sichtbaren Windböen |
 | 14 | Terra-Kernzitadelle | Mineralkernhöhle mit schwebenden Felsen und Erdbeben |
 
-Gegnerdichte und Umgebungsgefahren steigen von Level zu Level. Für jedes Level kann unabhängig **Leicht**, **Mittel** oder **Schwer** gewählt werden; die Einstellung beeinflusst Gegnergeschwindigkeit, Häufigkeit und Geschwindigkeit der Gefahren sowie den Punktemultiplikator. Die Auswahl bleibt ausschließlich lokal im Browser des Geräts gespeichert.
+Für jedes Level kann unabhängig **Leicht**, **Mittel** oder **Schwer** gewählt werden. Jede Stufe verwendet in allen vierzehn Leveln dieselben Gegner-, Boss-, Schuss- und Gefahrenwerte; nur Kulisse, Musik, Farben und Blockoptik unterscheiden sich. Die Auswahl bleibt ausschließlich lokal im Browser des Geräts gespeichert.
 
 ## Lokale Entwicklung
 
