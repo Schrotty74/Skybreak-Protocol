@@ -14,6 +14,7 @@
     "build:release": "npm run verify:release && tsc -b && vite build --mode release && node scripts/promote-pages.mjs",
     "build:offline": "npm run verify:release && tsc -b && vite build --mode release --base / --outDir dist-offline && node scripts/promote-pages.mjs dist-offline && node scripts/package-offline.mjs",
     "build:handbooks": "python3 scripts/build-handbooks.py",
+    "generate:retro-music": "node scripts/generate-retro-soundtrack.mjs",
     "verify:release": "node scripts/verify-release.mjs release",
     "verify:beta": "node scripts/verify-release.mjs beta",
     "verify:final": "node scripts/verify-release.mjs final",
