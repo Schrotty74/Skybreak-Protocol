@@ -1,48 +1,25 @@
 # Nächste Schritte – Skybreak Protocol
 
-**Stand:** 8. August 2026
-**Ausgangsstand:** `1.0.0-beta.7`
+**Stand:** 15. August 2026
 
-Diese Datei bei jeder größeren Änderung aktualisieren. Sie enthält nur tatsächlich bekannte, noch offene Punkte.
+**Ausgangsstand:** `1.0.1-beta.8`
 
-## Priorität 1 – Gameplay-Variation auf echten Geräten abnehmen
+Diese Datei enthält ausschließlich bestätigte, noch offene Punkte. Erledigte oder durch spätere Änderungen ungültige Punkte werden entfernt; bei jeder relevanten Änderung muss sie zusammen mit `PROJECT_CONTEXT.md`, `CHAT_TEMPLATE.md` und `PORTFOLIO_UPDATE.md` geprüft werden.
 
-- Die neuen Level-Regeln wurden kompiliert, aber noch nicht als kompletter Lauf in einem echten Browser oder auf einem Mobilgerät gespielt.
-- Manuell prüfen: Bruchzonen (Level 2/4/7), bewegliche Plattformen (1/5/10), Eisplattformen (3/7), Strömungen (3/5/7/8/10), Seitenlaser (4/7/10), Phasenplattformen (6/8), Rift-Sprünge (9), Energiezellen/Schalter sowie Boss-Angriffe nach jedem Integritätstreffer.
-- Eispickel prüfen: Schalteraktivierung, Projektil-Auflösung, Schildgegner, Kryo-Frost bei passenden Style-Stufen und die temporäre Eisbrücke ab Kraftstufe 4.
-- Dabei besonders auf unfaire Spawnpunkte, erreichbare Rifts, Kollisionen bei unsichtbaren Phasenplattformen und Wärmeentwicklung auf Mobilgeräten achten.
-- „Leicht“ auf Desktop und Mobilgerät prüfen: acht Startleben, keine normalen Gegner, ein Pflichtziel, ausschließlich stabile Plattformen, keine Windstöße und keine Umweltgefahren sowie ein einzelner stark entschärfter Wächter müssen nachvollziehbar wirken.
+## Priorität 1 – Spielablauf auf echten Geräten abnehmen
 
-## Priorität 2 – Musikwechsel auf echtem Gerät prüfen
+Der lokale Build ist erfolgreich, aber noch kein vollständiger, manueller Browser-Durchlauf für den aktuellen Beta-8-Stand dokumentiert. Mit ausdrücklicher Browser-Erlaubnis prüfen:
 
-- Der Quellcode verwaltet beim Wechsel nun aktive Musikobjekte zentral und löst vorherige Tracks nach der Überblendung.
-- Der frühere Fehlerbericht mit gleichzeitig hörbaren Level-Tracks ist damit im Quellcode adressiert, aber noch nicht durch den vollständigen manuellen Ablauf bestätigt.
-- Manuell prüfen: Levelwechsel, Neustart, Pause/Fortsetzen, Musik aus/ein, Wechsel zum Startbildschirm sowie mehrfach schnelle Übergänge.
+- alle drei Schwierigkeitsstufen in mehreren Leveln: Gegner-/Bosszahlen, Boss-Fallverhalten, gestaffelte Schüsse, Schilde, Truhen, Wände und Doppelstege;
+- Phasenblöcke und bewegliche Stege über den vollständigen 15-Etagen-Aufstieg auf Lesbarkeit, Verteilung und faire Erreichbarkeit;
+- die von Stegen abgehenden Fallobjekte auf Timing und darauf, dass keine zusätzlichen Gefahren am oberen Bildschirmrand entstehen;
+- schnelle aufeinanderfolgende Levelwechsel, Neustart, Pause/Fortsetzen, Musik aus/ein und Rückkehr zum Startmenü: nie mehr als ein hörbarer Musiktrack;
+- kompakte mobile Startansicht, einklappbare Optionen, Profil-Reset und die lokale Cheat-Sequenz.
 
-## Priorität 3 – Dokumentation vor dem nächsten Release abgleichen
+## Priorität 2 – Dokumentation vor der nächsten Beta
 
-- `src/SkybreakProtocol.tsx` speichert zusätzlich die Renderauflösung unter `skybreak-render-resolution`.
-- [`DATENSCHUTZ.md`](DATENSCHUTZ.md) und [`PRIVACY.md`](PRIVACY.md) nennen derzeit sechs gespeicherte Werte und führen diesen Schlüssel nicht auf.
-- Vor dem nächsten öffentlichen Release prüfen und die Datenschutzberichte nur dann ergänzen, wenn der aktuelle Quellcode weiterhin maßgeblich ist. Keine Speicher- oder Netzwerkbehauptungen ohne Quellcodeprüfung ändern.
+Vor der nächsten echten Beta den tatsächlichen Code erneut mit README, Handbüchern, Datenschutzberichten und Release-Notizen abgleichen. Insbesondere die aktuelle Liste der Local-Storage-Werte in `src/storage.ts` gegen `DATENSCHUTZ.md` und `PRIVACY.md` prüfen.
 
-## Priorität 4 – Mobile FPS-Anzeige auf echtem Gerät abnehmen
+## Keine weiteren festgelegten Spielaufgaben
 
-- Die Anzeige wurde aus dem Spielfeld in den schwarzen Kopfbereich unter „Skybreak Protocol“ verschoben und größer in Gelb gestaltet.
-- Auf einem echten Mobilgerät im aktiven Spiel prüfen, ob sie bei unterschiedlichen Bildschirmbreiten lesbar bleibt und weder Score noch Lives verdeckt.
-
-## Priorität 5 – Roboter-Abschlusssequenz abnehmen
-
-- Mit der normalen Roboterfigur auf einem Desktop- und Mobilbrowser ein Level beenden.
-- Prüfen: Die Vollbild-Tanzsequenz läuft fünf Sekunden, die aktuelle Levelmusik bleibt hörbar, die Hologramm-Tänzerin bewegt Arme, Beine und Hüfte sichtbar und anschließend erscheint zuverlässig die Upgrade-Auswahl beziehungsweise das Finale.
-- Mit aktiviertem Bikini-Avatar ein Level beenden: Die Vollbild-Look-Präsentation muss fünf Sekunden erscheinen, je Level sichtbar anders aussehen und danach zuverlässig weiterführen.
-
-## Spätere Präsentationsoption – echte 3D-Abschlusssequenz
-
-- Nicht begonnen: Ein geriggtes 3D-Modell mit Skelettanimation kann die aktuelle 2D-Hologramm-Tanzeinlage später ersetzen. Vorher Mobil-Leistung, Modell-/Animationsquelle und Ladezeit bewerten.
-
-## Bereits bekannte Beta-Einschränkungen
-
-- Bildrate und Wärmeentwicklung hängen von Gerät, Browser, Akkustand, Umgebungstemperatur und Grafikstufe ab.
-- Ultra kann auf Mobilgeräten deutlich Wärme und Akkuverbrauch erhöhen; 4K Ultra ist dort kein 60-FPS-Zielmodus.
-- Firefox kann bei fehlendem WebGPU den leichteren WebGL2-Fallback verwenden.
-- Für den lokalen macOS-Starter müssen projektlokale Node-Abhängigkeiten vorhanden sein; nach frischem Checkout `npm ci` ausführen.
+Neue Features, Balancing-Änderungen oder Veröffentlichungen werden erst nach ausdrücklichem Auftrag ergänzt.

@@ -1,76 +1,61 @@
 # Skybreak Protocol – Projektkontext
 
-**Stand:** 9. August 2026
-**Status:** öffentliche Web-Beta `1.0.1-beta.2`
+**Stand:** 15. August 2026
 
-Diese Datei ist die zentrale technische Übergabe für neue Codex-Chats. Zuerst diese Datei und anschließend [`NEXT_STEPS.md`](NEXT_STEPS.md) lesen. Für Release-Vorhaben zusätzlich [`docs/RELEASE_WORKFLOW.md`](docs/RELEASE_WORKFLOW.md), [`docs/UNRELEASED.md`](docs/UNRELEASED.md), [`CHANGELOG.md`](CHANGELOG.md) und die passenden Release-Notizen lesen.
+**Öffentliche Version:** `1.0.1-beta.8`
+**Arbeitsstand:** `main` nach dem getesteten Abhängigkeitsupdate; keine unveröffentlichten Spieländerungen
 
-## Zweck
+Diese Datei ist die zentrale technische Übergabe für neue Arbeiten. Zuerst diese Datei, dann [`NEXT_STEPS.md`](NEXT_STEPS.md) und anschließend die aktuellen README-Dateien lesen. Für Release-Arbeit zusätzlich [`docs/RELEASE_WORKFLOW.md`](docs/RELEASE_WORKFLOW.md), [`docs/UNRELEASED.md`](docs/UNRELEASED.md), [`CHANGELOG.md`](CHANGELOG.md) und die passenden Release-Notizen prüfen.
 
-Skybreak Protocol ist ein eigenständiges, vertikales Cyberpunk-Arcade-Spiel für aktuelle Desktop- und Mobilbrowser. Es umfasst vierzehn Level mit eigenen Kulissen, 2.5D-Plattformen, Wächterdrohnen und Musikstücken. Die veröffentlichte Web-App läuft über GitHub Pages; ein versioniertes Offline-Paket wird bei öffentlichen Releases erstellt.
+## Zweck und Grenzen
 
-## Architektur und wichtige Dateien
+Skybreak Protocol ist ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für aktuelle Desktop- und Mobilbrowser. Es gibt ausschließlich die Web-Version: keine native macOS-App und keine 3D-App. Die öffentliche App läuft über GitHub Pages; öffentliche Betas und Finals erhalten zusätzlich ein versioniertes Offline-ZIP.
+
+Alle Spielstände, Freischaltungen und Einstellungen liegen lokal im Browser. Es gibt keine Konten, keinen Anwendungsserver und keine Analyse-Dienste. Der öffentliche Name ist ausschließlich `Schrotty74`.
+
+## Bestätigter Spielstand
+
+- Vierzehn Level mit jeweils 15 Etagen, eigener 2.5D-Kulisse, Plattformoptik, Routenvariante, Zielgeräten, Bossarena und Musik.
+- Die Schwierigkeit ist in allen Leveln gleich: Leicht 4 Patrouillen und 1 Boss, Mittel 5 Patrouillen und 2 Bosse, Schwer 6 Patrouillen und 2 Bosse. Nur ausgewählte Patrouillen schießen; auf Mittel und Schwer sind Schüsse zeitlich gestaffelt. Nur ein Boss pro Begegnung schießt und wirft Bomben.
+- Boss-Integrität: 2/5/8 Treffer auf Leicht/Mittel/Schwer. Schilde halten 8/6/4 Sekunden und 3/2/1 Treffer aus. Leicht/Mittel/Schwer besitzen 2/4/6 zerstörbare senkrechte Wände sowie 1/2/3 Doppelstege.
+- Fallgefahren lösen sich sichtbar unter vorhandenen Stegen, nicht am oberen Bildschirmrand: Leicht 1 Objekt alle 5,8–7,2 Sekunden, Mittel 1 alle 3,5–4,8 Sekunden, Schwer 2 alle 2,2–3,3 Sekunden. Ihr Stil unterscheidet sich je Level, Anzahl und Timing nur nach Schwierigkeit.
+- Phasenblöcke sind über getrennte Etagen verteilt: 4/8/12 auf Leicht/Mittel/Schwer. Seitlich bewegliche Stege: 4/6/8. Beide Plattformarten sind in allen Leveln vorhanden und klar lesbar.
+- Truhen: Leicht 5 feste; Mittel 4 feste plus 2 wandernde Bonustruhen ab 40 % Höhe; Schwer 2 feste plus 1 wandernde Bonustruhe ab 60 % Höhe. Wandernde Truhen gewähren stärkere Boni.
+- Level 1 bis 10 verwenden zehn unterschiedliche, samplefreie Retro-Arcade-Tracks. Die zentrale Audioverwaltung entfernt bei Levelwechsel, Neustart, Pause, Menüwechsel und Unmount alte Musikobjekte, sodass kein Track überlagert bleibt.
+- Die Sektorbezeichnungen sind reine Umgebungsnamen und behaupten keine entfernten Wind-, Laser- oder Pulseffekte.
+
+## Architektur
 
 | Bereich | Zuständigkeit |
 |---|---|
-| `src/SkybreakProtocol.tsx` | React-Komponente, Spielzustand, Gameplay-Schleife, Canvas-Zeichnung, Audio, Oberflächen und Grafikmodi |
-| `src/powerUps.ts`, `src/cheats.ts`, `src/keyBindings.ts` | Power-ups, Cheat-Erkennung und frei belegbare Desktop-Steuerung |
-| `src/storage.ts` | nach Build-Kanal getrennte Local-Storage-Schlüssel und einmalige Übernahme älterer Final-Spielstände |
-| `src/ultraWorker.ts` | Worker für Ultra-Effektinstanzen und lokale Leistungssteuerung |
-| `src/updateCheck.ts` | öffentliche GitHub-Release-Prüfung beim Start von Beta/Final |
-| `public/audio/` | vierzehn mitgelieferte Level-Musikstücke |
-| `source/` | Vite-Einstiegspunkte für Englisch und Deutsch |
-| `scripts/` | Release-Prüfung, Pages-Aufbereitung, Offline-Paket, Handbücher und lokaler Performance-Test |
-| `.github/workflows/` | GitHub-Pages-Bereitstellung und automatisierte Release-Erstellung |
+| `src/SkybreakProtocol.tsx` | React-Komponente, Spielzustand, Schleife, Schwierigkeitsregeln, Canvas und Oberfläche |
+| `src/game/world.ts` | Welterzeugung und Plattformgrundlayout |
+| `src/gameAudio.ts` | Soundeffekte, Musikwechsel und Aufräumen früherer Tracks |
+| `src/game/` | Hintergrund-, Entitäten- und WebGPU/WebGL-Effekte |
+| `src/levelData.ts` | Levelthemen, Hintergrund-, Musik- und Fallgefahrenstile |
+| `src/storage.ts` | nach Local/Beta/Final getrennte Browser-Speicherung und Profil-Reset |
+| `source/` | englische, deutsche und Reset-Vite-Einstiegspunkte |
+| `public/` | veröffentlichte Musik-, Bild-, Icon- und Manifest-Assets |
+| `scripts/` | Release-Prüfung, Pages-Aufbereitung, Offline-Paket, Handbücher, Musik- und Leistungswerkzeuge |
+| `.github/workflows/` | GitHub-Pages-Bereitstellung und Release-Veröffentlichung |
 
-Die zentralen Daten sind In-Memory-Spielzustand in `SkybreakProtocol.tsx` sowie lokale Browser-Einstellungen und Fortschritte. Es gibt keinen Anwendungsserver und keine Benutzerkonten.
-
-## Build, Test und Release
+## Build, Test und Veröffentlichung
 
 - Frischer Checkout: `npm ci`
-- Normaler lokaler Spieltest: `npm run dev` oder unter macOS `Skybreak-Protocol-Lokaltest.command`
-- Sicherer lokaler Produktions-Build ohne Release-Artefakte: `npm run build:local`
-- Beta/Final-Testkanäle: `npm run dev:beta`, `npm run dev:final`, `npm run build:beta`, `npm run build:final`
+- Lokaler Server: `npm run dev` oder `Skybreak-Protocol-Lokaltest.command`
+- Sicherer lokaler Produktions-Build: `npm run build:local`
+- Getrennte Kanäle: `npm run dev:beta`, `npm run dev:final`, `npm run build:beta`, `npm run build:final`
 - Veröffentlichbarer Pages-Build: `npm run build`; Offline-Paket: `npm run build:offline`
-- Handbücher nach inhaltlichen Spieländerungen: `npm run build:handbooks`, danach PDF-Seiten visuell prüfen.
+- Nach sichtbaren Spieländerungen: `npm run build:handbooks` und beide erzeugten PDFs visuell prüfen.
 
-`npm run build` ist nur für einen absichtlich vorbereiteten Release-Stand bestimmt. Der genaue Ablauf und die Prüfregeln stehen in [`docs/RELEASE_WORKFLOW.md`](docs/RELEASE_WORKFLOW.md). Keine Version, keinen Tag, Release, Commit oder Push ohne ausdrücklichen Auftrag erstellen.
+Vor jeder Änderung Ursache und betroffene Dateien nennen. Nach jeder Spieländerung `npm run build:local` ausführen und den lokalen Starter bereithalten. Ohne ausdrücklichen Auftrag keine Version, keinen Commit, Push, Tag oder Release erzeugen. Browser oder Computersteuerung nur mit ausdrücklicher Erlaubnis.
 
-## Umgesetzter Stand
+## Verbindliche Pflege
 
-- Zehn vollständige 15-Etagen-Level mit eigenen Plattformregeln, Energiezellen/Schaltern als Level-Zielen, Umweltgefahren, Gegner-Archetypen, Wächter-Phasen, Schwierigkeitsübernahme, freischaltbaren Startleveln und Eispickel-Upgrades. Die Stufe „Leicht“ ist ein klarer Einstiegsmodus: acht Leben, keine normalen Gegner, nur ein Ziel, ausschließlich stabile Plattformen, keine Windstöße oder Umweltgefahren und ein verlangsamter Wächter mit nur einem Trefferpunkt.
-- Desktop-Tastatursteuerung, Touch-Steuerung, Pause, Vollbild/immersiver Safari-Fallback, Cheats und Power-ups.
-- Grafikstufen Niedrig, Mittel, Hoch und Ultra; Canvas-2D-Hauptszene, WebGPU-Ultra-Effekte und WebGL2-Fallback.
-- Mobile Live-FPS-Anzeige während aktiver Runden sowie Desktop-Performance-Anzeige.
-- Lokale Fortschritts- und Einstellungsspeicherung, getrennt nach Entwicklungs-, Beta- und Final-Kanal.
-- Eigener Level-Soundtrack und synthetisierte Arcade-Soundeffekte.
-- Level-Regeln bleiben zustandslos im Spielstand: Bruchzonen, bewegliche und vereiste Plattformen, Strömungen, seitliche Laser, Reaktor-/Geist-Phasen und Rift-Sprünge verändern das jeweilige Level, ohne neue Browserdaten zu speichern. Der Eispickel kann Schalter aktivieren, Projektilenergie auflösen, Schildgegner knacken, Kryo-Frost auslösen und ab Kraftstufe 4 zeitweise Eisbrücken erzeugen.
-- Der rein kosmetische Bikini-Avatar-Cheat wird während einer aktiven Runde durch zwei Musik-Aus/An-Zyklen ausgelöst; zwischen den zwei vollständigen Zyklen dürfen höchstens fünf Sekunden liegen. Jede erfolgreiche Cheat-Aktivierung zeigt eine sichtbare Bestätigung im Spielfeld. Das realistische, transparente Asset liegt unter `public/images/bikini-avatar-compact.png`. Der Avatar verändert weder Punkte noch Spielwerte und gilt nur bis zum Neuladen der Seite.
-- Erreicht die normale Roboterfigur das Levelziel, wird vor der Upgrade-Auswahl beziehungsweise dem Finale eine fünfsekündige, nicht explizite Vollbild-Tanzsequenz über der weiterlaufenden Levelmusik angezeigt. Die Abschlusssequenz verwendet eine eigenständige Cyberpunk-Hologramm-Tänzerin mit tatsächlich animierten Armen, Beinen, Hüfte und Oberkörper. Erreicht der Bikini-Avatar das Ziel, erscheint stattdessen fünf Sekunden lang eine Vollbild-Look-Präsentation; sie verwendet je Level eine andere Farbwelt, Kontur und Akzentgestaltung. Eine spätere, echte 3D-Skelettanimation ist als mögliche Ausbaustufe vorgemerkt, aber nicht begonnen.
-- Öffentliche, optionale GitHub-Release-Prüfung für Beta und Final.
-
-## Feste technische Regeln
-
-- Mobil auf **Hoch** bleibt die Gameplay-Schleife bei maximal 60 FPS. Bei Wärme-/Leistungsdruck dürfen nur Effekte, Auflösung und atmosphärische Ebenen reduziert werden, nicht die Hauptspielschleife.
-- Audio muss bei Levelwechsel, Neustart, Pausieren, Menüwechsel und Unmount eindeutig verwaltet werden: Es darf niemals mehr als ein Musiktrack gleichzeitig hörbar sein.
-- Bestehende Local-Storage-Werte und getrennte Build-Kanäle müssen kompatibel bleiben.
-- Die beiden Sprachfassungen der App und die inhaltlich passenden Dokumentationen müssen synchron gehalten werden.
-- Keine unnötigen Refactorings oder Änderungen an Spielfluss, Steuerung, Datenformaten oder gespeicherten Fortschritten.
+Bei jeder relevanten Änderung diese Datei, [`NEXT_STEPS.md`](NEXT_STEPS.md), [`CHAT_TEMPLATE.md`](CHAT_TEMPLATE.md) und [`PORTFOLIO_UPDATE.md`](PORTFOLIO_UPDATE.md) gegen den tatsächlichen Stand prüfen und bei Bedarf im selben Arbeitsgang aktualisieren. Bei öffentlichen Änderungen zusätzlich README, Changelog, Release-Notizen, Handbücher und Datenschutzdokumente nach dem Release-Workflow abgleichen.
 
 ## Datenschutz und Veröffentlichung
 
-- Nur „Schrotty74“ als öffentlicher Name verwenden.
-- Keine privaten Daten, lokalen Pfade, Zugangsdaten, Tokens, Logs, Backups oder echten Spielstände in Quellcode, Dokumentation, Screenshots oder Releases veröffentlichen.
-- Vor einem öffentlichen Release Portfolio und GitHub-Profil aktualisieren, falls sichtbare Projektinformationen geändert wurden; siehe [`PORTFOLIO_UPDATE.md`](PORTFOLIO_UPDATE.md).
-- Datenschutz- und Geheimnisprüfung vor jeder Veröffentlichung wiederholen; bestehende Berichte: [`DATENSCHUTZ.md`](DATENSCHUTZ.md) und [`PRIVACY.md`](PRIVACY.md).
-- Marken-, Grafik- und Audioinhalte sind nicht durch die MIT-Lizenz freigegeben; siehe [`ASSET_LICENSE.md`](ASSET_LICENSE.md).
-
-## Dokumentationsreihenfolge
-
-1. Diese Datei
-2. [`NEXT_STEPS.md`](NEXT_STEPS.md)
-3. Bei Release-Arbeit: [`docs/RELEASE_WORKFLOW.md`](docs/RELEASE_WORKFLOW.md), [`docs/UNRELEASED.md`](docs/UNRELEASED.md), [`CHANGELOG.md`](CHANGELOG.md)
-4. Bei Datenschutz-/Veröffentlichungsarbeit: [`DATENSCHUTZ.md`](DATENSCHUTZ.md), [`PRIVACY.md`](PRIVACY.md), [`PORTFOLIO_UPDATE.md`](PORTFOLIO_UPDATE.md)
-5. Bei Funktionsdetails: passende Abschnitte in `README.de.md`, `README.md` und dem Quellcode
-
-Aktuelle offene Punkte und bekannte Einschränkungen stehen ausschließlich in [`NEXT_STEPS.md`](NEXT_STEPS.md), nicht in dieser Grundlagen-Datei.
+- Keine privaten Daten, lokalen Pfade, Zugangsdaten, Tokens, Backups, Logs oder echten Spielstände in öffentliche Dateien oder Releases aufnehmen.
+- Vor einer Veröffentlichung [`DATENSCHUTZ.md`](DATENSCHUTZ.md), [`PRIVACY.md`](PRIVACY.md), [`ASSET_LICENSE.md`](ASSET_LICENSE.md) und [`PORTFOLIO_UPDATE.md`](PORTFOLIO_UPDATE.md) prüfen.
+- Die Lizenz für Code steht in [`LICENSE`](LICENSE); Grafik-, Audio- und Markenmaterial sind gemäß [`ASSET_LICENSE.md`](ASSET_LICENSE.md) ausgenommen.

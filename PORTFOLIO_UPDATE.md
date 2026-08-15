@@ -1,9 +1,11 @@
 # Portfolio update rule
 
-This repository is a public project presented through the Schrotty74 portfolio.
+This repository is a public web-game project presented through the Schrotty74 portfolio. This rule is checked whenever public-facing project information changes and before every public beta or final release.
 
-Before a public release, update the portfolio only when public-facing information changed, such as the main description, status, screenshots, supported platforms, repository URL, live-app URL or download URL.
+Update the portfolio only when the public description, current status, screenshots, supported platforms, repository URL, live-app URL, download URL, or other visitor-visible facts changed. Do not create a portfolio update merely for internal refactors, dependency updates, local testing, or unchanged release metadata.
 
 For a new public project, add English and German portfolio cards and detail pages, add the project to the GitHub profile README, include it in the portfolio release-status workflow, and use only public assets or screenshots with synthetic demo data.
 
-Never publish private user data, personal exports, logs, backups, licence keys or screenshots containing real data.
+Before a release, check this file together with `PROJECT_CONTEXT.md`, `NEXT_STEPS.md`, and `CHAT_TEMPLATE.md`. Keep this rule current if the portfolio workflow, public project scope, or publication channels change.
+
+Never publish private user data, personal exports, logs, backups, licence keys, local paths, tokens, or screenshots containing real data.
