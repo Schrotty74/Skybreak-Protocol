@@ -117,7 +117,7 @@ function colorChannels(color: string): [number, number, number] {
   return [parseInt(match[1], 16) / 255, parseInt(match[2], 16) / 255, parseInt(match[3], 16) / 255];
 }
 
-import { addDestructibleWalls, addDoubleDecks, applyEasyAssists, buildLevel, FLOOR_BASE_Y, FLOOR_SPACING, GRAVITY, JUMP_SPEED, levelProgress, makeWorld, MOVE_SPEED, PLAYER_H, PLAYER_W, placeWorldAtLevel, setBossLayout, setChestLayout, setEnemyLayout, setGuardianIntegrity, setMovingBlockLayout, setPhaseBlockLayout, themeColor, TILE, tileIsActive, WORLD_TOP, type Chest, type Enemy, type Objective, type Particle, type Player, type Tile, type TileMode, type World } from "./game/world";
+import { addDestructibleWalls, addDoubleDecks, applyEasyAssists, buildLevel, FLOOR_BASE_Y, FLOOR_SPACING, GRAVITY, JUMP_SPEED, LEVEL_FLOORS, levelProgress, makeWorld, MOVE_SPEED, PLAYER_H, PLAYER_W, placeWorldAtLevel, setBossLayout, setChestLayout, setEnemyLayout, setGuardianIntegrity, setMovingBlockLayout, setPhaseBlockLayout, themeColor, TILE, tileIsActive, WORLD_TOP, type Chest, type Enemy, type Objective, type Particle, type Player, type Tile, type TileMode, type World } from "./game/world";
 
 
 const CHEST_POWER_UPS: PowerUpKind[] = ["shield", "life", "score", "overdrive"];
@@ -2402,6 +2402,58 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         platformSurfaceCache.set(key, surface);
         return surface;
       };
+      // These are visual-only route markers and guardian set pieces. They sit
+      // behind the collision tiles, so every sector can look structurally
+      // different without changing jump widths, enemy counts, or damage rules.
+      const drawSectorArchitecture = () => {
+        const arenaY = FLOOR_BASE_Y - (LEVEL_FLOORS - 2) * FLOOR_SPACING;
+        const markerRows = [2, 6, 10];
+        ctx.save();
+        ctx.globalAlpha = .36;
+        ctx.strokeStyle = theme.secondary;
+        ctx.fillStyle = theme.accent;
+        ctx.lineWidth = 1.5;
+        for (const row of markerRows) {
+          const y = FLOOR_BASE_Y - row * FLOOR_SPACING + 18;
+          const leftX = 18 + ((theme.motif * 37 + row * 19) % 94);
+          const rightX = VIEW_W - 46 - ((theme.motif * 29 + row * 13) % 94);
+          ctx.fillRect(leftX, y - 32, 4, 32);
+          ctx.fillRect(rightX, y - 32, 4, 32);
+          ctx.beginPath(); ctx.moveTo(leftX - 8, y - 26); ctx.lineTo(leftX + 12, y - 26); ctx.moveTo(rightX - 8, y - 26); ctx.lineTo(rightX + 12, y - 26); ctx.stroke();
+        }
+        ctx.globalAlpha = .54;
+        if (theme.motif === 0) {
+          for (const x of [130, 760]) { ctx.strokeRect(x, arenaY - 58, 48, 56); ctx.beginPath(); ctx.moveTo(x + 12, arenaY - 58); ctx.lineTo(x + 12, arenaY - 86); ctx.lineTo(x + 37, arenaY - 86); ctx.stroke(); }
+        } else if (theme.motif === 1) {
+          for (const x of [108, 742]) { ctx.beginPath(); ctx.moveTo(x, arenaY - 4); ctx.lineTo(x + 34, arenaY - 52); ctx.lineTo(x + 68, arenaY - 4); ctx.closePath(); ctx.fill(); }
+        } else if (theme.motif === 2) {
+          ctx.beginPath(); ctx.arc(VIEW_W / 2, arenaY + 26, 182, Math.PI, 0); ctx.stroke(); ctx.beginPath(); ctx.arc(VIEW_W / 2, arenaY + 26, 126, Math.PI, 0); ctx.stroke();
+        } else if (theme.motif === 3) {
+          for (let x = 90; x < VIEW_W - 80; x += 88) { ctx.fillRect(x, arenaY - 44, 8, 42); ctx.fillRect(x + 13, arenaY - 30, 3, 28); }
+        } else if (theme.motif === 4) {
+          for (const x of [150, 470, 790]) { ctx.beginPath(); ctx.arc(x, arenaY - 25, 24, Math.PI, 0); ctx.lineTo(x + 24, arenaY + 3); ctx.lineTo(x - 24, arenaY + 3); ctx.closePath(); ctx.stroke(); }
+        } else if (theme.motif === 5) {
+          for (let ring = 0; ring < 3; ring++) { ctx.beginPath(); ctx.ellipse(VIEW_W / 2, arenaY - 36, 105 + ring * 64, 22 + ring * 13, world.fxTime * (ring % 2 ? .16 : -.12), 0, Math.PI * 2); ctx.stroke(); }
+        } else if (theme.motif === 6) {
+          for (const x of [116, 244, 628, 756]) { ctx.strokeRect(x, arenaY - 48, 74, 39); ctx.beginPath(); ctx.moveTo(x + 37, arenaY - 48); ctx.lineTo(x + 37, arenaY - 78); ctx.stroke(); }
+        } else if (theme.motif === 7) {
+          ctx.setLineDash([5, 6]); for (const x of [164, 430, 696]) { ctx.strokeRect(x, arenaY - 58, 98, 48); } ctx.setLineDash([]);
+        } else if (theme.motif === 8) {
+          for (const x of [184, 480, 776]) { ctx.beginPath(); ctx.arc(x, arenaY - 31, 28 + Math.sin(world.fxTime * 2 + x) * 5, 0, Math.PI * 2); ctx.stroke(); }
+        } else if (theme.motif === 9) {
+          ctx.fillRect(VIEW_W / 2 - 5, arenaY - 112, 10, 111); ctx.beginPath(); ctx.moveTo(VIEW_W / 2 - 68, arenaY - 80); ctx.lineTo(VIEW_W / 2, arenaY - 118); ctx.lineTo(VIEW_W / 2 + 68, arenaY - 80); ctx.stroke();
+        } else if (theme.motif === 10) {
+          for (const x of [146, 430, 714]) { ctx.beginPath(); ctx.arc(x, arenaY - 14, 34, Math.PI, 0); ctx.stroke(); ctx.fillRect(x - 4, arenaY - 58, 8, 44); }
+        } else if (theme.motif === 11) {
+          for (const x of [150, 430, 710]) { ctx.beginPath(); ctx.moveTo(x, arenaY); ctx.quadraticCurveTo(x + 30, arenaY - 80, x + 60, arenaY); ctx.stroke(); }
+        } else if (theme.motif === 12) {
+          for (const x of [178, 480, 782]) { ctx.beginPath(); ctx.arc(x, arenaY - 32, 32, 0, Math.PI * 2); ctx.stroke(); ctx.fillRect(x - 4, arenaY - 64, 8, 64); }
+        } else {
+          for (const x of [146, 430, 714]) { ctx.beginPath(); ctx.moveTo(x, arenaY); ctx.lineTo(x + 26, arenaY - 68); ctx.lineTo(x + 58, arenaY - 17); ctx.lineTo(x + 84, arenaY - 74); ctx.stroke(); }
+        }
+        ctx.restore();
+      };
+      drawSectorArchitecture();
       for (const tile of world.tiles) {
         if (!tile.alive || !visible(tile.x, tile.y, TILE, tile.mode === "wall" ? TILE : 40)) continue;
         const phaseActive = tileIsActive(tile, world.fxTime);
@@ -2467,9 +2519,8 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         plate.addColorStop(0, platformMaterials[0]); plate.addColorStop(0.18, platformMaterials[1]); plate.addColorStop(0.58, platformMaterials[2]); plate.addColorStop(1, "#02040a");
         ctx.fillStyle = plate; ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = glow; ctx.lineWidth = 2; ctx.stroke();
         }
-        // Water only becomes slippery while this clearly visible wet front is
-        // passing through the level. It deliberately uses the very same phase
-        // as the movement code, so the player never slides "for no reason".
+        // The water front is a clearly visible scene effect only. It never
+        // changes traction, preserving the same movement rules in every level.
         const waterSlipActive = world.sector === 12
           && Math.sin(world.fxTime * 1.05 + world.sector * 1.7) > -0.1;
         if (waterSlipActive) {
@@ -2647,6 +2698,28 @@ export default function NeonAscent({ language = "en", languageHref = "./de/", ic
         } else {
           roundedRect(ctx, 0, 6, 22, 18, 4); ctx.fill(); ctx.stroke();
           ctx.globalAlpha = pulse; ctx.fillStyle = theme.accent; ctx.fillRect(7, 11, 8, 8);
+        }
+        // The objective rules remain cell/switch only; this compact foreground
+        // identity turns them into level-specific devices without new logic.
+        ctx.globalAlpha = .82;
+        ctx.strokeStyle = theme.secondary;
+        ctx.fillStyle = theme.secondary;
+        if (theme.motif === 0 || theme.motif === 6) {
+          ctx.beginPath(); ctx.moveTo(3, 4); ctx.lineTo(19, 4); ctx.moveTo(11, 1); ctx.lineTo(11, 6); ctx.stroke();
+        } else if (theme.motif === 1 || theme.motif === 7) {
+          ctx.setLineDash([2, 2]); ctx.strokeRect(3, 3, 16, 4); ctx.setLineDash([]);
+        } else if (theme.motif === 2 || theme.motif === 10) {
+          for (const x of [5, 11, 17]) { ctx.beginPath(); ctx.arc(x, 4, 1.7, 0, Math.PI * 2); ctx.fill(); }
+        } else if (theme.motif === 3 || theme.motif === 12) {
+          ctx.fillRect(3, 3, 16, 2); ctx.fillRect(7, 0, 8, 2);
+        } else if (theme.motif === 4 || theme.motif === 11) {
+          ctx.beginPath(); ctx.arc(11, 4, 6, Math.PI, 0); ctx.stroke();
+        } else if (theme.motif === 5 || theme.motif === 8) {
+          ctx.beginPath(); ctx.arc(11, 4, 5, 0, Math.PI * 2); ctx.stroke(); ctx.fillRect(10, 3, 2, 2);
+        } else if (theme.motif === 9) {
+          ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(17, 6); ctx.lineTo(5, 6); ctx.closePath(); ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.moveTo(4, 6); ctx.lineTo(9, 0); ctx.lineTo(14, 6); ctx.lineTo(19, 1); ctx.stroke();
         }
         ctx.restore();
       }

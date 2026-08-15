@@ -1,4 +1,4 @@
-# Unveröffentlichte Änderungen seit Skybreak Protocol 1.0.1-beta.7
+# Unveröffentlichte Änderungen seit Skybreak Protocol 1.0.1-beta.8
 
 ## Umgesetzt
 

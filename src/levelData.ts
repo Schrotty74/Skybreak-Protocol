@@ -19,13 +19,13 @@ export const LEVEL_THEMES = [
 export type LevelTheme = typeof LEVEL_THEMES[number];
 
 export const LEVEL_GAMEPLAY = [
-  { de: "AUFSTIEG", en: "ASCENT", hazard: "fall", drift: 0 }, { de: "BRUCHZONEN", en: "FRACTURE ZONES", hazard: "fall", drift: 0 },
-  { de: "TOXINWIND", en: "TOXIC DRAFT", hazard: "fall", drift: 46 }, { de: "FIREWALL-LASER", en: "FIREWALL LASERS", hazard: "laser", drift: 0 },
-  { de: "DATENSTRÖMUNG", en: "DATA CURRENT", hazard: "fall", drift: -42 }, { de: "REAKTOR-PHASEN", en: "REACTOR PHASES", hazard: "pulse", drift: 0 },
-  { de: "SOLARSTURM", en: "SOLAR STORM", hazard: "laser", drift: 28 }, { de: "GEIST-PHASEN", en: "GHOST PHASES", hazard: "pulse", drift: -26 },
-  { de: "RIFT-SPRUNG", en: "RIFT JUMP", hazard: "pulse", drift: 0 }, { de: "APEX-ANSTIEG", en: "APEX ASCENT", hazard: "laser", drift: 18 },
-  { de: "SCHMELZTIEGEL", en: "CRUCIBLE ASCENT", hazard: "fall", drift: 0 }, { de: "ABYSS-DRIFT", en: "ABYSS DRIFT", hazard: "pulse", drift: 0 },
-  { de: "STURMFRONT", en: "STORM FRONT", hazard: "laser", drift: 0 }, { de: "KERNBEBEN", en: "CORE QUAKE", hazard: "fall", drift: 0 },
+  { de: "WARTUNGSSCHÄCHTE", en: "SERVICE SHAFTS" }, { de: "MARKTARKADEN", en: "MARKET ARCADES" },
+  { de: "TRANSITLINIEN", en: "TRANSIT LINES" }, { de: "SICHERHEITSGITTER", en: "SECURITY GRID" },
+  { de: "DATENKANALE", en: "DATA CHANNELS" }, { de: "REAKTORKAMMERN", en: "REACTOR CHAMBERS" },
+  { de: "HELIOSTATEN", en: "HELIOSTATS" }, { de: "PHANTOMKNOTEN", en: "PHANTOM NODES" },
+  { de: "RIFTPFADE", en: "RIFT PATHS" }, { de: "SENDETERRASSEN", en: "TRANSMISSION TERRACES" },
+  { de: "SCHMIEDEBRÜCKEN", en: "FORGE BRIDGES" }, { de: "KORALLENSERVER", en: "CORAL SERVERS" },
+  { de: "TURBINENRINGE", en: "TURBINE RINGS" }, { de: "GEODENWEGE", en: "GEODE PATHS" },
 ] as const;
 
 export type BlockExplosionStyle = "energy-bolt" | "cryo-shard" | "chrome-sliver" | "toxic-splinter" | "fire-spark" | "sea-droplet" | "plasma-crystal" | "solar-ray" | "ghost-fragment" | "rift-diamond" | "apex-star" | "magma-burst" | "bubble-spray" | "wind-shard" | "geode-fragment";

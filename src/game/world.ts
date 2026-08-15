@@ -16,6 +16,26 @@ export const MOVE_SPEED = 255;
 export const JUMP_SPEED = 610;
 export const WORLD_TOP = FLOOR_BASE_Y - (LEVEL_FLOORS - 1) * FLOOR_SPACING - PLAYER_H + 13;
 
+// Each sector owns a recognisable route blueprint. Every row keeps the same
+// reachable one- or two-module opening as every other sector; variants mirror
+// or shift it only for replay value, never to increase the difficulty.
+const ROUTE_GAP_COLUMNS: readonly (readonly number[])[] = [
+  [2, 7, 3, 9, 4, 1, 6, 10, 5, 2, 8, 4, 9, 3],
+  [8, 3, 9, 4, 10, 5, 1, 6, 2, 7, 3, 8, 4, 9],
+  [1, 5, 9, 5, 1, 6, 10, 6, 2, 7, 10, 5, 2, 8],
+  [9, 6, 2, 7, 3, 8, 4, 9, 5, 1, 6, 2, 7, 3],
+  [3, 8, 4, 9, 5, 10, 6, 1, 7, 2, 8, 3, 9, 4],
+  [5, 1, 7, 3, 9, 5, 2, 8, 4, 10, 6, 1, 7, 3],
+  [2, 4, 7, 9, 3, 5, 8, 10, 4, 6, 9, 1, 5, 7],
+  [7, 10, 6, 2, 8, 4, 1, 5, 9, 3, 7, 10, 6, 2],
+  [4, 9, 1, 6, 10, 2, 7, 3, 8, 5, 1, 6, 10, 2],
+  [10, 5, 1, 7, 3, 9, 4, 8, 2, 6, 10, 5, 1, 7],
+  [3, 6, 10, 4, 8, 2, 7, 1, 5, 9, 3, 6, 10, 4],
+  [8, 4, 1, 5, 9, 3, 7, 2, 6, 10, 4, 8, 1, 5],
+  [1, 6, 3, 8, 5, 10, 2, 7, 4, 9, 1, 6, 3, 8],
+  [6, 2, 8, 4, 10, 1, 7, 3, 9, 5, 6, 2, 8, 4],
+];
+
 export type TileMode = "stable" | "fragile" | "phase" | "rift" | "moving" | "ice" | "bridge" | "wall";
 export type Tile = { x: number; y: number; alive: boolean; cracked: boolean; mode: TileMode; phaseOffset: number; baseX: number; travel: number; speed: number; previousX: number; temporaryLife?: number; doubleDeck?: "lower" | "upper" };
 export type Objective = { x: number; y: number; kind: "cell" | "switch"; active: boolean };
@@ -103,9 +123,11 @@ export function buildLevel(sector = 1, variant = 0): Pick<World, "tiles" | "enem
 
   for (let row = 0; row < LEVEL_FLOORS; row++) {
     const y = FLOOR_BASE_Y - row * FLOOR_SPACING;
-    // Three deterministic layouts per sector: varied but always retain both
-    // edge supports and the same fair, reachable gap width.
-    const gapStart = row === 0 ? -10 : (row * 5 + 2 + variant * 3 + (row % 3 === 0 ? variant : 0)) % 11;
+    // Three deterministic variants per sector retain the blueprint's fair,
+    // reachable gap width while making the climb read as a unique route.
+    const route = ROUTE_GAP_COLUMNS[Math.max(0, Math.min(ROUTE_GAP_COLUMNS.length - 1, sector - 1))];
+    const blueprintGap = route[Math.max(0, row - 1)] ?? 5;
+    const gapStart = row === 0 ? -10 : variant === 1 ? 10 - blueprintGap : variant === 2 ? (blueprintGap + 4) % 11 : blueprintGap;
     const rowTiles: Tile[] = [];
     for (let col = 0; col < 15; col++) {
       const safeEdge = col === 0 || col === 14;

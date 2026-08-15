@@ -27,6 +27,16 @@ export function createAudio() {
     }
     elementalNodes = [];
   };
+  const stopTrack = (track: HTMLAudioElement) => {
+    track.pause();
+    track.src = "";
+    activeMusic.delete(track);
+  };
+  const stopTracksExcept = (keep: HTMLAudioElement | null = null) => {
+    for (const track of [...activeMusic]) {
+      if (track !== keep) stopTrack(track);
+    }
+  };
   const startElementalMusic = async (sector: number) => {
     stopElementalMusic();
     context ??= new AudioContext();
@@ -87,21 +97,46 @@ export function createAudio() {
   };
   const playMusic = async (sector: number) => {
     const nextSector = Math.max(1, Math.min(LEVEL_COUNT, sector));
-    if (music && currentSector === nextSector) { if (music.paused) await music.play().catch(() => undefined); return; }
+    if (music && currentSector === nextSector) {
+      // A quick level transition may have left an earlier fading element in
+      // the set. The current sector must always have exactly one MP3 player.
+      stopTracksExcept(music);
+      if (music.paused) await music.play().catch(() => undefined);
+      return;
+    }
+    const request = ++musicRequest;
+    cancelAnimationFrame(fadeFrame);
     if (nextSector > MUSIC_TRACKS.length) {
-      for (const track of activeMusic) { track.pause(); track.src = ""; }
-      activeMusic.clear(); music = null; currentSector = nextSector; await startElementalMusic(nextSector); return;
+      stopTracksExcept();
+      music = null;
+      currentSector = nextSector;
+      await startElementalMusic(nextSector);
+      return;
     }
     stopElementalMusic();
-    // Element sectors currently reuse the last authored track rather than
-    // requesting non-existent audio files.
-    const previous = music; const request = ++musicRequest; const next = new Audio(MUSIC_TRACKS[Math.min(MUSIC_TRACKS.length - 1, nextSector - 1)]);
+    const previous = music;
+    // Only the current track receives a crossfade. Any older one is residue
+    // from an interrupted crossfade and must never remain audible.
+    stopTracksExcept(previous);
+    if (previous) previous.volume = .28;
+    const next = new Audio(MUSIC_TRACKS[Math.min(MUSIC_TRACKS.length - 1, nextSector - 1)]);
     activeMusic.add(next); next.loop = true; next.preload = "auto"; next.volume = 0;
     try { await next.play(); } catch { activeMusic.delete(next); return; }
     if (request !== musicRequest) { next.pause(); next.src = ""; activeMusic.delete(next); return; }
-    music = next; currentSector = nextSector; cancelAnimationFrame(fadeFrame);
+    music = next; currentSector = nextSector;
     const started = performance.now();
-    const fade = (time: number) => { const progress = Math.min(1, (time - started) / 900); next.volume = .28 * progress; if (previous) previous.volume = .28 * (1 - progress); if (progress < 1) fadeFrame = requestAnimationFrame(fade); else { previous?.pause(); if (previous) previous.src = ""; if (previous) activeMusic.delete(previous); } };
+    const fade = (time: number) => {
+      const progress = Math.min(1, (time - started) / 900);
+      next.volume = .28 * progress;
+      if (previous) previous.volume = .28 * (1 - progress);
+      if (progress < 1) fadeFrame = requestAnimationFrame(fade);
+      else {
+        if (previous) stopTrack(previous);
+        // Defensive cleanup for a fade interrupted by an unusually fast
+        // transition: no player except the new sector may survive.
+        stopTracksExcept(next);
+      }
+    };
     fadeFrame = requestAnimationFrame(fade);
   };
   const stop = () => { musicRequest += 1; cancelAnimationFrame(fadeFrame); stopElementalMusic(); for (const track of activeMusic) { track.pause(); track.src = ""; } activeMusic.clear(); music = null; currentSector = 0; void context?.close(); context = null; };
