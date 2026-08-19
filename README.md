@@ -7,6 +7,8 @@
 # Skybreak Protocol
 
 [![Deploy Pages](https://github.com/Schrotty74/Skybreak-Protocol/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/Schrotty74/Skybreak-Protocol/actions/workflows/deploy-pages.yml)
+[![Latest Release](https://img.shields.io/github/v/release/Schrotty74/Skybreak-Protocol)](https://github.com/Schrotty74/Skybreak-Protocol/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Schrotty74/Skybreak-Protocol/total)](https://github.com/Schrotty74/Skybreak-Protocol/releases)
 
 **Current release:** `v1.0.1-beta.8` · [Detailed changelog](docs/releases/1.0.1-beta.8.en.md) · [All changelogs](CHANGELOG.md)
 
@@ -47,7 +49,7 @@ The current version is shown in the game. On startup, Skybreak Protocol checks t
 <p align="center">
   <a href="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/desktop-gameplay-ultra.jpeg"><img src="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/desktop-gameplay-ultra.jpeg" alt="Skybreak Protocol desktop gameplay in Ultra mode" width="430"></a>
   &nbsp;&nbsp;
-  <a href="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/desktop-start-ultra.jpeg"><img src="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/desktop-start-ultra.jpeg" alt="Skybreak Protocol desktop start screen in Ultra mode" width="430"></a>
+  <a href="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/desktop-start-ultra.jpeg"><img src="https://raw.githubusercontent.com/Schrotty74/Skybreak-Protocol/main/docs/screenshots/desktop-start-ultra.jpeg" alt="Skybreak Protocol desktop start screen" width="430"></a>
 </p>
 
 <p align="center"><em>Click a preview to open the full-size image.</em></p>
