@@ -6,6 +6,8 @@
 
 # Skybreak Protocol
 
+[![Deploy Pages](https://github.com/Schrotty74/Skybreak-Protocol/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/Schrotty74/Skybreak-Protocol/actions/workflows/deploy-pages.yml)
+
 **Current release:** `v1.0.1-beta.8` · [Detailed changelog](docs/releases/1.0.1-beta.8.en.md) · [All changelogs](CHANGELOG.md)
 
 An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through fourteen visually distinct levels, break platforms from below, evade drones and falling hazards, and reach the transmission tower above the megacity. Every level has its own theme, 2.5D platform material, animated scenery, effects, guardian, and soundtrack.
