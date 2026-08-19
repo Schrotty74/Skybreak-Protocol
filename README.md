@@ -230,6 +230,10 @@ Every beta and final build requires its own detailed file under `docs/releases/`
 
 On an **iPhone 17 Pro**, **Ultra + 1080p** reached 60 FPS with the full Ultra effects. **4K Ultra** is an extremely demanding quality and screenshot mode on mobile devices, not the 60 FPS mode. Ultra can still warm the device; select **Medium** or **Low** if it becomes noticeably warm.
 
+## Repo activity
+
+![Repobeats analytics image](https://repobeats.axiom.co/api/embed/53f9be10734a94ff32acba519ab5639442630dea.svg "Repobeats analytics image")
+
 ## License
 
 The source code is available under the [MIT License](LICENSE). The name **Skybreak Protocol**, logos, app icons, screenshots, promotional images, and visual artwork are excluded; see the [Asset and Brand License](ASSET_LICENSE.md).
