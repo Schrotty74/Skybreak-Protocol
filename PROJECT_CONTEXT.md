@@ -5,8 +5,6 @@
 **Öffentliche Version:** `1.0.1-beta.8`
 **Arbeitsstand:** `main` nach dem getesteten Abhängigkeitsupdate; keine unveröffentlichten Spieländerungen
 
-Diese Datei ist die zentrale technische Übergabe für neue Arbeiten. Zuerst diese Datei, dann [`NEXT_STEPS.md`](NEXT_STEPS.md) und anschließend die aktuellen README-Dateien lesen. Für Release-Arbeit zusätzlich [`docs/RELEASE_WORKFLOW.md`](docs/RELEASE_WORKFLOW.md), [`docs/UNRELEASED.md`](docs/UNRELEASED.md), [`CHANGELOG.md`](CHANGELOG.md) und die passenden Release-Notizen prüfen.
-
 ## Zweck und Grenzen
 
 Skybreak Protocol ist ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für aktuelle Desktop- und Mobilbrowser. Es gibt ausschließlich die Web-Version: keine native macOS-App und keine 3D-App. Die öffentliche App läuft über GitHub Pages; öffentliche Betas und Finals erhalten zusätzlich ein versioniertes Offline-ZIP.
@@ -52,7 +50,7 @@ Vor jeder Änderung Ursache und betroffene Dateien nennen. Nach jeder Spielände
 
 ## Verbindliche Pflege
 
-Bei jeder relevanten Änderung diese Datei, [`NEXT_STEPS.md`](NEXT_STEPS.md), [`CHAT_TEMPLATE.md`](CHAT_TEMPLATE.md) und [`PORTFOLIO_UPDATE.md`](PORTFOLIO_UPDATE.md) gegen den tatsächlichen Stand prüfen und bei Bedarf im selben Arbeitsgang aktualisieren. Bei öffentlichen Änderungen zusätzlich README, Changelog, Release-Notizen, Handbücher und Datenschutzdokumente nach dem Release-Workflow abgleichen.
+Bei jeder relevanten Änderung diese Datei, [`NEXT_STEPS.md`](NEXT_STEPS.md) und [`PORTFOLIO_UPDATE.md`](PORTFOLIO_UPDATE.md) gegen den tatsächlichen Stand prüfen und bei Bedarf im selben Arbeitsgang aktualisieren. Bei öffentlichen Änderungen zusätzlich README, Changelog, Release-Notizen, Handbücher und Datenschutzdokumente nach dem Release-Workflow abgleichen.
 
 ## Datenschutz und Veröffentlichung
 
