@@ -1,13 +1,25 @@
-# Vorlage für einen neuen Codex-Chat
+# Chat-Startvorlage – Skybreak-Protocol
 
-Arbeite ausschließlich im Projektordner `Skybreak-Protocol` und ausschließlich an der normalen Web-Version. Keine native macOS- oder 3D-App anlegen oder planen.
+Ich arbeite am Projekt **Skybreak-Protocol**.
 
-Lies zuerst vollständig:
+Projekt-Root:
+`Repository-Root`
 
-1. `README.md` und `README.de.md`
-2. `PROJECT_CONTEXT.md` und `NEXT_STEPS.md`
-3. `CHANGELOG.md`, `docs/UNRELEASED.md` und `docs/RELEASE_WORKFLOW.md`
-4. `package.json`, `package-lock.json`, `vite.config.ts`, die relevanten Skripte, Workflows und den betroffenen Quellcode
+Repository:
+https://github.com/Schrotty74/Skybreak-Protocol
+
+Bitte lies vor Beginn vollständig:
+
+1. `AGENTS.md`
+2. `PROJECT_CONTEXT.md`
+3. `NEXT_STEPS.md`
+4. `README.md` und `README.de.md`
+5. `CHANGELOG.md`, `docs/UNRELEASED.md` und `docs/RELEASE_WORKFLOW.md`
+6. `package.json`, `package-lock.json`, `vite.config.ts`, die relevanten Skripte, Workflows und den betroffenen Quellcode
+
+Arbeite ausschließlich an der normalen Web-Version. Keine native macOS- oder 3D-App anlegen oder planen.
+
+Prüfe vor Aussagen oder Änderungen den tatsächlichen Projektzustand. Halte den Auftrag eng begrenzt und aktualisiere bei relevanten Änderungen die vorgesehenen Kontextdateien im selben Auftrag.
 
 Wichtige Regeln:
 
@@ -29,3 +41,7 @@ Nach jeder Änderung an Spielverhalten, Architektur, Build-/Release-Ablauf, loka
 - diese Vorlage: Arbeitsregeln und verpflichtende Prüfschritte
 
 Vor einem Commit oder Release nochmals prüfen, dass Versionsstand, Spielregeln, offene Punkte und Verweise dieser Dateien zueinander passen. Keine doppelten oder konkurrierenden Übergabe-Dateien anlegen.
+
+Aktueller Auftrag:
+
+<Aktueller Auftrag>
