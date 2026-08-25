@@ -8,4 +8,4 @@ For a new public project, add English and German portfolio cards and detail page
 
 Before a release, check this file together with `PROJECT_CONTEXT.md`, `NEXT_STEPS.md`, and `CHAT_TEMPLATE.md`. Keep this rule current if the portfolio workflow, public project scope, or publication channels change.
 
-Never publish private user data, personal exports, logs, backups, licence keys, local paths, tokens, or screenshots containing real data.
+The repository-wide privacy and publication rules in `AGENTS.md` apply to all portfolio material. Public screenshots and example data must use only synthetic, anonymized or clearly fictional data.
