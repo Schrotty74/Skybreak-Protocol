@@ -5,11 +5,13 @@
 **Öffentliche Version:** `1.0.1-beta.8`
 **Arbeitsstand:** `main` nach dem getesteten Abhängigkeitsupdate; keine unveröffentlichten Spieländerungen
 
+Die allgemeinen Arbeits-, Git-, Veröffentlichungs- und Repository-Datenschutzregeln stehen verbindlich in `AGENTS.md`. Diese Datei enthält den projektspezifischen technischen und funktionalen Kontext.
+
 ## Zweck und Grenzen
 
 Skybreak Protocol ist ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für aktuelle Desktop- und Mobilbrowser. Es gibt ausschließlich die Web-Version: keine native macOS-App und keine 3D-App. Die öffentliche App läuft über GitHub Pages; öffentliche Betas und Finals erhalten zusätzlich ein versioniertes Offline-ZIP.
 
-Alle Spielstände, Freischaltungen und Einstellungen liegen lokal im Browser. Es gibt keine Konten, keinen Anwendungsserver und keine Analyse-Dienste. Der öffentliche Name ist ausschließlich `Schrotty74`.
+Alle Spielstände, Freischaltungen und Einstellungen liegen lokal im Browser. Es gibt keine Konten, keinen Anwendungsserver und keine Analyse-Dienste.
 
 ## Bestätigter Spielstand
 
@@ -45,15 +47,14 @@ Alle Spielstände, Freischaltungen und Einstellungen liegen lokal im Browser. Es
 - Getrennte Kanäle: `npm run dev:beta`, `npm run dev:final`, `npm run build:beta`, `npm run build:final`
 - Veröffentlichbarer Pages-Build: `npm run build`; Offline-Paket: `npm run build:offline`
 - Nach sichtbaren Spieländerungen: `npm run build:handbooks` und beide erzeugten PDFs visuell prüfen.
-
-Vor jeder Änderung Ursache und betroffene Dateien nennen. Nach jeder Spieländerung `npm run build:local` ausführen und den lokalen Starter bereithalten. Ohne ausdrücklichen Auftrag keine Version, keinen Commit, Push, Tag oder Release erzeugen. Browser oder Computersteuerung nur mit ausdrücklicher Erlaubnis.
+- Nach jeder Spieländerung `npm run build:local` ausführen und den lokalen Starter bereithalten.
 
 ## Verbindliche Pflege
 
 Bei jeder relevanten Änderung diese Datei, [`NEXT_STEPS.md`](NEXT_STEPS.md) und [`PORTFOLIO_UPDATE.md`](PORTFOLIO_UPDATE.md) gegen den tatsächlichen Stand prüfen und bei Bedarf im selben Arbeitsgang aktualisieren. Bei öffentlichen Änderungen zusätzlich README, Changelog, Release-Notizen, Handbücher und Datenschutzdokumente nach dem Release-Workflow abgleichen.
 
-## Datenschutz und Veröffentlichung
+## Projektspezifischer Datenschutz und Veröffentlichung
 
-- Keine privaten Daten, lokalen Pfade, Zugangsdaten, Tokens, Backups, Logs oder echten Spielstände in öffentliche Dateien oder Releases aufnehmen.
 - Vor einer Veröffentlichung [`DATENSCHUTZ.md`](DATENSCHUTZ.md), [`PRIVACY.md`](PRIVACY.md), [`ASSET_LICENSE.md`](ASSET_LICENSE.md) und [`PORTFOLIO_UPDATE.md`](PORTFOLIO_UPDATE.md) prüfen.
 - Die Lizenz für Code steht in [`LICENSE`](LICENSE); Grafik-, Audio- und Markenmaterial sind gemäß [`ASSET_LICENSE.md`](ASSET_LICENSE.md) ausgenommen.
+- Für alle öffentlichen Dateien und Release-Artefakte gelten zusätzlich die Repository-Datenschutzregeln aus `AGENTS.md`.
