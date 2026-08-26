@@ -138,7 +138,7 @@ To unlock all levels, robot models, and the hologram avatar in the local browser
 
 Ultra adds a full-scene WebGPU pipeline that requests the browser's **high-performance GPU**. On macOS the browser maps WebGPU to Metal; on current NVIDIA and AMD systems it uses the browser's native GPU backend. Compared with High, Ultra renders denser multilayer fog and rain, energy grids, animated light beams, stronger bloom, screen-space neon reflections, chromatic treatment, tone mapping, and higher resolution up to 4K.
 
-Platforms, enemies, debris, gameplay particles, and rain receive GPU-instanced enhancement layers. Prepared sprites, cached background layers, and visible-area culling reduce repeated Canvas work. A dedicated Web Worker calculates atmospheric instances and evaluates frame timing away from the main game thread. The player selects the 60 FPS, up-to-120 FPS, or Unlimited frame-rate limit for every graphics preset.
+Platforms, enemies, debris, gameplay particles, and rain receive GPU-instanced enhancement layers. Prepared sprites, cached background layers, and visible-area culling reduce repeated Canvas work. A dedicated Web Worker calculates atmospheric instances and evaluates frame timing away from the main game thread. The player selects the 60-FPS, up-to-120-FPS, or Unlimited frame-rate limit for every graphics preset.
 
 When supported, Ultra uses efficient 16-bit shader arithmetic for tone mapping and otherwise keeps the compatible 32-bit path. A Mac Studio M4 Max reached **120 FPS in Ultra at 4K** in Safari with a 120 Hz display after Safari's page-rendering preference was adjusted. The browser exposes no temperature sensor, so a local performance controller detects sustained frame-time degradation as a sign of thermal or power throttling and progressively reduces bloom samples, reflections, post-processing, and render resolution. No measurement leaves the device.
 
@@ -233,6 +233,10 @@ Every beta and final build requires its own detailed file under `docs/releases/`
 ## Device performance
 
 On an **iPhone 17 Pro**, **Ultra + 1080p** reached 60 FPS with the full Ultra effects. **4K Ultra** is an extremely demanding quality and screenshot mode on mobile devices, not the 60 FPS mode. Ultra can still warm the device; select **Medium** or **Low** if it becomes noticeably warm.
+
+## Community
+
+Questions, feedback and discussions are welcome on [Discord](https://discord.gg/Zy93AaYFaj).
 
 ## Repo activity
 
