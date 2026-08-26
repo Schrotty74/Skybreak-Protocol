@@ -230,6 +230,10 @@ Jede Beta- und Final-Version benötigt eine eigene ausführliche Datei unter `do
 
 Auf einem **iPhone 17 Pro** erreichte **Ultra + 1080p** 60 FPS bei vollständigen Ultra-Effekten. **4K Ultra** ist auf Mobilgeräten ein sehr aufwendiger Qualitäts- und Screenshot-Modus, nicht der 60-FPS-Modus. Ultra kann das Gerät dennoch erwärmen; bei deutlicher Erwärmung sollte **Mittel** oder **Niedrig** verwendet werden.
 
+## Community
+
+Fragen, Feedback und Diskussionen sind auf [Discord](https://discord.gg/Zy93AaYFaj) willkommen.
+
 ## Lizenz
 
 Der Quelltext steht unter der [MIT-Lizenz](LICENSE). Der Name **Skybreak Protocol**, Logos, App-Symbole, Screenshots, Werbegrafiken und visuelle Kunstwerke sind davon ausgenommen; siehe [Asset and Brand License](ASSET_LICENSE.md).
