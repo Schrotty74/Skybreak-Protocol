@@ -10,7 +10,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/Schrotty74/Skybreak-Protocol)](https://github.com/Schrotty74/Skybreak-Protocol/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Schrotty74/Skybreak-Protocol/total)](https://github.com/Schrotty74/Skybreak-Protocol/releases)
 
-**Current release:** `v1.0.1-beta.8` · [Detailed changelog](docs/releases/1.0.1-beta.8.en.md) · [All changelogs](CHANGELOG.md)
+**Current release:** `v1.0.1` · [Detailed changelog](docs/releases/1.0.1.en.md) · [All changelogs](CHANGELOG.md)
 
 An independent vertical cyberpunk arcade game for modern desktop and mobile browsers. Fight upward through fourteen visually distinct levels, break platforms from below, evade drones and falling hazards, upgrade the robot's ice pick and reach the transmission tower above the megacity.
 
@@ -25,7 +25,7 @@ Data handling is documented in the [English Privacy Report](PRIVACY.md) and the 
 
 The web app runs without installation. On iPhone or iPad, use **Share → Add to Home Screen** in Safari. Android browsers offer the equivalent option in their menu.
 
-**Play offline:** Download the versioned ZIP from the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.8), extract it and open the matching starter for macOS, Windows or Linux. All fourteen music tracks are included; only the optional update check requires internet access.
+**Play offline:** Download the versioned ZIP from the [GitHub release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1), extract it and open the matching starter for macOS, Windows or Linux. All fourteen music tracks are included; only the optional update check requires internet access.
 
 ## Manual and detailed documentation
 

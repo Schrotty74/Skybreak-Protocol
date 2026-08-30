@@ -6,7 +6,7 @@
 
 # Skybreak Protocol
 
-**Aktuelle Version:** `v1.0.1-beta.8` · [Ausführlicher Changelog](docs/releases/1.0.1-beta.8.md) · [Alle Changelogs](CHANGELOG.md)
+**Aktuelle Version:** `v1.0.1` · [Ausführlicher Changelog](docs/releases/1.0.1.md) · [Alle Changelogs](CHANGELOG.md)
 
 Ein eigenständiges vertikales Cyberpunk-Arcade-Spiel für moderne Desktop- und Mobilbrowser. Kämpfe dich durch vierzehn optisch eigenständige Level nach oben, durchbrich Plattformen von unten, weiche Drohnen und fallenden Gefahren aus, verbessere den Eispickel des Roboters und erreiche den Sendeturm über der Megacity.
 
@@ -21,7 +21,7 @@ Der Umgang mit Daten ist im [Datenschutzbericht](DATENSCHUTZ.md) und im [English
 
 Die Web-App funktioniert ohne Installation. Auf iPhone oder iPad kann sie in Safari über **Teilen → Zum Home-Bildschirm** abgelegt werden. Unter Android steht die entsprechende Funktion im Browsermenü zur Verfügung.
 
-**Offline spielen:** Das versionierte ZIP beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1-beta.8) herunterladen, entpacken und den passenden Starter für macOS, Windows oder Linux öffnen. Alle vierzehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
+**Offline spielen:** Das versionierte ZIP beim [GitHub-Release](https://github.com/Schrotty74/Skybreak-Protocol/releases/tag/v1.0.1) herunterladen, entpacken und den passenden Starter für macOS, Windows oder Linux öffnen. Alle vierzehn Musikstücke sind enthalten; nur die optionale Update-Prüfung benötigt Internet.
 
 ## Handbuch und ausführliche Dokumentation
 

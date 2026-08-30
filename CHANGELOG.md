@@ -2,6 +2,7 @@
 
 Every public beta and final build has its own detailed German and English release document.
 
+- **1.0.1:** [Deutsch](docs/releases/1.0.1.md) · [English](docs/releases/1.0.1.en.md) – first stable release with fourteen distinct levels, consistent difficulty rules, distributed phase and moving platforms, and reliable music transitions
 - **1.0.1-beta.8:** [Deutsch](docs/releases/1.0.1-beta.8.md) · [English](docs/releases/1.0.1-beta.8.en.md) – unique fair route blueprints and set pieces, retro arcade tracks for Levels 1–10, and reliable music transitions
 - **1.0.1-beta.7:** [Deutsch](docs/releases/1.0.1-beta.7.md) · [English](docs/releases/1.0.1-beta.7.en.md) – consistent difficulty rules across all levels, distributed phase blocks, and restored moving routes
 - **1.0.1-beta.6:** [Deutsch](docs/releases/1.0.1-beta.6.md) · [English](docs/releases/1.0.1-beta.6.en.md) – difficulty-balanced patrols and guardians, level-specific falling hazards, destructible walls, double decks, and expanded chest rewards

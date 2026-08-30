@@ -1,9 +1,9 @@
 # Skybreak Protocol – Projektkontext
 
-**Stand:** 15. August 2026
+**Stand:** 30. August 2026
 
 **Öffentliche Version:** `1.0.1-beta.8`
-**Arbeitsstand:** `main` nach dem getesteten Abhängigkeitsupdate; keine unveröffentlichten Spieländerungen
+**Arbeitsstand:** Final-Kandidat `1.0.1` wird lokal gebaut; noch nicht veröffentlicht
 
 Die allgemeinen Arbeits-, Git-, Veröffentlichungs- und Repository-Datenschutzregeln stehen verbindlich in `AGENTS.md`. Diese Datei enthält den projektspezifischen technischen und funktionalen Kontext.
 
