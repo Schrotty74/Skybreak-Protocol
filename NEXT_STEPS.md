@@ -1,14 +1,14 @@
 # Nächste Schritte – Skybreak Protocol
 
-**Stand:** 15. August 2026
+**Stand:** 30. August 2026
 
-**Ausgangsstand:** `1.0.1-beta.8`
+**Ausgangsstand:** Final `1.0.1`
 
 Diese Datei enthält ausschließlich bestätigte, noch offene Punkte. Erledigte oder durch spätere Änderungen ungültige Punkte werden entfernt; bei jeder relevanten Änderung muss sie zusammen mit `PROJECT_CONTEXT.md`, `CHAT_TEMPLATE.md` und `PORTFOLIO_UPDATE.md` geprüft werden.
 
 ## Priorität 1 – Spielablauf auf echten Geräten abnehmen
 
-Der lokale Build ist erfolgreich, aber noch kein vollständiger, manueller Browser-Durchlauf für den aktuellen Beta-8-Stand dokumentiert. Mit ausdrücklicher Browser-Erlaubnis prüfen:
+Die Build-Prüfungen für Final `1.0.1` sind erfolgreich, aber noch kein vollständiger, manueller Browser-Durchlauf für diesen veröffentlichten Stand dokumentiert. Mit ausdrücklicher Browser-Erlaubnis prüfen:
 
 - alle drei Schwierigkeitsstufen in mehreren Leveln: Gegner-/Bosszahlen, Boss-Fallverhalten, gestaffelte Schüsse, Schilde, Truhen, Wände und Doppelstege;
 - Phasenblöcke und bewegliche Stege über den vollständigen 15-Etagen-Aufstieg auf Lesbarkeit, Verteilung und faire Erreichbarkeit;

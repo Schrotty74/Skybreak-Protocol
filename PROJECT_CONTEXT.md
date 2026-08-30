@@ -2,8 +2,8 @@
 
 **Stand:** 30. August 2026
 
-**Öffentliche Version:** `1.0.1-beta.8`
-**Arbeitsstand:** Final-Kandidat `1.0.1` wird lokal gebaut; noch nicht veröffentlicht
+**Öffentliche Version:** `1.0.1`
+**Arbeitsstand:** Final `1.0.1` veröffentlicht
 
 Die allgemeinen Arbeits-, Git-, Veröffentlichungs- und Repository-Datenschutzregeln stehen verbindlich in `AGENTS.md`. Diese Datei enthält den projektspezifischen technischen und funktionalen Kontext.
 
