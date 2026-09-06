@@ -4,7 +4,12 @@
 
 ## Supported Versions
 
-Security reports are accepted for the current published Skybreak Protocol release.
+| Version | Supported |
+| --- | --- |
+| 1.0.x | Yes |
+| Earlier versions | No |
+
+The current stable release is 1.0.1.
 
 ## Reporting a Vulnerability
 
@@ -14,6 +19,6 @@ Please do not publish sensitive vulnerability details in a public GitHub issue. 
 
 Relevant reports include the browser/PWA runtime, service-worker or offline behavior, local-storage handling of progress and settings, keyboard/touch input, downloadable offline packages, GitHub Pages deployment, the optional GitHub release check, WebGPU/WebGL rendering paths, Web Workers and Web Audio behavior.
 
-Skybreak Protocol stores game progress, high score, settings and unlocks locally in the browser. It does not require an account. Reports are especially useful for unintended network requests, unsafe handling of local data, malicious or unexpected behavior in offline packages, or vulnerabilities that could escape the expected browser security boundary.
+Skybreak Protocol stores game progress, high score, settings and unlocks locally in the browser and does not require an account.
 
 Thank you for helping keep Skybreak Protocol and its players secure.
