@@ -25,20 +25,8 @@ Prüfe vor Aussagen oder Änderungen den tatsächlichen Projektzustand. Halte de
 
 Skybreak-spezifisch:
 
-- Local, Beta und Final strikt getrennt halten. Nach jeder Spieländerung `npm run build:local` ausführen und `Skybreak-Protocol-Lokaltest.command` bereitstellen.
-- Browser, Bildschirmaufnahme und Computersteuerung nur mit ausdrücklicher Erlaubnis bedienen.
-- Bei einer echten Beta deutsche und englische Release-Notizen, `CHANGELOG.md`, beide READMEs und beide PDF-Handbücher aktualisieren, die PDFs visuell prüfen sowie Beta-, Release- und Offline-Build ausführen.
-- Vor öffentlichen Releases die projektspezifische Datenschutzprüfung wiederholen und bei sichtbaren Projektänderungen die Portfolio-Regel in `PORTFOLIO_UPDATE.md` beachten.
 
-## Dokumentationspflege
-
-Nach Änderungen an Spielverhalten, Architektur, Build-/Release-Ablauf, lokaler Speicherung, Tests oder öffentlichen Projektinformationen die folgenden Dateien gegen den tatsächlichen Repository-Inhalt prüfen und bei Bedarf im selben Arbeitsgang aktualisieren:
-
-- `PROJECT_CONTEXT.md`: bestätigter technischer Stand und Architektur
-- `NEXT_STEPS.md`: ausschließlich tatsächlich offene, noch relevante Aufgaben
-- `PORTFOLIO_UPDATE.md`: Regel und Auslöser für öffentliche Portfolio-Pflege
-
-Keine doppelten oder konkurrierenden Übergabe-Dateien anlegen.
+- Die verbindlichen Build-, Release-, Datenschutz- und Dokumentationsregeln stehen in `PROJECT_CONTEXT.md` und den dort verlinkten Spezialdokumenten.
 
 Aktueller Auftrag:
 
